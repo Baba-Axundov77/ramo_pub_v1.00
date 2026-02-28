@@ -38,6 +38,10 @@ def index():
 
     active  = svc.get_active_orders(g.db)
     today   = svc.get_today_orders(g.db)
+    completed_today = [
+        o for o in today
+        if o.status.value in {"paid", "cancelled"}
+    ]
     summary = svc.get_today_summary(g.db)
     tables  = table_svc.get_all(g.db)
 
@@ -57,6 +61,7 @@ def index():
         "orders/index.html",
         active          = active,
         today           = today,
+        completed_today = completed_today,
         summary         = summary,
         tables          = tables,
         selected_table  = selected_table,
