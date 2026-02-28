@@ -109,7 +109,26 @@ def create_order(table_id: int):
     if "user" not in session:
         return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
 
-    ok, result = order_workflow_service.ensure_order_for_table(
+    try:
+        ok, result = order_workflow_service.ensure_order_for_table(
+            g.db,
+            table_id=table_id,
+            waiter_id=_user_id(),
+        )
+        if not ok:
+            return jsonify({"ok": False, "msg": str(result)}), 400
+
+        order = result["order"]
+        created = result["created"]
+        status_code = 201 if created else 409
+        return jsonify({
+            "ok":       False,
+            "msg":      f"Bu masada artıq aktiv sifariş var (#{existing.id}).",
+            "order_id": existing.id,
+            "redirect": f"/orders/?table_id={table_id}&order_id={existing.id}&focus_menu=1",
+        }), 409
+
+    ok, result = order_svc.create_order(
         g.db,
         table_id=table_id,
         waiter_id=_user_id(),
@@ -121,12 +140,11 @@ def create_order(table_id: int):
     created = result["created"]
     status_code = 201 if created else 409
     return jsonify({
-        "ok": created,
-        "order_id": order.id,
-        "redirect": f"/orders/?table_id={table_id}&order_id={order.id}&focus_menu=1",
-        "msg": (f"Sifariş #{order.id} yaradıldı" if created else f"Bu masada aktiv sifariş var (#{order.id})."),
-    }), status_code
-
+        "ok":       True,
+        "order_id": result.id,
+        "redirect": f"/orders/?table_id={table_id}&order_id={result.id}&focus_menu=1",
+        "msg":      f"Sifariş #{result.id} yaradıldı",
+    })
 
 
 # ─────────────────────────────────────────────────────────────────────────────
