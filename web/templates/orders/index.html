@@ -127,8 +127,10 @@
                     </td>
                     <td>
                         {% set st_map = {
-                            'open':      ('badge-blue',  'Açıq'),
-                            'pending':   ('badge-amber', 'Gözləyir'),
+                            'new':       ('badge-blue',  'Yeni'),
+                            'preparing': ('badge-amber', 'Hazırlanır'),
+                            'ready':     ('badge-purple','Hazırdır'),
+                            'served':    ('badge-muted', 'Verilib'),
                             'paid':      ('badge-green', 'Ödənildi'),
                             'cancelled': ('badge-red',   'Ləğv edildi'),
                         } %}
