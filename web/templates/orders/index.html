@@ -263,7 +263,7 @@
                     <option value="">— Masa seçin —</option>
                     {% for t in tables %}
                     <option value="{{ t.id }}"
-                        {% if t.status.value == 'occupied' %}disabled style="color:var(--red)"{% endif %}>
+                        {% if t.status.value =='occupied' %}disabled style="color:var(--red)"{% endif %}>
                         Masa {{ t.number }}{% if t.name and t.name != 'Masa ' + t.number|string %} — {{ t.name }}{% endif %}
                         ({{ 'Dolu' if t.status.value == 'occupied' else 'Boş' if t.status.value == 'available' else t.status.value }})
                     </option>
@@ -275,7 +275,7 @@
                 <input type="text" id="newOrderNotes" class="form-input" placeholder="Xüsusi istəklər...">
             </div>
             <div style="display:flex; gap:10px;">
-                <button class="btn btn-primary" style="flex:1;" onclick="submitNewOrder()">Yaraδ</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="submitNewOrder()">✅ Yarat</button>
                 <button class="btn btn-secondary" onclick="closeModal('newOrderModal')">Ləğv</button>
             </div>
         </div>
@@ -327,43 +327,45 @@
         </div>
     </div>
 </div>
-<div class="card">
-    <div class="table-responsive">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Masa</th>
-                    <th>Cəmi</th>
-                    <th>Vaxt</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for o in today %}
-                <tr class="{{ "row-warning" if selected_order and selected_order.id == o.id else "" }}">
-                    <td><strong>#{{ o.id }}</strong></td>
-                    <td>{{ "Masa " + o.table.number|string if o.table else "—" }}</td>
-                    <td class="text-amber"><strong>{{ "%.2f"|format(o.total) }} ₼</strong></td>
-                    <td class="text-muted text-sm">
-                        {{ o.created_at.strftime("%H:%M") if o.created_at else "—" }}
-                    </td>
-                    <td>
-                        {% set st_map = {
-                            'new':       ('badge-blue',  'Yeni'),
-                            'preparing': ('badge-amber', 'Hazırlanır'),
-                            'ready':     ('badge-purple','Hazırdır'),
-                            'served':    ('badge-muted', 'Verilib'),
-                            'paid':      ('badge-green', 'Ödənildi'),
-                            'cancelled': ('badge-red',   'Ləğv edildi'),
-                        } %}
-                        {% set sc = st_map.get(o.status.value, ('badge-muted', o.status.value)) %}
-                        <span class="badge {{ sc[0] }}">{{ sc[1] }}</span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+
+
+<!-- ════════════════════════════════════════════════════════════
+     MODAL — ÖDƏNİŞ
+════════════════════════════════════════════════════════════ -->
+<div id="payModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box" style="max-width:380px;">
+        <div class="modal-header">
+            <h3>💳 Ödəniş</h3>
+            <button class="modal-close" onclick="closeModal('payModal')">✕</button>
+        </div>
+        <div style="padding:20px;">
+            <div style="background:var(--bg2); border-radius:10px; padding:16px; margin-bottom:16px;">
+                <div style="display:flex; justify-content:space-between; margin-bottom:6px;">
+                    <span class="text-muted">Cəmi:</span>
+                    <strong id="payTotal" class="text-amber" style="font-size:20px;">0.00 ₼</strong>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Endirim kodu</label>
+                <div style="display:flex; gap:8px;">
+                    <input type="text" id="payDiscountCode" class="form-input" placeholder="WELCOME10 ..." style="flex:1; text-transform:uppercase;">
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label>Ödəniş üsulu</label>
+                <div style="display:flex; gap:8px;">
+                    <button class="pay-method-btn active" data-method="cash" onclick="selectPayMethod('cash')">💵 Nağd</button>
+                    <button class="pay-method-btn" data-method="card" onclick="selectPayMethod('card')">💳 Kart</button>
+                    <button class="pay-method-btn" data-method="online" onclick="selectPayMethod('online')">📱 Online</button>
+                </div>
+            </div>
+
+            <button class="btn btn-primary" style="width:100%; margin-top:10px;" onclick="submitPayment()">
+                ✅ Ödənişi Təsdiqlə
+            </button>
+        </div>
     </div>
 </div>
 
@@ -524,9 +526,9 @@ async function addToOrder(itemId, name, price) {
         body: JSON.stringify({ menu_item_id: itemId, quantity: 1 }),
     });
     if (res?.ok) {
-        showFlash(`${name} əlavə edildi`, "success");
+        showFlash(`${name} əlavə edildi ✅`, "success");
         await loadOrder(activeOrderId);
-        closeModal("menuModal");
+        // Menyu modalını bağlamırıq — istifadəçi daha çox məhsul əlavə edə bilsin
     } else {
         showFlash(res?.msg || "Xəta baş verdi", "danger");
     }
@@ -641,9 +643,9 @@ async function submitPayment() {
         showFlash(`✅ Ödəniş qəbul edildi — ${res.final_amount?.toFixed(2)} ₼`, "success");
         closeModal("payModal");
         closePanel();
-        setTimeout(() => location.reload(), 1200);
+        setTimeout(() => location.reload(), 800);
     } else {
-        showFlash(res?.msg || "Ödəniş uğursuz", "danger");
+        showFlash(res?.msg || "Ödəniş uğursuz oldu. Sifarişin statusunu yoxlayın.", "danger");
     }
 }
 
