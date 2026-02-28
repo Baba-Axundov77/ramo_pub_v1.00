@@ -121,10 +121,10 @@
         </div>
         {% endif %}
 
-        <!-- Bu günün bütün sifarişləri -->
+        <!-- Tamamlanmış sifarişlər -->
         <div class="section-header" style="margin-top:24px; margin-bottom:12px;">
-            <h2>📅 Bu Günün Sifarişləri</h2>
-            <span class="badge badge-muted">{{ today|length }}</span>
+            <h2>✅ Tamamlanmış Sifarişlər</h2>
+            <span class="badge badge-muted">{{ completed_today|length }}</span>
         </div>
         <div class="card">
             <div class="table-responsive">
@@ -136,7 +136,7 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {% for o in today %}
+                        {% for o in completed_today %}
                         <tr>
                             <td><strong>#{{ o.id }}</strong></td>
                             <td>{{ "Masa " + o.table.number|string if o.table else "—" }}</td>
@@ -167,7 +167,7 @@
                         </tr>
                         {% else %}
                         <tr><td colspan="7" style="text-align:center; color:var(--muted); padding:30px;">
-                            📭 Bu gün sifariş yoxdur
+                            📭 Tamamlanmış sifariş yoxdur
                         </td></tr>
                         {% endfor %}
                     </tbody>
@@ -689,9 +689,15 @@ function showFlash(msg, type = "success") {
 }
 
 // ── İlk yüklənmə ──────────────────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    const params = new URLSearchParams(window.location.search);
+    const shouldFocusMenu = params.get("focus_menu") === "1";
+
     {% if selected_order %}
-    loadOrder({{ selected_order.id }});
+    await loadOrder({{ selected_order.id }});
+    if (shouldFocusMenu) {
+        openMenuModal();
+    }
     {% endif %}
 
     // Modal kənar kliklə bağlan

@@ -5,6 +5,7 @@ from flask import (
     url_for, g, request, jsonify, flash
 )
 from modules.orders.order_service import OrderService
+from modules.orders.workflow_service import order_workflow_service
 from modules.tables.table_service import TableService
 from modules.menu.menu_service import MenuService
 
@@ -38,16 +39,24 @@ def index():
 
     active  = svc.get_active_orders(g.db)
     today   = svc.get_today_orders(g.db)
+    completed_today = order_workflow_service.get_completed_orders(g.db)
     summary = svc.get_today_summary(g.db)
     tables  = table_svc.get_all(g.db)
 
     selected_table = table_svc.get_by_id(g.db, table_id) if table_id else None
     if selected_table:
         active = [o for o in active if o.table_id == selected_table.id]
+        completed_today = [o for o in completed_today if o.table_id == selected_table.id]
 
     selected_order = None
     if order_id:
-        selected_order = svc.get_order(g.db, order_id)
+        ok, msg, order_obj = order_workflow_service.validate_order_context(g.db, order_id, table_id)
+        if ok:
+            selected_order = order_obj
+        else:
+            flash(msg, "warning")
+    elif selected_table and active:
+        selected_order = active[0]
 
     # Menyu kateqoriya + məhsullar
     categories = menu_svc.get_categories(g.db)
@@ -57,6 +66,7 @@ def index():
         "orders/index.html",
         active          = active,
         today           = today,
+        completed_today = completed_today,
         summary         = summary,
         tables          = tables,
         selected_table  = selected_table,
