@@ -9,26 +9,32 @@ from __future__ import annotations
 
 import os
 import sys
+import secrets
 
 # Proyektin kök qovluğunu Python path-ə əlavə et
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from flask import (
-    Flask, render_template, redirect, url_for,
-    session, flash, request, jsonify, g
-)
-from functools import wraps
-from typing import Callable, Any
+from flask import Flask, render_template, redirect, url_for, session, request, g
 
 # Verilənlər bazası
 from database.connection import get_db, init_database
-from modules.auth.auth_service import AuthService
 
 # Route modulları
 from web.routes import dashboard, tables, menu, orders, reports, auth_routes
 from web.routes.reservations import reservations_bp
-from web.routes.loyalty      import loyalty_bp
-from web.routes.inventory    import inventory_bp
+from web.routes.loyalty import loyalty_bp
+from web.routes.inventory import inventory_bp
+
+
+_MUTATING_METHODS = {"POST", "PUT", "PATCH", "DELETE"}
+
+
+def _csrf_token() -> str:
+    token = session.get("csrf_token")
+    if not token:
+        token = secrets.token_urlsafe(32)
+        session["csrf_token"] = token
+    return token
 
 
 def create_app(config: dict = None) -> Flask:
@@ -40,9 +46,10 @@ def create_app(config: dict = None) -> Flask:
     )
 
     # ── Konfiqurasiya ─────────────────────────────────────────────────────────
-    app.secret_key = os.environ.get("FLASK_SECRET", "ramo-pub-secret-key-2024")
+    app.secret_key = os.environ.get("FLASK_SECRET") or os.environ.get("SECRET_KEY") or secrets.token_hex(32)
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
 
     if config:
         app.config.update(config)
@@ -51,6 +58,21 @@ def create_app(config: dict = None) -> Flask:
     @app.before_request
     def open_db():
         g.db = get_db()
+
+    @app.before_request
+    def verify_csrf():
+        if request.method not in _MUTATING_METHODS:
+            return None
+
+        if request.path.startswith("/tables/api/"):
+            sent = request.headers.get("X-CSRF-Token")
+        else:
+            sent = request.form.get("csrf_token") or request.headers.get("X-CSRF-Token")
+
+        expected = session.get("csrf_token")
+        if not expected or not sent or not secrets.compare_digest(expected, sent):
+            return render_template("errors/500.html"), 400
+        return None
 
     @app.teardown_request
     def close_db(exc):
@@ -73,10 +95,12 @@ def create_app(config: dict = None) -> Flask:
     @app.context_processor
     def inject_globals():
         from datetime import datetime as _dt
+
         return {
-            "app_name":    "Ramo Pub & TeaHouse",
+            "app_name": "Ramo Pub & TeaHouse",
             "current_user": session.get("user"),
-            "now":         _dt.now,
+            "now": _dt.now,
+            "csrf_token": _csrf_token,
         }
 
     # ── Kök marşrut ───────────────────────────────────────────────────────────
@@ -98,29 +122,6 @@ def create_app(config: dict = None) -> Flask:
     return app
 
 
-# ── Giriş tələb edən decorator ────────────────────────────────────────────────
-def login_required(f: Callable) -> Callable:
-    @wraps(f)
-    def decorated(*args: Any, **kwargs: Any):
-        if "user" not in session:
-            flash("Zəhmət olmasa, əvvəlcə giriş edin.", "warning")
-            return redirect(url_for("auth.login"))
-        return f(*args, **kwargs)
-    return decorated
-
-
-def admin_required(f: Callable) -> Callable:
-    @wraps(f)
-    def decorated(*args: Any, **kwargs: Any):
-        if "user" not in session:
-            return redirect(url_for("auth.login"))
-        if session["user"].get("role") != "admin":
-            flash("Bu səhifəyə giriş icazəniz yoxdur.", "danger")
-            return redirect(url_for("dashboard.index"))
-        return f(*args, **kwargs)
-    return decorated
-
-
 if __name__ == "__main__":
     ok, msg = init_database()
     if not ok:
@@ -129,4 +130,5 @@ if __name__ == "__main__":
     app = create_app()
     print("[OK] Ramo Pub Web Paneli başlayır...")
     print("[OK] http://localhost:5000")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    debug_enabled = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.run(host="0.0.0.0", port=5000, debug=debug_enabled)

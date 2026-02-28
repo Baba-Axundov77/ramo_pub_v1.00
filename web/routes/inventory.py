@@ -6,7 +6,7 @@ from flask import (
     url_for, flash, jsonify,
 )
 from database.connection import get_db
-from web.app import login_required, admin_required
+from web.auth_utils import login_required, admin_required
 
 inventory_bp = Blueprint("inventory", __name__, url_prefix="/inventory")
 
@@ -36,14 +36,22 @@ def index():
 def create():
     from modules.inventory.inventory_service import inventory_service
     db = get_db()
+    try:
+        quantity = float(request.form.get("quantity", 0))
+        min_quantity = float(request.form.get("min_quantity", 5))
+        cost_per_unit = float(request.form.get("cost_per_unit", 0))
+    except ValueError:
+        flash("❌ Rəqəm formatı yanlışdır.", "danger")
+        return redirect(url_for("inventory.index"))
+
     ok, result = inventory_service.create(
         db,
-        name          = request.form["name"].strip(),
-        unit          = request.form["unit"].strip(),
-        quantity      = float(request.form.get("quantity", 0)),
-        min_quantity  = float(request.form.get("min_quantity", 5)),
-        cost_per_unit = float(request.form.get("cost_per_unit", 0)),
-        supplier      = request.form.get("supplier", "").strip(),
+        name=request.form["name"].strip(),
+        unit=request.form["unit"].strip(),
+        quantity=quantity,
+        min_quantity=min_quantity,
+        cost_per_unit=cost_per_unit,
+        supplier=request.form.get("supplier", "").strip(),
     )
     flash(f"{'✅  Stok əlavə edildi.' if ok else '❌  ' + str(result)}", "success" if ok else "danger")
     return redirect(url_for("inventory.index"))
@@ -54,8 +62,12 @@ def create():
 def adjust(item_id: int):
     from modules.inventory.inventory_service import inventory_service
     db     = get_db()
-    mode   = request.form.get("mode", "add")
-    amount = float(request.form.get("amount", 0))
+    mode = request.form.get("mode", "add")
+    try:
+        amount = float(request.form.get("amount", 0))
+    except ValueError:
+        flash("❌ Miqdar formatı yanlışdır.", "danger")
+        return redirect(url_for("inventory.index"))
     if mode == "add":
         ok, result = inventory_service.add_stock(db, item_id, amount)
     else:

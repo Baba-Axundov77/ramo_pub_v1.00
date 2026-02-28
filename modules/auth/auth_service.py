@@ -125,14 +125,17 @@ def create_default_admin(db: Session):
     admin_exists = db.query(User).filter(User.role == UserRole.admin).first()
     if not admin_exists:
         svc = AuthService()
+        initial_password = os.getenv("RAMO_DEFAULT_ADMIN_PASSWORD")
+        if not initial_password:
+            initial_password = binascii.hexlify(os.urandom(9)).decode()
         ok, result = svc.create_user(
             db=db,
             username="admin",
             full_name="Sistem Admini",
-            password="admin123",
+            password=initial_password,
             role="admin",
         )
         if ok:
-            print("Default admin yaradildi: admin / admin123")
+            print(f"Default admin yaradildi: admin / {initial_password}")
         return ok, result
     return True, admin_exists
