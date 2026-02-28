@@ -36,6 +36,35 @@ def api_all():
 def set_status(table_id: int):
     if "user" not in session:
         return jsonify({"error": "Giriş tələb olunur"}), 401
-    status = request.json.get("status", "available")
+    payload = request.get_json(silent=True) or {}
+    status = str(payload.get("status", "available")).strip().lower()
+
+    allowed = {"available", "occupied", "reserved", "cleaning"}
+    if status not in allowed:
+        return jsonify({"ok": False, "msg": "Yanlış status göndərildi."}), 400
+
     ok, result = svc.set_status(g.db, table_id, status)
     return jsonify({"ok": ok, "msg": str(result)})
+
+
+@bp.route("/api/active-order/<int:table_id>")
+def active_order(table_id: int):
+    if "user" not in session:
+        return jsonify({"error": "Giriş tələb olunur"}), 401
+
+    table = svc.get_by_id(g.db, table_id)
+    if not table:
+        return jsonify({"ok": False, "msg": "Masa tapılmadı."}), 404
+
+    order = svc.get_active_order(g.db, table_id)
+    if not order:
+        return jsonify({"ok": True, "order": None})
+
+    return jsonify({
+        "ok": True,
+        "order": {
+            "id": order.id,
+            "status": order.status.value,
+            "total": float(order.total or 0),
+        }
+    })

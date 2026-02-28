@@ -805,3 +805,35 @@ body { display: flex; }
 .table-status.reserved  { color: var(--amber); background: rgba(232,160,69,.12); }
 .table-status.cleaning  { color: var(--blue); background: rgba(52,152,219,.12); }
 .table-order { margin-top: 10px; min-height: 24px; }
+.table-actions {
+  margin-top: 10px;
+  display: flex;
+  gap: 8px;
+}
+.table-action-btn {
+  flex: 1;
+  justify-content: center;
+}
+
+.table-status-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.status-option {
+  border: 1px solid var(--border);
+  background: var(--bg2);
+  color: var(--text);
+  border-radius: 8px;
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: var(--transition);
+  font-weight: 600;
+}
+
+.status-option:hover,
+.status-option.active {
+  border-color: var(--accent);
+  color: var(--accent);
+}
