@@ -94,6 +94,14 @@ def create_app(config: dict = None) -> Flask:
         if db is not None:
             db.close()
 
+    @app.after_request
+    def set_security_headers(resp):
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+        resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+        resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        return resp
+
     # ── Blueprint-lər ─────────────────────────────────────────────────────────
     from web.routes import auth_routes, dashboard, tables, menu, orders, reports
     from web.routes.reservations import reservations_bp

@@ -58,8 +58,6 @@
             <div class="table-photo-fallback" {% if t.image_path %}style="display:none"{% endif %}>🪑</div>
         </div>
 
-        <div class="table-num-badge">{{ t.number }}</div>
-        <div class="table-name">{{ t.name or ('Masa ' ~ t.number) }}</div>
         <div class="table-meta">👥 {{ t.capacity }} nəfər • {{ t.floor }}. mərtəbə</div>
         <div class="table-status {{ sc[0] }}">{{ sc[1] }}</div>
 
@@ -333,16 +331,18 @@ async function actNewOrder() {
 
 function actViewOrder() {
     const id = _card?.dataset.id;
+    const orderId = _orderId;
     closeActionModal();
-    if (!_orderId) { toast("Aktiv sifariş yoxdur", "warning"); return; }
-    window.location.href = `/orders/?table_id=${id}&order_id=${_orderId}`;
+    if (!orderId) { toast("Aktiv sifariş yoxdur", "warning"); return; }
+    window.location.href = `/orders/?table_id=${id}&order_id=${orderId}&focus_menu=1`;
 }
 
 function actPayment() {
     const id = _card?.dataset.id;
+    const orderId = _orderId;
     closeActionModal();
-    if (!_orderId) { toast("Aktiv sifariş yoxdur", "warning"); return; }
-    window.location.href = `/orders/?table_id=${id}&order_id=${_orderId}&pay=1`;
+    if (!orderId) { toast("Aktiv sifariş yoxdur", "warning"); return; }
+    window.location.href = `/orders/?table_id=${id}&order_id=${orderId}&pay=1`;
 }
 
 async function actReserve() {
