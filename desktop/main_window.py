@@ -265,12 +265,18 @@ class MainWindow(QMainWindow):
             self.db, self._services["loyalty"], self.auth
         )
 
-        # ── Placeholder-lar ───────────────────────────────────────────────────
-        for key, icon, title, color in [
-            ("settings", "⚙️",  "Tənzimləmələr", "#95A5A6"),
-            ("pos",      "💳", "Kassa",         "#E8A045"),
-        ]:
-            self._views[key] = self._make_placeholder(icon, title, color)
+        # ── Kassa ─────────────────────────────────────────────────────────────
+        from desktop.views.pos_dashboard_view import POSDashboardView
+        self._views["pos"] = POSDashboardView(
+            self.db,
+            self._services["orders"],
+            self._services["pos"],
+            self._open_payment,
+        )
+
+        # ── Tənzimləmələr ─────────────────────────────────────────────────────
+        from desktop.views.settings_view import SettingsView
+        self._views["settings"] = SettingsView()
 
         for widget in self._views.values():
             self.stack.addWidget(widget)

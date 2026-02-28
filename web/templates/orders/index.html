@@ -121,61 +121,6 @@
         </div>
         {% endif %}
 
-        <!-- Tamamlanmış sifarişlər -->
-        <div class="section-header" style="margin-top:24px; margin-bottom:12px;">
-            <h2>✅ Tamamlanmış Sifarişlər</h2>
-            <span class="badge badge-muted">{{ completed_today|length }}</span>
-        </div>
-        <div class="card">
-            <div class="table-responsive">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>#</th><th>Masa</th><th>Məhsullar</th>
-                            <th>Cəmi</th><th>Vaxt</th><th>Status</th><th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for o in completed_today %}
-                        <tr>
-                            <td><strong>#{{ o.id }}</strong></td>
-                            <td>{{ "Masa " + o.table.number|string if o.table else "—" }}</td>
-                            <td><span class="text-muted">{{ o.items|length }} qələm</span></td>
-                            <td class="text-amber"><strong>{{ "%.2f"|format(o.total) }} ₼</strong></td>
-                            <td class="text-muted text-sm">
-                                {{ o.created_at.strftime("%H:%M") if o.created_at else "—" }}
-                            </td>
-                            <td>
-                                {% set st_map = {
-                                    'new':       ('badge-blue',   'Yeni'),
-                                    'preparing': ('badge-amber',  'Hazırlanır'),
-                                    'ready':     ('badge-purple', 'Hazırdır'),
-                                    'served':    ('badge-muted',  'Verilib'),
-                                    'paid':      ('badge-green',  'Ödənildi'),
-                                    'cancelled': ('badge-red',    'Ləğv'),
-                                } %}
-                                {% set sc = st_map.get(o.status.value, ('badge-muted', o.status.value)) %}
-                                <span class="badge {{ sc[0] }}">{{ sc[1] }}</span>
-                            </td>
-                            <td>
-                                {% if o.status.value not in ['paid', 'cancelled'] %}
-                                <button class="btn btn-sm btn-secondary" onclick="loadOrder({{ o.id }})">
-                                    📂 Aç
-                                </button>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="7" style="text-align:center; color:var(--muted); padding:30px;">
-                            📭 Tamamlanmış sifariş yoxdur
-                        </td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-
     <!-- Sağ: Aktiv sifariş panel -->
     <div id="orderPanel" style="position:sticky; top:20px;">
         <div class="card" id="orderPanelCard" style="min-height:400px;">
