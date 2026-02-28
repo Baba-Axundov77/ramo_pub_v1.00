@@ -109,9 +109,18 @@ def create_order(table_id: int):
     if "user" not in session:
         return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
 
-    # Aktiv sifariş varmı?
-    existing = svc.get_active_order(g.db, table_id)
-    if existing:
+    try:
+        ok, result = order_workflow_service.ensure_order_for_table(
+            g.db,
+            table_id=table_id,
+            waiter_id=_user_id(),
+        )
+        if not ok:
+            return jsonify({"ok": False, "msg": str(result)}), 400
+
+        order = result["order"]
+        created = result["created"]
+        status_code = 201 if created else 409
         return jsonify({
             "ok":       False,
             "msg":      f"Bu masada artıq aktiv sifariş var (#{existing.id}).",
