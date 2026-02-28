@@ -6,7 +6,7 @@ from flask import (
     url_for, flash, jsonify,
 )
 from database.connection import get_db
-from web.auth_utils import login_required, admin_required
+from web.app import login_required, admin_required
 
 loyalty_bp = Blueprint("loyalty", __name__, url_prefix="/loyalty")
 
@@ -73,11 +73,7 @@ def adjust_points(customer_id: int):
     from modules.loyalty.loyalty_service import loyalty_service
     db     = get_db()
     mode   = request.form.get("mode", "add")
-    try:
-        points = int(request.form.get("points", 0))
-    except ValueError:
-        flash("❌ Xal dəyəri rəqəm olmalıdır.", "danger")
-        return redirect(url_for("loyalty.index"))
+    points = int(request.form.get("points", 0))
     reason = request.form.get("reason", "Manuel əməliyyat")
     pts    = points if mode == "add" else -points
     ok, msg = loyalty_service.adjust_points(db, customer_id, pts, reason)
@@ -90,22 +86,14 @@ def adjust_points(customer_id: int):
 def create_discount():
     from modules.loyalty.loyalty_service import loyalty_service
     db = get_db()
-    try:
-        value = float(request.form["value"])
-        min_order = float(request.form.get("min_order", 0))
-        usage_limit = int(request.form.get("usage_limit", 0))
-    except ValueError:
-        flash("❌ Endirim parametrlərində rəqəm formatı yanlışdır.", "danger")
-        return redirect(url_for("loyalty.index"))
-
     ok, result = loyalty_service.create_discount(
         db,
-        code=request.form["code"].strip().upper(),
-        description=request.form.get("description", "").strip(),
-        dtype=request.form.get("type", "percent"),
-        value=value,
-        min_order=min_order,
-        usage_limit=usage_limit,
+        code        = request.form["code"].strip().upper(),
+        description = request.form.get("description", "").strip(),
+        dtype       = request.form.get("type", "percent"),
+        value       = float(request.form["value"]),
+        min_order   = float(request.form.get("min_order", 0)),
+        usage_limit = int(request.form.get("usage_limit", 0)),
     )
     flash(f"{'✅  Kod yaradıldı.' if ok else '❌  ' + str(result)}", "success" if ok else "danger")
     return redirect(url_for("loyalty.index"))
