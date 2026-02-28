@@ -45,12 +45,8 @@
              data-floor="{{ t.floor }}"
              data-status="{{ t.status.value }}"
              data-number="{{ t.number }}"
-             data-name="{{ t.name or ('Masa ' ~ t.number) }}"
-             data-capacity="{{ t.capacity }}"
-             onclick="onTableClick(this)"
-             style="cursor:pointer; transition:transform 0.15s, box-shadow 0.15s;">
-
-        <div class="table-photo-wrap">
+             data-name="{{ t.name or ('Masa ' ~ t.number) }}">
+        <div class="table-photo-wrap table-open-order" role="button" tabindex="0" title="Sifariş səhifəsini aç">
             {% if t.image_path %}
             <img src="{{ media_url(t.image_path) }}" alt="{{ t.name }}" class="table-photo"
                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
@@ -63,12 +59,17 @@
         <div class="table-meta">👥 {{ t.capacity }} nəfər • {{ t.floor }}. mərtəbə</div>
         <div class="table-status {{ sc[0] }}">{{ sc[1] }}</div>
 
-        <div class="table-order" style="margin-top:8px; min-height:22px;">
+        <div class="table-actions">
+            <button class="btn btn-secondary btn-sm table-action-btn" data-action="open">📋 Sifarişlər</button>
+            <button class="btn btn-sm table-action-btn" data-action="status">🔁 Status</button>
+        </div>
+
+        <div class="table-order">
             {% set active = namespace(found=false) %}
             {% for o in t.orders %}
                 {% if o.status.value in ['new','preparing','ready','served'] %}
                     {% set active.found = true %}
-                    <span class="badge badge-amber" style="font-size:11px;">
+                    <a href="{{ url_for('orders.index', table_id=t.id, order_id=o.id) }}" class="badge badge-amber">
                         #{{ o.id }} — {{ "%.2f"|format(o.total) }} ₼
                     </span>
                 {% endif %}
@@ -81,386 +82,131 @@
     {% endfor %}
 </div>
 
-
-<!-- ════════════════════════════════════════════════
-     MODAL — MASA ƏMƏLİYYATLARI
-     Desktop TableActionDialog ilə tam eyni məntiqi
-════════════════════════════════════════════════ -->
-<div id="tableActionModal" class="modal-overlay" style="display:none;">
-    <div style="max-width:320px; width:calc(100% - 32px); border-radius:16px;
-                background:var(--bg3); border:1px solid var(--border);
-                padding:20px; display:flex; flex-direction:column; gap:10px;">
-
-        <div style="display:flex; justify-content:space-between; align-items:flex-start;">
-            <div>
-                <div id="taTitle" style="font-size:15px;font-weight:700;color:var(--accent);font-family:Georgia,serif;"></div>
-                <div id="taStatus" style="font-size:12px;margin-top:3px;"></div>
-            </div>
-            <button onclick="closeActionModal()"
-                    style="background:none;border:none;color:var(--muted);font-size:22px;cursor:pointer;line-height:1;padding:0;">✕</button>
-        </div>
-
-        <div id="taOrderInfo" style="display:none;background:rgba(232,160,69,0.1);
-             border:1px solid rgba(232,160,69,0.3);border-radius:8px;
-             padding:8px 12px;font-size:12px;color:var(--amber);"></div>
-
-        <div style="height:1px;background:var(--border);"></div>
-
-        <div id="taButtons" style="display:flex;flex-direction:column;gap:8px;"></div>
-
-        <div style="height:1px;background:var(--border);"></div>
-
-        <button onclick="closeActionModal()"
-                style="width:100%;padding:10px;border-radius:8px;border:1px solid #50507050;
-                       background:transparent;color:#8080A0;cursor:pointer;font-size:13px;">
-            Bağla
-        </button>
-    </div>
-</div>
-
-
-<!-- ════════════════════════════════════════════════
-     MODAL — MASANI REDAKTƏ ET
-════════════════════════════════════════════════ -->
-<div id="editTableModal" class="modal-overlay" style="display:none;">
-    <div class="modal-box" style="max-width:360px;">
+<div id="tableStatusModal" class="modal-overlay" style="display:none;">
+    <div class="modal-card" style="max-width:460px; width:calc(100% - 24px);">
         <div class="modal-header">
-            <h3 id="editTableTitle">⚙️ Masanı redaktə et</h3>
-            <button class="modal-close" onclick="closeModal('editTableModal')">✕</button>
+            <h3 id="modalTitle">Masa statusu</h3>
+            <button type="button" class="modal-close" id="modalCloseBtn">✕</button>
         </div>
-        <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px;">
-            <input type="hidden" id="editTableId">
-            <div class="form-group">
-                <label>Ad</label>
-                <input type="text" id="editTableName" class="form-input">
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <div class="form-group">
-                    <label>Tutum</label>
-                    <input type="number" id="editTableCap" class="form-input" min="1">
-                </div>
-                <div class="form-group">
-                    <label>Mərtəbə</label>
-                    <input type="number" id="editTableFloor" class="form-input" min="1">
-                </div>
-            </div>
-            <div style="display:flex;gap:10px;">
-                <button class="btn btn-primary" style="flex:1;" onclick="submitEditTable()">💾 Yadda saxla</button>
-                <button class="btn btn-secondary" onclick="closeModal('editTableModal')">Ləğv</button>
-            </div>
+        <div class="modal-body">
+            <p class="text-muted" id="modalDesc">Yeni status seçin</p>
+            <div class="table-status-options" id="statusOptions"></div>
         </div>
     </div>
 </div>
-
-
-<!-- ════════════════════════════════════════════════
-     MODAL — YENİ MASA
-════════════════════════════════════════════════ -->
-<div id="addTableModal" class="modal-overlay" style="display:none;">
-    <div class="modal-box" style="max-width:360px;">
-        <div class="modal-header">
-            <h3>➕ Yeni Masa</h3>
-            <button class="modal-close" onclick="closeModal('addTableModal')">✕</button>
-        </div>
-        <div style="padding:16px 20px 20px;display:flex;flex-direction:column;gap:12px;">
-            <div class="form-group">
-                <label>Masa nömrəsi *</label>
-                <input type="number" id="newTableNum" class="form-input" min="1" placeholder="13">
-            </div>
-            <div class="form-group">
-                <label>Ad (ixtiyari)</label>
-                <input type="text" id="newTableName" class="form-input" placeholder="Kabinet, VIP ...">
-            </div>
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
-                <div class="form-group">
-                    <label>Tutum</label>
-                    <input type="number" id="newTableCap" class="form-input" min="1" value="4">
-                </div>
-                <div class="form-group">
-                    <label>Mərtəbə</label>
-                    <input type="number" id="newTableFloor" class="form-input" min="1" value="1">
-                </div>
-            </div>
-            <div style="display:flex;gap:10px;">
-                <button class="btn btn-primary" style="flex:1;" onclick="submitAddTable()">💾 Əlavə et</button>
-                <button class="btn btn-secondary" onclick="closeModal('addTableModal')">Ləğv</button>
-            </div>
-        </div>
-    </div>
-</div>
-
+{% endblock %}
 
 {% block extra_js %}
 <script>
-"use strict";
+(() => {
+    const statusLabels = {
+        available: "Boş",
+        occupied: "Dolu",
+        reserved: "Rezerv",
+        cleaning: "Təmizlik",
+    };
 
-const IS_ADMIN = {{ 'true' if current_user and current_user.role == 'admin' else 'false' }};
+    const modal = document.getElementById("tableStatusModal");
+    const statusOptions = document.getElementById("statusOptions");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalDesc = document.getElementById("modalDesc");
+    const modalCloseBtn = document.getElementById("modalCloseBtn");
+    let selectedTable = null;
 
-const STATUS_COLOR = {
-    available: "#2ECC71",
-    occupied:  "#E74C3C",
-    reserved:  "#F39C12",
-    cleaning:  "#3498DB",
-};
-const STATUS_LABEL = {
-    available: "Boş",
-    occupied:  "Dolu",
-    reserved:  "Rezerv",
-    cleaning:  "Təmizlik",
-};
-
-let _card = null;
-let _orderId = null;
-
-/* ── Utilities ───────────────────────────────────────────── */
-function openModal(id)  { document.getElementById(id).style.display = "flex"; }
-function closeModal(id) { document.getElementById(id).style.display = "none"; }
-
-function toast(msg, type = "success") {
-    const d = document.createElement("div");
-    d.className = `flash flash-${type}`;
-    d.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;" +
-        "min-width:260px;padding:12px 20px;border-radius:10px;" +
-        "font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.5);";
-    d.textContent = msg;
-    document.body.appendChild(d);
-    setTimeout(() => {
-        d.style.transition = "opacity .4s";
-        d.style.opacity = "0";
-        setTimeout(() => d.remove(), 400);
-    }, 3000);
-}
-
-function makeBtn(label, color, onclick) {
-    const b = document.createElement("button");
-    b.textContent = label;
-    b.style.cssText = `width:100%;padding:11px 14px;border-radius:8px;text-align:left;
-        background:rgba(255,255,255,.04);color:${color};
-        border:1px solid ${color}55;cursor:pointer;font-size:13px;font-weight:600;transition:.15s;`;
-    b.onmouseenter = () => { b.style.background = color + "22"; b.style.borderColor = color; };
-    b.onmouseleave = () => { b.style.background = "rgba(255,255,255,.04)"; b.style.borderColor = color + "55"; };
-    b.onclick = onclick;
-    return b;
-}
-
-/* ── Klik handler ────────────────────────────────────────── */
-async function onTableClick(card) {
-    _card = card;
-    const { id, status, number, name } = card.dataset;
-
-    // Aktiv sifarişi yoxla
-    const res = await window.apiFetch(`/tables/api/active-order/${id}`);
-    _orderId = res?.order?.id || null;
-
-    // Modal başlıq
-    document.getElementById("taTitle").textContent  = `🪑  Masa #${number}  —  ${name}`;
-    const stEl = document.getElementById("taStatus");
-    stEl.textContent = `Status: ${STATUS_LABEL[status] || status}`;
-    stEl.style.color = STATUS_COLOR[status] || "#fff";
-
-    // Aktiv sifariş info
-    const oEl = document.getElementById("taOrderInfo");
-    if (_orderId && res.order) {
-        oEl.style.display = "block";
-        oEl.textContent   = `📋 Aktiv sifariş: #${res.order.id}  |  ${(res.order.total||0).toFixed(2)} ₼`;
-    } else {
-        oEl.style.display = "none";
+    function closeModal() {
+        modal.style.display = "none";
+        selectedTable = null;
     }
 
-    // Düymələri qur
-    buildButtons(status);
-    openModal("tableActionModal");
-}
+    function showModal(tableCard) {
+        selectedTable = tableCard;
+        const number = tableCard.dataset.number;
+        const name = tableCard.dataset.name;
+        const currentStatus = tableCard.dataset.status;
 
-function buildButtons(status) {
-    const wrap = document.getElementById("taButtons");
-    wrap.innerHTML = "";
+        modalTitle.textContent = `Masa ${number} — ${name}`;
+        modalDesc.textContent = `Cari status: ${statusLabels[currentStatus] ?? currentStatus}`;
 
-    /* Status-a görə düymələr — Desktop TableActionDialog ilə eyni */
-    if (status === "available") {
-        wrap.appendChild(makeBtn("📋  Yeni Sifariş",  "#2ECC71", actNewOrder));
-        wrap.appendChild(makeBtn("📅  Rezerv et",      "#F39C12", actReserve));
-    } else if (status === "occupied") {
-        wrap.appendChild(makeBtn("📋  Sifarişə bax",   "#3498DB", actViewOrder));
-        wrap.appendChild(makeBtn("💳  Ödəniş al",      "#E8A045", actPayment));
-    } else if (status === "reserved") {
-        wrap.appendChild(makeBtn("✅  Müştəri gəldi",  "#2ECC71", actOccupy));
-        wrap.appendChild(makeBtn("❌  Rezervi ləğv et","#E74C3C", actCancelReserve));
-    } else if (status === "cleaning") {
-        wrap.appendChild(makeBtn("✅  Təmizlik bitti", "#2ECC71", actSetAvailable));
+        statusOptions.innerHTML = Object.entries(statusLabels).map(([value, label]) => {
+            const activeClass = value === currentStatus ? "active" : "";
+            return `<button class="status-option ${activeClass}" data-status="${value}">${label}</button>`;
+        }).join("");
+
+        modal.style.display = "flex";
     }
 
-    // Hər zaman: Təmizlənir
-    if (status !== "cleaning") {
-        wrap.appendChild(makeBtn("🧹  Təmizlənir", "#3498DB", actSetCleaning));
+    async function onStatusChange(nextStatus) {
+        if (!selectedTable) return;
+        const tableId = selectedTable.dataset.id;
+
+        const result = await window.setTableStatus(tableId, nextStatus);
+        if (!result || !result.ok) {
+            alert(result?.msg || "Status yenilənmədi.");
+            return;
+        }
+
+        window.location.reload();
     }
 
-    // Admin: Redaktə
-    if (IS_ADMIN) {
-        const sep = document.createElement("div");
-        sep.style.cssText = "height:1px;background:var(--border);margin:2px 0;";
-        wrap.appendChild(sep);
-
-        const eb = makeBtn("⚙️  Masanı redaktə et", "var(--muted)", actEdit);
-        eb.style.fontSize   = "12px";
-        eb.style.color      = "var(--muted)";
-        eb.style.borderColor = "var(--border)";
-        eb.style.fontWeight = "500";
-        wrap.appendChild(eb);
-    }
-}
-
-function closeActionModal() {
-    closeModal("tableActionModal");
-    _card = null; _orderId = null;
-}
-
-/* ── Əməliyyatlar ────────────────────────────────────────── */
-
-async function actNewOrder() {
-    closeActionModal();
-    const res = await window.apiFetch(`/tables/api/create-order/${_card?.dataset.id || _card}`,
-        { method: "POST" });
-    if (res?.ok) {
-        toast("Sifariş yaradıldı ✅");
-        setTimeout(() => { window.location.href = res.redirect; }, 500);
-    } else if (res?.redirect) {
-        toast(res.msg, "warning");
-        setTimeout(() => { window.location.href = res.redirect; }, 800);
-    } else {
-        toast(res?.msg || "Xəta", "danger");
-    }
-}
-
-function actViewOrder() {
-    const id = _card?.dataset.id;
-    closeActionModal();
-    if (!_orderId) { toast("Aktiv sifariş yoxdur", "warning"); return; }
-    window.location.href = `/orders/?table_id=${id}&order_id=${_orderId}`;
-}
-
-function actPayment() {
-    const id = _card?.dataset.id;
-    closeActionModal();
-    if (!_orderId) { toast("Aktiv sifariş yoxdur", "warning"); return; }
-    window.location.href = `/orders/?table_id=${id}&order_id=${_orderId}&pay=1`;
-}
-
-async function actReserve() {
-    const id = _card?.dataset.id; closeActionModal();
-    const res = await window.apiFetch(`/tables/api/reserve/${id}`, { method: "POST" });
-    res?.ok ? (toast("Masa rezerv edildi 📅"), setTimeout(() => location.reload(), 700))
-            : toast(res?.msg || "Xəta", "danger");
-}
-
-async function actCancelReserve() {
-    const id = _card?.dataset.id; closeActionModal();
-    const res = await window.apiFetch(`/tables/api/free/${id}`, { method: "POST" });
-    res?.ok ? (toast("Rezerv ləğv edildi"), setTimeout(() => location.reload(), 700))
-            : toast(res?.msg || "Xəta", "danger");
-}
-
-async function actOccupy() {
-    const id = _card?.dataset.id; closeActionModal();
-    const res = await window.apiFetch(`/tables/api/status/${id}`,
-        { method: "POST", body: JSON.stringify({ status: "occupied" }) });
-    res?.ok ? (toast("Masa dolu edildi 🔴"), setTimeout(() => location.reload(), 700))
-            : toast(res?.msg || "Xəta", "danger");
-}
-
-async function actSetAvailable() {
-    const id = _card?.dataset.id; closeActionModal();
-    const res = await window.apiFetch(`/tables/api/free/${id}`, { method: "POST" });
-    res?.ok ? (toast("Masa boş edildi ✅"), setTimeout(() => location.reload(), 700))
-            : toast(res?.msg || "Xəta", "danger");
-}
-
-async function actSetCleaning() {
-    const id = _card?.dataset.id; closeActionModal();
-    const res = await window.apiFetch(`/tables/api/clean/${id}`, { method: "POST" });
-    res?.ok ? (toast("Masa təmizlənir 🧹"), setTimeout(() => location.reload(), 700))
-            : toast(res?.msg || "Xəta", "danger");
-}
-
-function actEdit() {
-    const c = _card; closeActionModal();
-    document.getElementById("editTableId").value    = c.dataset.id;
-    document.getElementById("editTableName").value  = c.dataset.name;
-    document.getElementById("editTableCap").value   = c.dataset.capacity;
-    document.getElementById("editTableFloor").value = c.dataset.floor;
-    document.getElementById("editTableTitle").textContent =
-        `⚙️ Masa #${c.dataset.number} — redaktə`;
-    openModal("editTableModal");
-}
-
-async function submitEditTable() {
-    const id = document.getElementById("editTableId").value;
-    const res = await window.apiFetch(`/tables/api/update/${id}`, {
-        method: "POST",
-        body: JSON.stringify({
-            name:     document.getElementById("editTableName").value.trim() || null,
-            capacity: +document.getElementById("editTableCap").value   || 4,
-            floor:    +document.getElementById("editTableFloor").value || 1,
-        }),
-    });
-    if (res?.ok) {
-        toast("Masa yeniləndi ✅");
-        closeModal("editTableModal");
-        setTimeout(() => location.reload(), 700);
-    } else {
-        toast(res?.msg || "Xəta", "danger");
-    }
-}
-
-async function submitAddTable() {
-    const num = +document.getElementById("newTableNum").value;
-    if (!num || num < 1) { toast("Masa nömrəsi daxil edin", "warning"); return; }
-    const res = await window.apiFetch("/tables/api/create", {
-        method: "POST",
-        body: JSON.stringify({
-            number:   num,
-            name:     document.getElementById("newTableName").value.trim() || null,
-            capacity: +document.getElementById("newTableCap").value  || 4,
-            floor:    +document.getElementById("newTableFloor").value || 1,
-        }),
-    });
-    if (res?.ok) {
-        toast("Masa yaradıldı ✅");
-        closeModal("addTableModal");
-        setTimeout(() => location.reload(), 700);
-    } else {
-        toast(res?.msg || "Xəta", "danger");
-    }
-}
-
-/* ── Mərtəbə filtri ──────────────────────────────────────── */
-document.querySelectorAll(".filter-tab").forEach(btn => {
-    btn.addEventListener("click", () => {
-        document.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        const floor = btn.dataset.floor;
-        document.querySelectorAll(".table-row").forEach(r => {
-            r.style.display = (floor === "all" || r.dataset.floor === floor) ? "" : "none";
+    document.querySelectorAll(".filter-tab").forEach(btn => {
+        btn.addEventListener("click", () => {
+            document.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));
+            btn.classList.add("active");
+            const floor = btn.dataset.floor;
+            document.querySelectorAll(".table-row").forEach(row => {
+                row.style.display = (floor === "all" || row.dataset.floor === floor) ? "" : "none";
+            });
         });
     });
-});
 
-/* ── Modal kənarından klik ───────────────────────────────── */
-document.querySelectorAll(".modal-overlay").forEach(m => {
-    m.addEventListener("click", e => { if (e.target === m) m.style.display = "none"; });
-});
+    document.querySelectorAll(".table-action-btn").forEach(btn => {
+        btn.addEventListener("click", async (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const card = btn.closest(".table-row");
+            const action = btn.dataset.action;
+            if (!card) return;
 
-/* ── Hover effekti ───────────────────────────────────────── */
-document.querySelectorAll(".table-tile").forEach(t => {
-    t.addEventListener("mouseenter", () => {
-        t.style.transform  = "translateY(-3px)";
-        t.style.boxShadow  = "0 8px 24px rgba(0,0,0,.4)";
+            if (action === "open") {
+                const tableId = card.dataset.id;
+                const activeOrder = await window.apiFetch(`/tables/api/active-order/${tableId}`);
+                if (activeOrder?.ok && activeOrder.order?.id) {
+                    window.location.href = `/orders/?table_id=${tableId}&order_id=${activeOrder.order.id}`;
+                    return;
+                }
+                window.location.href = `/orders/?table_id=${tableId}`;
+                return;
+            }
+
+            if (action === "status") {
+                showModal(card);
+            }
+        });
     });
-    t.addEventListener("mouseleave", () => {
-        t.style.transform  = "";
-        t.style.boxShadow  = "";
+
+    document.querySelectorAll(".table-open-order").forEach(el => {
+        el.addEventListener("click", () => {
+            el.closest(".table-row")?.querySelector('[data-action="open"]')?.click();
+        });
+        el.addEventListener("keydown", (e) => {
+            if (e.key === "Enter" || e.key === " ") {
+                e.preventDefault();
+                el.closest(".table-row")?.querySelector('[data-action="open"]')?.click();
+            }
+        });
     });
-});
+
+    modal.addEventListener("click", (e) => {
+        if (e.target === modal) closeModal();
+    });
+    modalCloseBtn.addEventListener("click", closeModal);
+
+    statusOptions.addEventListener("click", (e) => {
+        const btn = e.target.closest(".status-option");
+        if (!btn) return;
+        onStatusChange(btn.dataset.status);
+    });
+})();
 </script>
 {% endblock %}
 {% endblock %}
