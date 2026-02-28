@@ -130,12 +130,13 @@ class OrdersView(QWidget):
     """
     payment_requested = pyqtSignal(object)
 
-    def __init__(self, db, order_service, menu_service, auth_service, parent=None):
+    def __init__(self, db, order_service, menu_service, auth_service, workflow_service=None, parent=None):
         super().__init__(parent)
         self.db       = db
         self.order_svc = order_service
         self.menu_svc  = menu_service
         self.auth      = auth_service
+        self.workflow_svc = workflow_service
         self.current_order = None
         self.current_table = None
 
@@ -143,18 +144,27 @@ class OrdersView(QWidget):
         self._load_active_orders()
 
     def open_for_table(self, table, existing_order=None):
-        """Masa üçün yeni sifariş ekranını aç."""
+        """Masa üçün peşəkar order workspace aç (varsa aç, yoxdursa yarat)."""
         self.current_table = table
         if existing_order:
             self.current_order = existing_order
         else:
-            ok, result = self.order_svc.create_order(
-                self.db, table.id, self.auth.current_user.id
-            )
-            if not ok:
-                QMessageBox.warning(self, "Xəta", str(result))
-                return
-            self.current_order = result
+            if self.workflow_svc:
+                ok, result = self.workflow_svc.ensure_order_for_table(
+                    self.db, table_id=table.id, waiter_id=self.auth.current_user.id
+                )
+                if not ok:
+                    QMessageBox.warning(self, "Xəta", str(result))
+                    return
+                self.current_order = result["order"]
+            else:
+                ok, result = self.order_svc.create_order(
+                    self.db, table.id, self.auth.current_user.id
+                )
+                if not ok:
+                    QMessageBox.warning(self, "Xəta", str(result))
+                    return
+                self.current_order = result
 
         self.table_lbl.setText(f"🪑  {table.name}  —  Sifariş #{self.current_order.id}")
         self._load_menu()

@@ -5,6 +5,7 @@ from flask import (
     url_for, g, request, jsonify, flash
 )
 from modules.orders.order_service import OrderService
+from modules.orders.workflow_service import order_workflow_service
 from modules.tables.table_service import TableService
 from modules.menu.menu_service import MenuService
 

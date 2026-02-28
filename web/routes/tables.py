@@ -5,11 +5,10 @@ from flask import (
     url_for, g, jsonify, request, flash
 )
 from modules.tables.table_service import TableService
-from modules.orders.order_service import OrderService
+from modules.orders.workflow_service import order_workflow_service
 
 bp = Blueprint("tables", __name__, url_prefix="/tables")
 svc = TableService()
-order_svc = OrderService()
 
 
 def _check():
@@ -128,6 +127,9 @@ def create_order(table_id: int):
     if not ok:
         return jsonify({"ok": False, "msg": str(result)}), 400
 
+    order = result["order"]
+    created = result["created"]
+    status_code = 201 if created else 409
     return jsonify({
         "ok":       True,
         "order_id": result.id,
