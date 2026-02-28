@@ -18,8 +18,6 @@ from flask import (
     session, flash, request, jsonify, g, send_from_directory, abort
 )
 import secrets
-from functools import wraps
-from typing import Callable, Any
 
 # Verilənlər bazası
 from database.connection import get_db, init_database
@@ -133,30 +131,9 @@ def create_app(config: dict = None) -> Flask:
     return app
 
 
-# ── Giriş tələb edən decorator ────────────────────────────────────────────────
-def login_required(f: Callable) -> Callable:
-    @wraps(f)
-    def decorated(*args: Any, **kwargs: Any):
-        if "user" not in session:
-            flash("Zəhmət olmasa, əvvəlcə giriş edin.", "warning")
-            return redirect(url_for("auth.login"))
-        return f(*args, **kwargs)
-    return decorated
-
-
-def admin_required(f: Callable) -> Callable:
-    @wraps(f)
-    def decorated(*args: Any, **kwargs: Any):
-        if "user" not in session:
-            return redirect(url_for("auth.login"))
-        if session["user"].get("role") != "admin":
-            flash("Bu səhifəyə giriş icazəniz yoxdur.", "danger")
-            return redirect(url_for("dashboard.index"))
-        return f(*args, **kwargs)
-    return decorated
-
 
 if __name__ == "__main__":
+
     ok, msg = init_database()
     if not ok:
         print(f"[XƏTA] Verilənlər bazasına qoşulmaq olmadı: {msg}")

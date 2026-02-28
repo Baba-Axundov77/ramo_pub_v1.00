@@ -7,7 +7,7 @@ from flask import (
     url_for, flash, session, jsonify,
 )
 from database.connection import get_db
-from web.app import login_required
+from web.auth import login_required
 
 reservations_bp = Blueprint("reservations", __name__, url_prefix="/reservations")
 
