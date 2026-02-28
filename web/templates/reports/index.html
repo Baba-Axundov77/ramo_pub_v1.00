@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Hesabatlar{% endblock %}
+{% block breadcrumb %}Hesabatlar{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -7,12 +8,47 @@
         <h1 class="page-title">📈 Hesabatlar</h1>
         <p class="page-sub">{{ today.strftime("%d %B %Y") }}</p>
     </div>
+    <button class="btn btn-secondary" onclick="location.reload()">
+        <i class="fas fa-sync-alt"></i> Yenilə
+    </button>
 </div>
 
-<!-- Günlük xülasə -->
-<div class="stats-grid">
+<!-- ── Sifariş Statistikası (sifarişlər bölməsindən köçürüldü) ── -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:16px;">
+    <div class="stat-card stat-blue">
+        <div class="stat-icon">📋</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ summary.total_orders }}</div>
+            <div class="stat-label">Bu gün sifarişlər</div>
+        </div>
+    </div>
+    <div class="stat-card" style="border-left-color:#E74C3C;">
+        <div class="stat-icon">🔥</div>
+        <div class="stat-body">
+            <div class="stat-value" style="color:#E74C3C;">{{ summary.active_orders }}</div>
+            <div class="stat-label">Aktiv</div>
+        </div>
+    </div>
+    <div class="stat-card stat-green">
+        <div class="stat-icon">✅</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ summary.paid_orders }}</div>
+            <div class="stat-label">Ödənildi</div>
+        </div>
+    </div>
     <div class="stat-card stat-amber">
         <div class="stat-icon">💰</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ "%.2f"|format(summary.total_revenue) }} ₼</div>
+            <div class="stat-label">Gün gəliri</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Maliyyə Statistikası ───────────────────────────────── -->
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
+    <div class="stat-card stat-amber">
+        <div class="stat-icon">💵</div>
         <div class="stat-body">
             <div class="stat-value">{{ "%.2f"|format(daily.revenue) }} ₼</div>
             <div class="stat-label">Bu Günkü Gəlir</div>
@@ -36,12 +72,12 @@
         <div class="stat-icon">🏷️</div>
         <div class="stat-body">
             <div class="stat-value">{{ "%.2f"|format(daily.discounts) }} ₼</div>
-            <div class="stat-label">Endirimler</div>
+            <div class="stat-label">Endirimlər</div>
         </div>
     </div>
 </div>
 
-<!-- ── Diaqramlar ───────────────────────────────────────────── -->
+<!-- ── Diaqramlar ─────────────────────────────────────────── -->
 <div class="charts-row">
     <!-- Aylıq gəlir -->
     <div class="chart-card chart-wide">
@@ -50,8 +86,7 @@
             <div class="chart-controls">
                 <select id="monthSelect" class="select-sm">
                     {% for m in range(1, 13) %}
-                    <option value="{{ m }}"
-                        {% if m == today.month %}selected{% endif %}>
+                    <option value="{{ m }}" {% if m == today.month %}selected{% endif %}>
                         {{ ["","Yanvar","Fevral","Mart","Aprel","May","İyun",
                              "İyul","Avqust","Sentyabr","Oktyabr","Noyabr","Dekabr"][m] }}
                     </option>
@@ -59,8 +94,7 @@
                 </select>
                 <select id="yearSelect" class="select-sm">
                     {% for y in range(today.year - 2, today.year + 2) %}
-                    <option value="{{ y }}"
-                        {% if y == today.year %}selected{% endif %}>{{ y }}</option>
+                    <option value="{{ y }}" {% if y == today.year %}selected{% endif %}>{{ y }}</option>
                     {% endfor %}
                 </select>
             </div>
@@ -83,7 +117,7 @@
     </div>
 </div>
 
-<!-- Ödəniş üsulları -->
+<!-- Ödəniş üsulları + Saatlıq -->
 <div class="charts-row">
     <div class="chart-card">
         <div class="chart-title">💳 Ödəniş Üsulları (Bu Gün)</div>
@@ -162,16 +196,11 @@ async function loadMonthly() {
             responsive: true,
             plugins: {
                 legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: ctx => `${ctx.parsed.y.toFixed(2)} ₼`
-                    }
-                }
+                tooltip: { callbacks: { label: ctx => `${ctx.parsed.y.toFixed(2)} ₼` } }
             },
             scales: {
                 x: { ticks:{color:CHART_DEFAULTS.tickColor}, grid:{color:CHART_DEFAULTS.gridColor} },
-                y: { ticks:{color:CHART_DEFAULTS.tickColor, callback: v => v + " ₼"},
-                     grid:{color:CHART_DEFAULTS.gridColor} }
+                y: { ticks:{color:CHART_DEFAULTS.tickColor, callback: v => v + " ₼"}, grid:{color:CHART_DEFAULTS.gridColor} }
             }
         }
     });
@@ -181,7 +210,7 @@ document.getElementById("monthSelect").addEventListener("change", loadMonthly);
 document.getElementById("yearSelect").addEventListener("change", loadMonthly);
 loadMonthly();
 
-// ── Ödəniş üsulları ─────────────────────────────────────────
+// ── Ödəniş üsulları ──────────────────────────────────────────
 const byMethod = {{ daily.by_method | tojson }};
 const methodMap = {"cash":"Nağd","card":"Kart","online":"Online"};
 const pmLabels = Object.keys(byMethod).map(k => methodMap[k] || k);
@@ -200,9 +229,7 @@ new Chart(document.getElementById("payMethodChart").getContext("2d"), {
     },
     options: {
         responsive: true,
-        plugins: {
-            legend: { labels: { color: CHART_DEFAULTS.color } }
-        }
+        plugins: { legend: { labels: { color: CHART_DEFAULTS.color } } }
     }
 });
 
@@ -229,8 +256,7 @@ fetch("/reports/api/hourly")
                 plugins: { legend: { display: false } },
                 scales: {
                     x: { ticks:{color:CHART_DEFAULTS.tickColor}, grid:{color:CHART_DEFAULTS.gridColor} },
-                    y: { ticks:{color:CHART_DEFAULTS.tickColor, stepSize:1},
-                         grid:{color:CHART_DEFAULTS.gridColor} }
+                    y: { ticks:{color:CHART_DEFAULTS.tickColor, stepSize:1}, grid:{color:CHART_DEFAULTS.gridColor} }
                 }
             }
         });
