@@ -689,9 +689,15 @@ function showFlash(msg, type = "success") {
 }
 
 // ── İlk yüklənmə ──────────────────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
+document.addEventListener("DOMContentLoaded", async () => {
+    const params = new URLSearchParams(window.location.search);
+    const shouldFocusMenu = params.get("focus_menu") === "1";
+
     {% if selected_order %}
-    loadOrder({{ selected_order.id }});
+    await loadOrder({{ selected_order.id }});
+    if (shouldFocusMenu) {
+        openMenuModal();
+    }
     {% endif %}
 
     // Modal kənar kliklə bağlan
