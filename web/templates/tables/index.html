@@ -33,22 +33,7 @@
     } %}
     {% set sc = status_map.get(t.status.value, ('unknown', t.status.value)) %}
 
-    {% set active = namespace(found=false, order_id=None, total=0) %}
-    {% for o in t.orders %}
-        {% if o.status.value in ['new', 'preparing', 'ready', 'served'] and not active.found %}
-            {% set active.found = true %}
-            {% set active.order_id = o.id %}
-            {% set active.total = o.total %}
-        {% endif %}
-    {% endfor %}
-
-    <a class="table-tile table-row" data-floor="{{ t.floor }}"
-       href="{{ url_for('orders.index', table_id=t.id, order_id=active.order_id) }}">
-        <div class="table-header-row">
-            <div class="table-num-badge">{{ t.number }}</div>
-            <div class="table-floor">{{ t.floor }}. mərtəbə</div>
-        </div>
-
+    <div class="table-tile table-row" data-floor="{{ t.floor }}">
         <div class="table-photo-wrap">
             {% if t.image_path %}
             <img src="{{ media_url(t.image_path) }}" alt="{{ t.name or 'Masa ' ~ t.number }}" class="table-photo"
@@ -57,21 +42,26 @@
             <div class="table-photo-fallback" {% if t.image_path %}style="display:none"{% endif %}>🪑</div>
         </div>
 
+        <div class="table-num-badge">{{ t.number }}</div>
         <div class="table-name">{{ t.name or ('Masa ' ~ t.number) }}</div>
+        <div class="table-meta">👥 {{ t.capacity }} nəfər • {{ t.floor }}. mərtəbə</div>
+        <div class="table-status {{ sc[0] }}">{{ sc[1] }}</div>
 
         <div class="table-order">
-            {% if active.found %}
-                <span class="badge badge-amber">Sifariş #{{ active.order_id }} — {{ "%.2f"|format(active.total) }} ₼</span>
-            {% else %}
-                <span class="text-muted">Sifariş açmaq üçün toxunun</span>
+            {% set active = namespace(found=false) %}
+            {% for o in t.orders %}
+                {% if o.status.value in ['new', 'preparing', 'ready', 'served'] %}
+                    {% set active.found = true %}
+                    <a href="{{ url_for('orders.index') }}" class="badge badge-amber">
+                        #{{ o.id }} — {{ "%.2f"|format(o.total) }} ₼
+                    </a>
+                {% endif %}
+            {% endfor %}
+            {% if not active.found %}
+                <span class="text-muted">Aktiv sifariş yoxdur</span>
             {% endif %}
         </div>
-
-        <div class="table-footer-row">
-            <div class="table-status {{ sc[0] }}">{{ sc[1] }}</div>
-            <div class="table-capacity">{{ t.capacity }} nəfər</div>
-        </div>
-    </a>
+    </div>
     {% endfor %}
 </div>
 {% endblock %}
