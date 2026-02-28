@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+{% block title %}Loyallıq{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">⭐ Loyallıq & Müştərilər</h1>
+        <p class="page-sub">Xal sistemi, müştəri idarəsi, endirim kodları</p>
+    </div>
+    <button class="btn btn-primary" onclick="document.getElementById('addCustModal').style.display='flex'">
+        ➕ Müştəri əlavə et
+    </button>
+</div>
+
+<!-- Stat Kartlar -->
+<div class="stats-grid" style="grid-template-columns: repeat(4,1fr); margin-bottom:20px;">
+    <div class="stat-card stat-blue">
+        <div class="stat-icon">👥</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ summary.total_customers }}</div>
+            <div class="stat-label">Müştəri</div>
+        </div>
+    </div>
+    <div class="stat-card stat-amber">
+        <div class="stat-icon">⭐</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ "{:,}".format(summary.total_points) }}</div>
+            <div class="stat-label">Cəmi Xal</div>
+        </div>
+    </div>
+    <div class="stat-card stat-green">
+        <div class="stat-icon">💰</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ "%.2f"|format(summary.total_spent or 0) }} ₼</div>
+            <div class="stat-label">Cəmi Xərcləndi</div>
+        </div>
+    </div>
+    <div class="stat-card stat-purple">
+        <div class="stat-icon">🏷️</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ discounts | length }}</div>
+            <div class="stat-label">Endirim Kodu</div>
+        </div>
+    </div>
+</div>
+
+<!-- Axtarış -->
+<form method="get" style="margin-bottom:16px; display:flex; gap:10px; max-width:400px;">
+    <input type="text" name="q" class="form-input" value="{{ search }}"
+           placeholder="🔍  Ad və ya telefon axtar...">
+    <button type="submit" class="btn btn-secondary">Axtar</button>
+    {% if search %}<a href="{{ url_for('loyalty.index') }}" class="btn btn-secondary">✕</a>{% endif %}
+</form>
+
+<!-- Müştərilər Cədvəli -->
+<div class="section-title" style="font-size:13px; font-weight:bold; color:#E8A045; margin-bottom:10px;">
+    ⭐ Müştərilər ({{ customers|length }})
+</div>
+<div class="table-card" style="margin-bottom:24px;">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Ad</th><th>Telefon</th><th>Xal</th>
+                <th>Dərəcə</th><th>Cəmi Xərcləndi</th><th>Ad Günü</th><th>Əməliyyat</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for c in customers %}
+            {% set tier_colors = {"Bronze":"#CD7F32","Silver":"#A8A8A8","Gold":"#F1C40F","Platinum":"#E5E4E2"} %}
+            <tr>
+                <td><strong>{{ c.full_name }}</strong></td>
+                <td>{{ c.phone or "—" }}</td>
+                <td style="color:#F1C40F; font-weight:bold;">⭐ {{ "{:,}".format(c.points) }}</td>
+                <td>
+                    <span class="badge" style="background:{{ tier_colors.get('Bronze','#CD7F32') }}33;
+                          color:{{ tier_colors.get('Bronze','#CD7F32') }}; border:1px solid currentColor;
+                          padding:2px 8px; border-radius:8px; font-size:10px;">
+                        Bronze
+                    </span>
+                </td>
+                <td>{{ "%.2f"|format(c.total_spent) }} ₼</td>
+                <td>{{ c.birthday.strftime("%d.%m") if c.birthday else "—" }}</td>
+                <td style="display:flex; gap:6px; flex-wrap:wrap;">
+                    <button class="btn btn-sm btn-secondary"
+                            onclick="openPointsModal({{ c.id }}, '{{ c.full_name }}', {{ c.points }})">
+                        ⭐ Xal
+                    </button>
+                    <form method="post" action="{{ url_for('loyalty.delete_customer', customer_id=c.id) }}"
+                          onsubmit="return confirm('{{ c.full_name }} silinsin?')">
+                        <button type="submit" class="btn btn-sm btn-danger">🗑</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="7" style="text-align:center; color:#6A6A8A; padding:40px;">
+                📭 Müştəri tapılmadı
+            </td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Endirim Kodları -->
+<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:10px;">
+    <div class="section-title" style="font-size:13px; font-weight:bold; color:#E8A045;">
+        🏷️ Endirim Kodları
+    </div>
+    <button class="btn btn-secondary btn-sm"
+            onclick="document.getElementById('addDiscModal').style.display='flex'">
+        ➕ Kod əlavə et
+    </button>
+</div>
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr><th>Kod</th><th>Növ</th><th>Dəyər</th><th>Min.Sifariş</th><th>İstifadə</th><th>Status</th><th>Əməliyyat</th></tr>
+        </thead>
+        <tbody>
+            {% for d in discounts %}
+            <tr>
+                <td><code style="color:#E8A045; font-size:13px; font-weight:bold;">{{ d.code }}</code></td>
+                <td>{{ "Faiz" if d.type == "percent" else "Sabit" }}</td>
+                <td>{{ d.value|int }}{% if d.type == "percent" %}%{% else %} ₼{% endif %}</td>
+                <td>{{ "%.2f"|format(d.min_order) }} ₼</td>
+                <td>{{ d.used_count }} / {{ "∞" if d.usage_limit == 0 else d.usage_limit }}</td>
+                <td>
+                    <span style="color: {{ '#2ECC71' if d.is_active else '#E74C3C' }}; font-weight:bold;">
+                        {{ "✅ Aktiv" if d.is_active else "❌ Deaktiv" }}
+                    </span>
+                </td>
+                <td style="display:flex; gap:5px;">
+                    <form method="post" action="{{ url_for('loyalty.toggle_discount', discount_id=d.id) }}">
+                        <button type="submit" class="btn btn-sm btn-secondary">
+                            {{ "❌" if d.is_active else "✅" }}
+                        </button>
+                    </form>
+                    <form method="post" action="{{ url_for('loyalty.delete_discount', discount_id=d.id) }}"
+                          onsubmit="return confirm('{{ d.code }} silinsin?')">
+                        <button type="submit" class="btn btn-sm btn-danger">🗑</button>
+                    </form>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Müştəri Əlavə Modal -->
+<div id="addCustModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box" style="max-width:440px;">
+        <div class="modal-header">
+            <h3>👤 Yeni Müştəri</h3>
+            <button class="modal-close" onclick="document.getElementById('addCustModal').style.display='none'">✕</button>
+        </div>
+        <form method="post" action="{{ url_for('loyalty.create_customer') }}">
+            <div class="form-grid-2">
+                <div class="form-group" style="grid-column:1/-1;">
+                    <label>Tam ad *</label>
+                    <input type="text" name="full_name" class="form-input" required placeholder="Ad Soyad">
+                </div>
+                <div class="form-group">
+                    <label>Telefon *</label>
+                    <input type="text" name="phone" class="form-input" required placeholder="+994...">
+                </div>
+                <div class="form-group">
+                    <label>E-poçt</label>
+                    <input type="email" name="email" class="form-input" placeholder="email@...">
+                </div>
+                <div class="form-group">
+                    <label>Ad günü</label>
+                    <input type="date" name="birthday" class="form-input">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">💾 Əlavə et</button>
+                <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('addCustModal').style.display='none'">Ləğv</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Endirim Kodu Modal -->
+<div id="addDiscModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box" style="max-width:400px;">
+        <div class="modal-header">
+            <h3>🏷️ Yeni Endirim Kodu</h3>
+            <button class="modal-close" onclick="document.getElementById('addDiscModal').style.display='none'">✕</button>
+        </div>
+        <form method="post" action="{{ url_for('loyalty.create_discount') }}">
+            <div class="form-group">
+                <label>Kod *</label>
+                <input type="text" name="code" class="form-input" required
+                       placeholder="SUMMER20" style="text-transform:uppercase;">
+            </div>
+            <div class="form-group">
+                <label>Təsvir</label>
+                <input type="text" name="description" class="form-input" placeholder="Yay kampaniyası...">
+            </div>
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label>Növ</label>
+                    <select name="type" class="form-input">
+                        <option value="percent">Faiz (%)</option>
+                        <option value="fixed">Sabit (₼)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Dəyər</label>
+                    <input type="number" name="value" class="form-input" min="1" value="10" required>
+                </div>
+                <div class="form-group">
+                    <label>Min. Sifariş (₼)</label>
+                    <input type="number" name="min_order" class="form-input" min="0" value="0">
+                </div>
+                <div class="form-group">
+                    <label>İstifadə limiti (0=∞)</label>
+                    <input type="number" name="usage_limit" class="form-input" min="0" value="0">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">💾 Yarat</button>
+                <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('addDiscModal').style.display='none'">Ləğv</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Xal Əməliyyat Modal -->
+<div id="pointsModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box" style="max-width:360px;">
+        <div class="modal-header">
+            <h3>⭐ Xal Əməliyyatı</h3>
+            <button class="modal-close" onclick="document.getElementById('pointsModal').style.display='none'">✕</button>
+        </div>
+        <form method="post" id="pointsForm">
+            <div class="form-group">
+                <label>Müştəri</label>
+                <div id="custNameDisplay" style="color:#E8A045; font-weight:bold; font-size:14px;"></div>
+            </div>
+            <div class="form-group">
+                <label>Əməliyyat növü</label>
+                <select name="mode" class="form-input">
+                    <option value="add">➕ Xal əlavə et</option>
+                    <option value="sub">➖ Xal çıx</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Miqdar</label>
+                <input type="number" name="points" class="form-input" min="1" value="10" required>
+            </div>
+            <div class="form-group">
+                <label>Səbəb</label>
+                <input type="text" name="reason" class="form-input" placeholder="Kampaniya, bonus...">
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">✅ Tətbiq et</button>
+                <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('pointsModal').style.display='none'">Ləğv</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+function openPointsModal(custId, custName, points) {
+    document.getElementById('pointsModal').style.display = 'flex';
+    document.getElementById('custNameDisplay').textContent = custName + ' — ⭐ ' + points + ' xal';
+    document.getElementById('pointsForm').action =
+        '/loyalty/customers/' + custId + '/points';
+}
+[document.getElementById('addCustModal'),
+ document.getElementById('addDiscModal'),
+ document.getElementById('pointsModal')].forEach(function(m) {
+    m.addEventListener('click', function(e) { if (e.target === m) m.style.display = 'none'; });
+});
+</script>
+{% endblock %}

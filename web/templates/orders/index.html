@@ -1,0 +1,132 @@
+{% extends "base.html" %}
+{% block title %}Sifarişlər{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">📋 Sifarişlər</h1>
+        <p class="page-sub">Aktiv: {{ active|length }} | Bu gün: {{ today|length }}</p>
+    </div>
+</div>
+
+<!-- Bugünkü xülasə -->
+<div class="stats-grid stats-grid-3">
+    <div class="stat-card stat-amber">
+        <div class="stat-icon">📋</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ summary.active_orders }}</div>
+            <div class="stat-label">Aktiv Sifariş</div>
+        </div>
+    </div>
+    <div class="stat-card stat-green">
+        <div class="stat-icon">💰</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ "%.2f"|format(summary.total_revenue) }} ₼</div>
+            <div class="stat-label">Bu Günkü Gəlir</div>
+        </div>
+    </div>
+    <div class="stat-card stat-blue">
+        <div class="stat-icon">🧾</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ summary.paid_orders }}</div>
+            <div class="stat-label">Ödənilmiş</div>
+        </div>
+    </div>
+</div>
+
+<!-- Aktiv sifarişlər -->
+{% if active %}
+<div class="section-header">
+    <h2>🔴 Aktiv Sifarişlər</h2>
+</div>
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Masa</th>
+                    <th>Ofisiant</th>
+                    <th>Məhsullar</th>
+                    <th>Cəmi</th>
+                    <th>Vaxt</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in active %}
+                <tr>
+                    <td><strong>#{{ o.id }}</strong></td>
+                    <td>
+                        {% if o.table %}
+                            <span class="badge badge-amber">Masa {{ o.table.number }}</span>
+                        {% else %}—{% endif %}
+                    </td>
+                    <td>{{ o.waiter.full_name if o.waiter else "—" }}</td>
+                    <td>
+                        <span class="text-muted">{{ o.items|length }} qələm</span>
+                    </td>
+                    <td><strong class="text-amber">{{ "%.2f"|format(o.total) }} ₼</strong></td>
+                    <td>
+                        <span class="text-muted text-sm">
+                            {{ o.created_at.strftime("%H:%M") if o.created_at else "—" }}
+                        </span>
+                    </td>
+                    <td>
+                        <span class="badge badge-red">Aktiv</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% else %}
+<div class="empty-state">
+    <div class="empty-icon">📋</div>
+    <div>Aktiv sifariş yoxdur</div>
+</div>
+{% endif %}
+
+<!-- Bu günün sifarişləri -->
+<div class="section-header" style="margin-top:24px;">
+    <h2>📅 Bu Günün Bütün Sifarişləri</h2>
+</div>
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Masa</th>
+                    <th>Cəmi</th>
+                    <th>Vaxt</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for o in today %}
+                <tr>
+                    <td><strong>#{{ o.id }}</strong></td>
+                    <td>{{ "Masa " + o.table.number|string if o.table else "—" }}</td>
+                    <td class="text-amber"><strong>{{ "%.2f"|format(o.total) }} ₼</strong></td>
+                    <td class="text-muted text-sm">
+                        {{ o.created_at.strftime("%H:%M") if o.created_at else "—" }}
+                    </td>
+                    <td>
+                        {% set st_map = {
+                            'open':      ('badge-blue',  'Açıq'),
+                            'pending':   ('badge-amber', 'Gözləyir'),
+                            'paid':      ('badge-green', 'Ödənildi'),
+                            'cancelled': ('badge-red',   'Ləğv edildi'),
+                        } %}
+                        {% set sc = st_map.get(o.status.value, ('badge-muted', o.status.value)) %}
+                        <span class="badge {{ sc[0] }}">{{ sc[1] }}</span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}

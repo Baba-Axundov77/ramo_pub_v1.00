@@ -1,0 +1,182 @@
+/* desktop/themes/dark.qss — Ramo Pub Dark Tema */
+
+/* ── Əsas Rənglər ──
+   Fon:         #0D0D0D, #141414, #1C1C1C
+   Panel:       #1E1E2E, #252535
+   Accent:      #E8A045  (qızılı-narıncı — pub ruhu)
+   Accent2:     #C0392B  (tünd qırmızı)
+   Text:        #F0EAD6, #B0A899
+   Border:      #2E2E3E
+*/
+
+QMainWindow, QDialog, QWidget {
+    background-color: #0D0D0D;
+    color: #F0EAD6;
+    font-family: "Segoe UI", "Ubuntu", sans-serif;
+    font-size: 11pt;
+}
+
+/* ── Login Widget ─────────────────────────────────────────────────────────── */
+
+#loginWidget {
+    background-color: #141414;
+}
+
+#loginCard {
+    background-color: #1C1C2E;
+    border: 1px solid #2E2E4E;
+    border-radius: 16px;
+}
+
+#appTitle {
+    color: #E8A045;
+    font-size: 28px;
+    font-weight: 700;
+    font-family: "Georgia", "Times New Roman", serif;
+    letter-spacing: 1px;
+}
+
+#appSubtitle {
+    color: #8080A0;
+    font-size: 12pt;
+    letter-spacing: 3px;
+    text-transform: uppercase;
+}
+
+#loginLabel {
+    color: #B0A899;
+    font-size: 11pt;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+/* ── Input Sahələri ───────────────────────────────────────────────────────── */
+
+QLineEdit {
+    background-color: #252535;
+    border: 1px solid #3A3A5A;
+    border-radius: 8px;
+    padding: 10px 14px;
+    color: #F0EAD6;
+    font-size: 13px;
+    selection-background-color: #E8A045;
+}
+
+QLineEdit:focus {
+    border: 1px solid #E8A045;
+    background-color: #2A2A3F;
+}
+
+QLineEdit:hover {
+    border: 1px solid #5A5A7A;
+}
+
+QLineEdit[echoMode="2"] {
+    letter-spacing: 2px;
+}
+
+/* ── Düymələr ─────────────────────────────────────────────────────────────── */
+
+QPushButton {
+    background-color: #E8A045;
+    color: #0D0D0D;
+    border: none;
+    border-radius: 8px;
+    padding: 10px 20px;
+    font-size: 13px;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+QPushButton:hover {
+    background-color: #F0B060;
+}
+
+QPushButton:pressed {
+    background-color: #C88030;
+}
+
+QPushButton:disabled {
+    background-color: #3A3A4A;
+    color: #6A6A7A;
+}
+
+QPushButton#secondaryBtn {
+    background-color: transparent;
+    color: #E8A045;
+    border: 1px solid #E8A045;
+}
+
+QPushButton#secondaryBtn:hover {
+    background-color: rgba(232, 160, 69, 0.1);
+}
+
+QPushButton#dangerBtn {
+    background-color: #C0392B;
+    color: #F0EAD6;
+}
+
+QPushButton#dangerBtn:hover {
+    background-color: #E74C3C;
+}
+
+/* ── ComboBox ─────────────────────────────────────────────────────────────── */
+
+QComboBox {
+    background-color: #252535;
+    border: 1px solid #3A3A5A;
+    border-radius: 8px;
+    padding: 8px 12px;
+    color: #F0EAD6;
+}
+
+QComboBox::drop-down {
+    border: none;
+    width: 24px;
+}
+
+QComboBox QAbstractItemView {
+    background-color: #1C1C2E;
+    border: 1px solid #3A3A5A;
+    color: #F0EAD6;
+    selection-background-color: #E8A045;
+    selection-color: #0D0D0D;
+}
+
+/* ── Xəbərdarlıq Mesajı ───────────────────────────────────────────────────── */
+
+#errorLabel {
+    color: #E74C3C;
+    font-size: 11pt;
+    padding: 4px 8px;
+    background-color: rgba(192, 57, 43, 0.15);
+    border-radius: 4px;
+    border: 1px solid rgba(192, 57, 43, 0.3);
+}
+
+#successLabel {
+    color: #2ECC71;
+    font-size: 11px;
+}
+
+/* ── Scrollbar ────────────────────────────────────────────────────────────── */
+
+QScrollBar:vertical {
+    background: #141414;
+    width: 8px;
+    border-radius: 4px;
+}
+
+QScrollBar::handle:vertical {
+    background: #3A3A5A;
+    border-radius: 4px;
+    min-height: 30px;
+}
+
+QScrollBar::handle:vertical:hover {
+    background: #E8A045;
+}
+
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0;
+}

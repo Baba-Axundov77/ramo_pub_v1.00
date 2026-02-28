@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Ramo Pub{% endblock %} — Web Panel</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+</head>
+<body>
+
+{% if current_user %}
+<!-- ── Sidebar ─────────────────────────────────────────────── -->
+<aside class="sidebar">
+    <div class="sidebar-brand">
+        <span class="brand-icon">🍺</span>
+        <div>
+            <div class="brand-name">Ramo Pub</div>
+            <div class="brand-sub">İdarəetmə Paneli</div>
+        </div>
+    </div>
+
+    <nav class="sidebar-nav">
+        <a href="{{ url_for('dashboard.index') }}"
+           class="nav-item {% if request.endpoint == 'dashboard.index' %}active{% endif %}">
+            <i class="fas fa-chart-pie"></i> Dashboard
+        </a>
+        <a href="{{ url_for('tables.index') }}"
+           class="nav-item {% if request.blueprint == 'tables' %}active{% endif %}">
+            <i class="fas fa-chair"></i> Masalar
+        </a>
+        <a href="{{ url_for('orders.index') }}"
+           class="nav-item {% if request.blueprint == 'orders' %}active{% endif %}">
+            <i class="fas fa-receipt"></i> Sifarişlər
+        </a>
+        <a href="{{ url_for('menu.index') }}"
+           class="nav-item {% if request.blueprint == 'menu' %}active{% endif %}">
+            <i class="fas fa-utensils"></i> Menyu
+        </a>
+        <a href="{{ url_for('reports.index') }}"
+           class="nav-item {% if request.blueprint == 'reports' %}active{% endif %}">
+            <i class="fas fa-chart-bar"></i> Hesabatlar
+        </a>
+        <a href="{{ url_for('reservations.index') }}"
+           class="nav-item {% if request.blueprint == 'reservations' %}active{% endif %}">
+            <i class="fas fa-calendar-alt"></i> Rezervasiyalar
+        </a>
+        <a href="{{ url_for('loyalty.index') }}"
+           class="nav-item {% if request.blueprint == 'loyalty' %}active{% endif %}">
+            <i class="fas fa-star"></i> Loyallıq
+        </a>
+        <a href="{{ url_for('inventory.index') }}"
+           class="nav-item {% if request.blueprint == 'inventory' %}active{% endif %}">
+            <i class="fas fa-boxes"></i> Anbar
+    </nav>
+
+    <div class="sidebar-footer">
+        <div class="user-info">
+            <div class="user-avatar">{{ current_user.full_name[0] }}</div>
+            <div>
+                <div class="user-name">{{ current_user.full_name }}</div>
+                <div class="user-role">{{ current_user.role | capitalize }}</div>
+            </div>
+        </div>
+        <a href="{{ url_for('auth.logout') }}" class="logout-btn" title="Çıxış">
+            <i class="fas fa-sign-out-alt"></i>
+        </a>
+    </div>
+</aside>
+
+<!-- ── Əsas Kontent ────────────────────────────────────────── -->
+<main class="main-content">
+    <!-- Flash mesajlar -->
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% if messages %}
+            <div class="flash-container">
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}">
+                        <i class="fas fa-{% if category == 'success' %}check-circle
+                                         {% elif category == 'danger' %}exclamation-circle
+                                         {% elif category == 'warning' %}exclamation-triangle
+                                         {% else %}info-circle{% endif %}"></i>
+                        {{ message }}
+                        <button class="flash-close" onclick="this.parentElement.remove()">✕</button>
+                    </div>
+                {% endfor %}
+            </div>
+        {% endif %}
+    {% endwith %}
+
+    {% block content %}{% endblock %}
+</main>
+
+{% else %}
+<!-- Auth səhifəsi — sidebar yox -->
+{% block auth_content %}{% endblock %}
+{% endif %}
+
+<script src="{{ url_for('static', filename='js/app.js') }}"></script>
+{% block extra_js %}{% endblock %}
+</body>
+</html>

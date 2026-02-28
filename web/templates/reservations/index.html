@@ -1,0 +1,148 @@
+{% extends "base.html" %}
+{% block title %}Rezervasiyalar{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">📅 Rezervasiyalar</h1>
+        <p class="page-sub">Masa rezervlərini idarə edin</p>
+    </div>
+    <button class="btn btn-primary" onclick="document.getElementById('addModal').style.display='flex'">
+        ➕ Rezervasiya et
+    </button>
+</div>
+
+<!-- Stat Kartlar -->
+<div class="stats-grid" style="grid-template-columns: repeat(3, 1fr); margin-bottom: 20px;">
+    <div class="stat-card stat-blue">
+        <div class="stat-icon">📅</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ today_count }}</div>
+            <div class="stat-label">Bu gün</div>
+        </div>
+    </div>
+    <div class="stat-card stat-amber">
+        <div class="stat-icon">📆</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ upcoming_count }}</div>
+            <div class="stat-label">Gələcək</div>
+        </div>
+    </div>
+    <div class="stat-card stat-green">
+        <div class="stat-icon">✅</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ reservations | length }}</div>
+            <div class="stat-label">Göstərilən</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filtr tab-ları -->
+<div class="filter-tabs" style="display:flex; gap:8px; margin-bottom:16px;">
+    <a href="?mode=today"    class="btn {% if mode == 'today' %}btn-primary{% else %}btn-secondary{% endif %}">📅 Bu gün</a>
+    <a href="?mode=upcoming" class="btn {% if mode == 'upcoming' %}btn-primary{% else %}btn-secondary{% endif %}">📆 Gələcək</a>
+    <a href="?mode=all"      class="btn {% if mode == 'all' %}btn-primary{% else %}btn-secondary{% endif %}">🗂️ Hamısı</a>
+</div>
+
+<!-- Cədvəl -->
+<div class="table-card">
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Müştəri</th>
+                <th>Telefon</th>
+                <th>Tarix</th>
+                <th>Saat</th>
+                <th>Masa</th>
+                <th>Qonaq</th>
+                <th>Qeyd</th>
+                <th>Əməliyyat</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for r in reservations %}
+            <tr>
+                <td><strong>{{ r.customer_name }}</strong></td>
+                <td>{{ r.customer_phone or "—" }}</td>
+                <td>{{ r.date.strftime("%d.%m.%Y") }}</td>
+                <td>{{ r.time.strftime("%H:%M") }}</td>
+                <td>{% if r.table %}Masa {{ r.table.number }}{% else %}—{% endif %}</td>
+                <td>👥 {{ r.guest_count }}</td>
+                <td>{{ (r.notes or "")[:30] }}</td>
+                <td>
+                    <form method="post" action="{{ url_for('reservations.cancel', res_id=r.id) }}"
+                          onsubmit="return confirm('Ləğv edilsin?')">
+                        <button type="submit" class="btn btn-danger btn-sm">❌ Ləğv</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" style="text-align:center; color:#6A6A8A; padding:40px;">
+                📭 Rezervasiya tapılmadı
+            </td></tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<!-- Yeni Rezervasiya Modal -->
+<div id="addModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box" style="max-width:500px;">
+        <div class="modal-header">
+            <h3>📅 Yeni Rezervasiya</h3>
+            <button class="modal-close" onclick="document.getElementById('addModal').style.display='none'">✕</button>
+        </div>
+        <form method="post" action="{{ url_for('reservations.create') }}">
+            <div class="form-grid-2">
+                <div class="form-group">
+                    <label>Müştəri adı *</label>
+                    <input type="text" name="customer_name" class="form-input" required placeholder="Ad Soyad">
+                </div>
+                <div class="form-group">
+                    <label>Telefon</label>
+                    <input type="text" name="customer_phone" class="form-input" placeholder="+994...">
+                </div>
+                <div class="form-group">
+                    <label>Tarix *</label>
+                    <input type="date" name="date" class="form-input" required
+                           value="{{ now().strftime('%Y-%m-%d') }}">
+                </div>
+                <div class="form-group">
+                    <label>Saat *</label>
+                    <input type="time" name="time" class="form-input" required value="19:00">
+                </div>
+                <div class="form-group">
+                    <label>Masa *</label>
+                    <select name="table_id" class="form-input" required>
+                        {% for t in tables %}
+                        <option value="{{ t.id }}">Masa {{ t.number }}{% if t.name %} — {{ t.name }}{% endif %} ({{ t.capacity }} nəfər)</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Qonaq sayı</label>
+                    <input type="number" name="guest_count" class="form-input" min="1" max="30" value="2">
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Qeyd</label>
+                <textarea name="notes" class="form-input" rows="2" placeholder="Əlavə qeydlər..."></textarea>
+            </div>
+            <div class="modal-footer">
+                <button type="submit" class="btn btn-primary">💾 Rezerv et</button>
+                <button type="button" class="btn btn-secondary"
+                        onclick="document.getElementById('addModal').style.display='none'">Ləğv</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Modal kənar klik ilə bağla
+document.getElementById('addModal').addEventListener('click', function(e) {
+    if (e.target === this) this.style.display = 'none';
+});
+</script>
+{% endblock %}

@@ -1,0 +1,50 @@
+{% extends "base.html" %}
+{% block title %}Giriş{% endblock %}
+
+{% block auth_content %}
+<div class="auth-page">
+    <div class="auth-card">
+        <div class="auth-logo">
+            <span>🍺</span>
+            <h1>Ramo Pub</h1>
+            <p>İdarəetmə Paneli</p>
+        </div>
+
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                {% for category, message in messages %}
+                    <div class="flash flash-{{ category }}" style="margin-bottom:14px;">
+                        {{ message }}
+                    </div>
+                {% endfor %}
+            {% endif %}
+        {% endwith %}
+
+        <form method="POST" class="auth-form">
+            <div class="form-group">
+                <label>İstifadəçi adı</label>
+                <div class="input-icon">
+                    <i class="fas fa-user"></i>
+                    <input type="text" name="username" placeholder="admin"
+                           autocomplete="username" required autofocus>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Şifrə</label>
+                <div class="input-icon">
+                    <i class="fas fa-lock"></i>
+                    <input type="password" name="password" placeholder="••••••••"
+                           autocomplete="current-password" required>
+                </div>
+            </div>
+            <button type="submit" class="btn btn-primary btn-full">
+                <i class="fas fa-sign-in-alt"></i> Giriş
+            </button>
+        </form>
+
+        <div class="auth-footer">
+            <small>🔒 Ramo Pub &amp; TeaHouse — Bütün hüquqlar qorunur</small>
+        </div>
+    </div>
+</div>
+{% endblock %}

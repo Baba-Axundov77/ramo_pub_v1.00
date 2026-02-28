@@ -1,0 +1,99 @@
+{% extends "base.html" %}
+{% block title %}Masalar{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">🪑 Masa İdarəsi</h1>
+        <p class="page-sub">Cəmi {{ tables|length }} masa</p>
+    </div>
+    <div class="header-actions">
+        <div class="filter-tabs" id="floorTabs">
+            <button class="filter-tab active" data-floor="all">Hamısı</button>
+            <button class="filter-tab" data-floor="1">1. Mərtəbə</button>
+            <button class="filter-tab" data-floor="2">2. Mərtəbə</button>
+        </div>
+    </div>
+</div>
+
+<!-- Stat bar -->
+<div class="mini-stats">
+    <span class="mini-stat green">🟢 Boş: {{ stats.available }}</span>
+    <span class="mini-stat red">🔴 Dolu: {{ stats.occupied }}</span>
+    <span class="mini-stat amber">🟡 Rezerv: {{ stats.reserved }}</span>
+    <span class="mini-stat blue">🔵 Təmizlik: {{ stats.cleaning }}</span>
+</div>
+
+<!-- Masa cədvəli -->
+<div class="card">
+    <div class="table-responsive">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Masa</th>
+                    <th>Ad</th>
+                    <th>Tutum</th>
+                    <th>Mərtəbə</th>
+                    <th>Status</th>
+                    <th>Aktiv Sifariş</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for t in tables %}
+                <tr class="table-row" data-floor="{{ t.floor }}">
+                    <td><span class="table-num">{{ t.number }}</span></td>
+                    <td>{{ t.name or "—" }}</td>
+                    <td>
+                        <i class="fas fa-users text-muted"></i>
+                        {{ t.capacity }} nəfər
+                    </td>
+                    <td>{{ t.floor }}. mərtəbə</td>
+                    <td>
+                        {% set status_map = {
+                            'available': ('badge-green',  '🟢 Boş'),
+                            'occupied':  ('badge-red',    '🔴 Dolu'),
+                            'reserved':  ('badge-amber',  '🟡 Rezerv'),
+                            'cleaning':  ('badge-blue',   '🔵 Təmizlik'),
+                        } %}
+                        {% set sc = status_map.get(t.status.value, ('badge-muted', t.status.value)) %}
+                        <span class="badge {{ sc[0] }}">{{ sc[1] }}</span>
+                    </td>
+                    <td>
+                        {% set active = namespace(found=false) %}
+                        {% for o in t.orders %}
+                            {% if o.status.value in ['open','pending'] %}
+                                {% set active.found = true %}
+                                <a href="{{ url_for('orders.index') }}"
+                                   class="badge badge-amber">
+                                    #{{ o.id }} — {{ "%.2f"|format(o.total) }} ₼
+                                </a>
+                            {% endif %}
+                        {% endfor %}
+                        {% if not active.found %}
+                            <span class="text-muted">—</span>
+                        {% endif %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Mərtəbə filtri
+document.querySelectorAll(".filter-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const floor = btn.dataset.floor;
+        document.querySelectorAll(".table-row").forEach(row => {
+            row.style.display =
+                (floor === "all" || row.dataset.floor === floor) ? "" : "none";
+        });
+    });
+});
+</script>
+{% endblock %}

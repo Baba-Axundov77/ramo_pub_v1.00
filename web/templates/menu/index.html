@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block title %}Menyu{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">🍽️ Menyu</h1>
+        <p class="page-sub">{{ categories|length }} kateqoriya, {{ items|length }} məhsul</p>
+    </div>
+    <div class="search-box">
+        <i class="fas fa-search"></i>
+        <input type="text" id="menuSearch" placeholder="Məhsul axtar...">
+    </div>
+</div>
+
+<!-- Kateqoriya filtri -->
+<div class="cat-tabs" id="catTabs">
+    <button class="cat-tab active" data-cat="all">🍽️ Hamısı</button>
+    {% for cat in categories %}
+    <button class="cat-tab" data-cat="{{ cat.id }}">
+        {{ cat.icon }} {{ cat.name }}
+    </button>
+    {% endfor %}
+</div>
+
+<!-- Məhsul kartları -->
+<div class="menu-grid" id="menuGrid">
+    {% for item in items %}
+    <div class="menu-card {{ 'unavailable' if not item.is_available }}"
+         data-cat="{{ item.category_id }}"
+         data-name="{{ item.name|lower }}">
+        <div class="menu-card-img">
+            {% if item.image_path %}
+            <img src="{{ url_for('static', filename='uploads/' + item.image_path|basename) }}"
+                 alt="{{ item.name }}" onerror="this.style.display='none'">
+            {% else %}
+            <div class="menu-placeholder">🍽️</div>
+            {% endif %}
+        </div>
+        <div class="menu-card-body">
+            <div class="menu-card-name">{{ item.name }}</div>
+            {% if item.description %}
+            <div class="menu-card-desc">{{ item.description[:60] }}...</div>
+            {% endif %}
+            <div class="menu-card-footer">
+                <span class="menu-price">{{ "%.2f"|format(item.price) }} ₼</span>
+                {% if item.is_available %}
+                    <span class="badge badge-green">Mövcud</span>
+                {% else %}
+                    <span class="badge badge-red">Mövcud deyil</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+    {% endfor %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Kateqoriya filtri
+document.querySelectorAll(".cat-tab").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.querySelectorAll(".cat-tab").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        const cat = btn.dataset.cat;
+        filterMenu();
+    });
+});
+
+// Axtarış
+document.getElementById("menuSearch").addEventListener("input", filterMenu);
+
+function filterMenu() {
+    const cat    = document.querySelector(".cat-tab.active").dataset.cat;
+    const search = document.getElementById("menuSearch").value.toLowerCase();
+    document.querySelectorAll(".menu-card").forEach(card => {
+        const matchCat  = cat === "all" || card.dataset.cat === cat;
+        const matchName = card.dataset.name.includes(search);
+        card.style.display = (matchCat && matchName) ? "" : "none";
+    });
+}
+</script>
+{% endblock %}

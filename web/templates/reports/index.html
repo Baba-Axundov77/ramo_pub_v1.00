@@ -1,0 +1,208 @@
+{% extends "base.html" %}
+{% block title %}Hesabatlar{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">📈 Hesabatlar</h1>
+        <p class="page-sub">{{ today.strftime("%d %B %Y") }}</p>
+    </div>
+</div>
+
+<!-- Günlük xülasə -->
+<div class="stats-grid">
+    <div class="stat-card stat-amber">
+        <div class="stat-icon">💰</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ "%.2f"|format(daily.revenue) }} ₼</div>
+            <div class="stat-label">Bu Günkü Gəlir</div>
+        </div>
+    </div>
+    <div class="stat-card stat-green">
+        <div class="stat-icon">🧾</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ daily.orders_paid }}</div>
+            <div class="stat-label">Ödənilmiş Sifariş</div>
+        </div>
+    </div>
+    <div class="stat-card stat-blue">
+        <div class="stat-icon">📊</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ "%.2f"|format(daily.avg_check) }} ₼</div>
+            <div class="stat-label">Orta Çek</div>
+        </div>
+    </div>
+    <div class="stat-card stat-purple">
+        <div class="stat-icon">🏷️</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ "%.2f"|format(daily.discounts) }} ₼</div>
+            <div class="stat-label">Endirimler</div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Diaqramlar ───────────────────────────────────────────── -->
+<div class="charts-row">
+    <!-- Aylıq gəlir -->
+    <div class="chart-card chart-wide">
+        <div class="chart-title-row">
+            <div class="chart-title">📅 Aylıq Gəlir</div>
+            <div class="chart-controls">
+                <select id="monthSelect" class="select-sm">
+                    {% for m in range(1, 13) %}
+                    <option value="{{ m }}"
+                        {% if m == today.month %}selected{% endif %}>
+                        {{ ["","Yanvar","Fevral","Mart","Aprel","May","İyun",
+                             "İyul","Avqust","Sentyabr","Oktyabr","Noyabr","Dekabr"][m] }}
+                    </option>
+                    {% endfor %}
+                </select>
+                <select id="yearSelect" class="select-sm">
+                    {% for y in range(today.year - 2, today.year + 2) %}
+                    <option value="{{ y }}"
+                        {% if y == today.year %}selected{% endif %}>{{ y }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+        </div>
+        <canvas id="monthlyChart" height="180"></canvas>
+    </div>
+
+    <!-- Top məhsullar -->
+    <div class="chart-card">
+        <div class="chart-title">🏆 Top 5 Məhsul</div>
+        <div id="topItemsList" class="top-list">
+            {% for item in top %}
+            <div class="top-item">
+                <span class="top-rank">#{{ loop.index }}</span>
+                <span class="top-name">{{ item.name[:22] }}</span>
+                <span class="top-value">{{ item.qty }} ədəd</span>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<!-- Ödəniş üsulları -->
+<div class="charts-row">
+    <div class="chart-card">
+        <div class="chart-title">💳 Ödəniş Üsulları (Bu Gün)</div>
+        <canvas id="payMethodChart" height="220"></canvas>
+    </div>
+    <div class="chart-card chart-wide">
+        <div class="chart-title">⏰ Saatlıq Sifariş (Bu Gün)</div>
+        <canvas id="hourlyChart2" height="220"></canvas>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const CHART_DEFAULTS = {
+    color: "#F0EAD6",
+    gridColor: "#2E2E4E",
+    tickColor: "#8080A0",
+};
+
+// ── Aylıq Gəlir ──────────────────────────────────────────────
+const monthlyCtx = document.getElementById("monthlyChart").getContext("2d");
+let monthlyChart = null;
+
+async function loadMonthly() {
+    const month = document.getElementById("monthSelect").value;
+    const year  = document.getElementById("yearSelect").value;
+    const resp  = await fetch(`/reports/api/monthly?year=${year}&month=${month}`);
+    const data  = await resp.json();
+    if (monthlyChart) monthlyChart.destroy();
+    monthlyChart = new Chart(monthlyCtx, {
+        type: "bar",
+        data: {
+            labels: data.days.map(d => d + ""),
+            datasets: [{
+                label: "Gəlir (₼)",
+                data: data.values,
+                backgroundColor: "#E8A04560",
+                borderColor: "#E8A045",
+                borderWidth: 2,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: ctx => `${ctx.parsed.y.toFixed(2)} ₼`
+                    }
+                }
+            },
+            scales: {
+                x: { ticks:{color:CHART_DEFAULTS.tickColor}, grid:{color:CHART_DEFAULTS.gridColor} },
+                y: { ticks:{color:CHART_DEFAULTS.tickColor, callback: v => v + " ₼"},
+                     grid:{color:CHART_DEFAULTS.gridColor} }
+            }
+        }
+    });
+}
+
+document.getElementById("monthSelect").addEventListener("change", loadMonthly);
+document.getElementById("yearSelect").addEventListener("change", loadMonthly);
+loadMonthly();
+
+// ── Ödəniş üsulları ─────────────────────────────────────────
+const byMethod = {{ daily.by_method | tojson }};
+const methodMap = {"cash":"Nağd","card":"Kart","online":"Online"};
+const pmLabels = Object.keys(byMethod).map(k => methodMap[k] || k);
+const pmValues = Object.values(byMethod);
+
+new Chart(document.getElementById("payMethodChart").getContext("2d"), {
+    type: "doughnut",
+    data: {
+        labels: pmLabels,
+        datasets: [{
+            data: pmValues,
+            backgroundColor: ["#2ECC71","#3498DB","#9B59B6"],
+            borderColor: "#1C1C2E",
+            borderWidth: 3,
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { labels: { color: CHART_DEFAULTS.color } }
+        }
+    }
+});
+
+// ── Saatlıq ──────────────────────────────────────────────────
+fetch("/reports/api/hourly")
+    .then(r => r.json())
+    .then(data => {
+        new Chart(document.getElementById("hourlyChart2").getContext("2d"), {
+            type: "line",
+            data: {
+                labels: data.hours.map(h => h + ":00"),
+                datasets: [{
+                    label: "Sifariş",
+                    data: data.counts,
+                    borderColor: "#E8A045",
+                    backgroundColor: "#E8A04520",
+                    fill: true,
+                    tension: 0.4,
+                    pointBackgroundColor: "#E8A045",
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { ticks:{color:CHART_DEFAULTS.tickColor}, grid:{color:CHART_DEFAULTS.gridColor} },
+                    y: { ticks:{color:CHART_DEFAULTS.tickColor, stepSize:1},
+                         grid:{color:CHART_DEFAULTS.gridColor} }
+                }
+            }
+        });
+    }).catch(()=>{});
+</script>
+{% endblock %}
