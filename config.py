@@ -64,4 +64,4 @@ PRINTER_PORT    = os.getenv("PRINTER_PORT", "COM1")
 # Web Panel
 WEB_HOST   = "0.0.0.0"
 WEB_PORT   = 5000
-SECRET_KEY = os.getenv("SECRET_KEY", "ramo-pub-secret-2024")
+SECRET_KEY = os.getenv("SECRET_KEY")

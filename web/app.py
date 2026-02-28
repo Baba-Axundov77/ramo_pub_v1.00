@@ -17,6 +17,7 @@ from flask import (
     Flask, render_template, redirect, url_for,
     session, flash, request, jsonify, g
 )
+import secrets
 from functools import wraps
 from typing import Callable, Any
 
@@ -40,9 +41,10 @@ def create_app(config: dict = None) -> Flask:
     )
 
     # ── Konfiqurasiya ─────────────────────────────────────────────────────────
-    app.secret_key = os.environ.get("FLASK_SECRET", "ramo-pub-secret-key-2024")
+    app.secret_key = os.environ.get("FLASK_SECRET") or os.environ.get("SECRET_KEY") or secrets.token_hex(32)
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+    app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
 
     if config:
         app.config.update(config)
@@ -129,4 +131,5 @@ if __name__ == "__main__":
     app = create_app()
     print("[OK] Ramo Pub Web Paneli başlayır...")
     print("[OK] http://localhost:5000")
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    debug_enabled = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.run(host="0.0.0.0", port=5000, debug=debug_enabled)
