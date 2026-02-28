@@ -3,20 +3,6 @@
   <component name="ChangeListManager">
     <list default="true" id="86c53497-eb33-44ba-a89f-dc4abf78bd90" name="Changes" comment="27mod">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/database/connection.py" beforeDir="false" afterPath="$PROJECT_DIR$/database/connection.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/desktop/main_window.py" beforeDir="false" afterPath="$PROJECT_DIR$/desktop/main_window.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/desktop/views/orders_view.py" beforeDir="false" afterPath="$PROJECT_DIR$/desktop/views/orders_view.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/modules/reports/report_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/modules/reports/report_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/app.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/app.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/orders.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/orders.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/reports.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/reports.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/tables.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/tables.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/css/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/css/style.css" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/base.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/base.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/errors/403.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/errors/403.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/orders/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/orders/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/reports/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/reports/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/tables/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/tables/index.html" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -226,7 +212,15 @@
       <option name="project" value="LOCAL" />
       <updated>1772273312879</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="27mod">
+      <option name="closed" value="true" />
+      <created>1772305159968</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1772305159968</updated>
+    </task>
+    <option name="localTasksCounter" value="5" />
     <servers />
   </component>
   <component name="Vcs.Log.Tabs.Properties">
