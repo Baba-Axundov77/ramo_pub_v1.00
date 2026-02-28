@@ -7,7 +7,7 @@ from flask import (
     url_for, flash, session, jsonify,
 )
 from database.connection import get_db
-from web.auth_utils import login_required
+from web.app import login_required
 
 reservations_bp = Blueprint("reservations", __name__, url_prefix="/reservations")
 
@@ -59,8 +59,8 @@ def create():
             flash("✅  Rezervasiya yaradıldı.", "success")
         else:
             flash(f"❌  {result}", "danger")
-    except Exception:
-        flash("❌  Daxil edilən məlumatlar yanlışdır.", "danger")
+    except Exception as e:
+        flash(f"❌  Xəta: {e}", "danger")
     return redirect(url_for("reservations.index"))
 
 
