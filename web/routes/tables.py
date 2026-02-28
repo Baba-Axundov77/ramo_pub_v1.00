@@ -1,22 +1,43 @@
-# web/routes/tables.py
+# web/routes/tables.py — Masa Marşrutları (Tam versiya)
 from __future__ import annotations
-from flask import Blueprint, render_template, session, redirect, url_for, g, jsonify, request
+from flask import (
+    Blueprint, render_template, session, redirect,
+    url_for, g, jsonify, request, flash
+)
 from modules.tables.table_service import TableService
+from modules.orders.order_service import OrderService
 
-bp   = Blueprint("tables", __name__, url_prefix="/tables")
-svc  = TableService()
+bp        = Blueprint("tables", __name__, url_prefix="/tables")
+svc       = TableService()
+order_svc = OrderService()
+
 
 def _check():
     if "user" not in session:
         return redirect(url_for("auth.login"))
 
+
+def _user_id():
+    return session["user"]["id"]
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SƏHIFƏ
+# ─────────────────────────────────────────────────────────────────────────────
+
 @bp.route("/")
 def index():
     c = _check()
-    if c: return c
+    if c:
+        return c
     tables = svc.get_all(g.db)
     stats  = svc.get_stats(g.db)
     return render_template("tables/index.html", tables=tables, stats=stats)
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API — BÜTÜN MASALAR
+# ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/all")
 def api_all():
@@ -24,13 +45,18 @@ def api_all():
         return jsonify({"error": "401"}), 401
     tables = svc.get_all(g.db)
     return jsonify([{
-        "id":     t.id,
-        "number": t.number,
-        "name":   t.name or "",
-        "status": t.status.value,
-        "floor":  t.floor,
+        "id":       t.id,
+        "number":   t.number,
+        "name":     t.name or "",
+        "status":   t.status.value,
+        "floor":    t.floor,
         "capacity": t.capacity,
     } for t in tables])
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API — STATUS DƏYİŞ
+# ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/status/<int:table_id>", methods=["POST"])
 def set_status(table_id: int):

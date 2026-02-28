@@ -10,26 +10,33 @@
     <div class="header-actions">
         <div class="filter-tabs" id="floorTabs">
             <button class="filter-tab active" data-floor="all">Hamısı</button>
-            <button class="filter-tab" data-floor="1">1. Mərtəbə</button>
-            <button class="filter-tab" data-floor="2">2. Mərtəbə</button>
+            {% set floors = tables | map(attribute='floor') | unique | list | sort %}
+            {% for f in floors %}
+            <button class="filter-tab" data-floor="{{ f }}">{{ f }}. Mərtəbə</button>
+            {% endfor %}
         </div>
+        {% if current_user and current_user.role == 'admin' %}
+        <button class="btn btn-primary btn-sm" onclick="openModal('addTableModal')" style="margin-left:12px;">➕ Yeni Masa</button>
+        {% endif %}
     </div>
 </div>
 
-<div class="mini-stats">
+<!-- Statistika -->
+<div class="mini-stats" style="margin-bottom:20px;">
     <span class="mini-stat green">🟢 Boş: {{ stats.available }}</span>
     <span class="mini-stat red">🔴 Dolu: {{ stats.occupied }}</span>
     <span class="mini-stat amber">🟡 Rezerv: {{ stats.reserved }}</span>
     <span class="mini-stat blue">🔵 Təmizlik: {{ stats.cleaning }}</span>
 </div>
 
+<!-- Masalar grid -->
 <div class="tables-grid" id="tablesGrid">
     {% for t in tables %}
     {% set status_map = {
-        'available': ('available',  'Boş'),
-        'occupied':  ('occupied',   'Dolu'),
-        'reserved':  ('reserved',   'Rezerv'),
-        'cleaning':  ('cleaning',   'Təmizlik'),
+        'available': ('available', 'Boş'),
+        'occupied':  ('occupied',  'Dolu'),
+        'reserved':  ('reserved',  'Rezerv'),
+        'cleaning':  ('cleaning',  'Təmizlik'),
     } %}
     {% set sc = status_map.get(t.status.value, ('unknown', t.status.value)) %}
 
@@ -41,7 +48,7 @@
              data-name="{{ t.name or ('Masa ' ~ t.number) }}">
         <div class="table-photo-wrap table-open-order" role="button" tabindex="0" title="Sifariş səhifəsini aç">
             {% if t.image_path %}
-            <img src="{{ media_url(t.image_path) }}" alt="{{ t.name or 'Masa ' ~ t.number }}" class="table-photo"
+            <img src="{{ media_url(t.image_path) }}" alt="{{ t.name }}" class="table-photo"
                  onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
             {% endif %}
             <div class="table-photo-fallback" {% if t.image_path %}style="display:none"{% endif %}>🪑</div>
@@ -60,15 +67,15 @@
         <div class="table-order">
             {% set active = namespace(found=false) %}
             {% for o in t.orders %}
-                {% if o.status.value in ['new', 'preparing', 'ready', 'served'] %}
+                {% if o.status.value in ['new','preparing','ready','served'] %}
                     {% set active.found = true %}
                     <a href="{{ url_for('orders.index', table_id=t.id, order_id=o.id) }}" class="badge badge-amber">
                         #{{ o.id }} — {{ "%.2f"|format(o.total) }} ₼
-                    </a>
+                    </span>
                 {% endif %}
             {% endfor %}
             {% if not active.found %}
-                <span class="text-muted">Aktiv sifariş yoxdur</span>
+                <span style="color:var(--muted);font-size:11px;">Aktiv sifariş yoxdur</span>
             {% endif %}
         </div>
     </article>
@@ -201,4 +208,5 @@
     });
 })();
 </script>
+{% endblock %}
 {% endblock %}
