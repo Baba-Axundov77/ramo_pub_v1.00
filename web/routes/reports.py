@@ -18,7 +18,8 @@ def index():
     today  = date.today()
     daily  = svc.daily_summary(g.db, today)
     top    = svc.top_items(g.db, limit=5)
-    return render_template("reports/index.html", daily=daily, top=top, today=today)
+    completed_sales = svc.completed_sales(g.db, today, limit=100)
+    return render_template("reports/index.html", daily=daily, top=top, today=today, completed_sales=completed_sales)
 
 @bp.route("/api/monthly")
 def api_monthly():

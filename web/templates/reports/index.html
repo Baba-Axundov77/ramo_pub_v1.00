@@ -94,6 +94,37 @@
         <canvas id="hourlyChart2" height="220"></canvas>
     </div>
 </div>
+
+<!-- Tamamlanmış satışlar -->
+<div class="card" style="margin-top:20px;">
+    <div class="section-header">
+        <h2>🧾 Tamamlanmış Satışlar</h2>
+        <span class="badge badge-green">{{ completed_sales|length }}</span>
+    </div>
+    <div class="table-wrap">
+        <table class="table">
+            <thead>
+            <tr>
+                <th>#</th><th>Masa</th><th>Məhsul sayı</th><th>Üsul</th><th>Məbləğ</th><th>Vaxt</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for s in completed_sales %}
+                <tr>
+                    <td>#{{ s.order_id }}</td>
+                    <td>{{ s.table if s.table else "—" }}</td>
+                    <td>{{ s.items }}</td>
+                    <td>{{ {"cash":"Nağd","card":"Kart","online":"Online"}.get(s.method, s.method) }}</td>
+                    <td><strong class="text-green">{{ "%.2f"|format(s.amount) }} ₼</strong></td>
+                    <td>{{ s.paid_at.strftime("%H:%M") if s.paid_at else "—" }}</td>
+                </tr>
+            {% else %}
+                <tr><td colspan="6" style="text-align:center; color:var(--muted); padding:24px;">Bu gün tamamlanan satış yoxdur.</td></tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}

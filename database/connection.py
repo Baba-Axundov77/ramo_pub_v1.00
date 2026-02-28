@@ -69,7 +69,11 @@ def init_database():
         )
         with engine.connect() as conn:
             conn.execute(text("SELECT 1"))
+    except OperationalError:
+        sqlite_url = os.getenv("SQLITE_FALLBACK_URL", "sqlite:///ramo_pub.sqlite3")
+        engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
 
+    try:
         SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
         # Yeni cedvelleri yarat (movcudlari deyismir)
