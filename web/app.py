@@ -15,6 +15,13 @@ import secrets
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import Flask, render_template, redirect, url_for, session, request, g
+from flask import (
+    Flask, render_template, redirect, url_for,
+    session, flash, request, jsonify, g
+)
+import secrets
+from functools import wraps
+from typing import Callable, Any
 
 # Verilənlər bazası
 from database.connection import get_db, init_database
