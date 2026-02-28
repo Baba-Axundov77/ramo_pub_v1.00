@@ -74,17 +74,18 @@ def main():
     # .env faylı
     import os
     from pathlib import Path
-    env_ok = Path(".env").exists()
+    root_dir = Path(__file__).resolve().parent
+    env_ok = (root_dir / ".env").exists()
     print(f"\n  {'✅' if env_ok else '❌'}  .env faylı{'    mövcuddur' if env_ok else '    YÜKLƏNMƏYİB'}")
     if not env_ok:
-        print("     → cp .env.example .env  komandası ilə yaradın")
+        print("     → layihə kökündə cp .env.example .env  komandası ilə yaradın")
         all_ok = False
 
     # PostgreSQL yoxlaması
     if not missing_required or "psycopg2-binary" not in missing_required:
         try:
             from dotenv import load_dotenv
-            load_dotenv()
+            load_dotenv(Path(__file__).resolve().parent / ".env")
             import sqlalchemy as sa
             db_url = (
                 f"postgresql://{os.getenv('DB_USER','postgres')}:"

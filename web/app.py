@@ -1,51 +1,31 @@
-# web/app.py
-# Python 3.10 uyğun — Flask Web Paneli
-"""
-Ramo Pub & TeaHouse — Web İdarə Paneli
-Əsas Flask tətbiqi.
-"""
-
+# web/app.py — Ramo Pub & TeaHouse Web Panel (Tam versiya)
 from __future__ import annotations
 
 import os
 import sys
+import secrets
 
-# Proyektin kök qovluğunu Python path-ə əlavə et
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import (
     Flask, render_template, redirect, url_for,
-    session, flash, request, jsonify, g, send_from_directory, abort
+    session, g, send_from_directory, abort
 )
-import secrets
 
-# Verilənlər bazası
 from database.connection import get_db, init_database
-from modules.auth.auth_service import AuthService
-
-# Route modulları
-from web.routes import dashboard, tables, menu, orders, reports, auth_routes
-from web.routes.reservations import reservations_bp
-from web.routes.loyalty      import loyalty_bp
-from web.routes.inventory    import inventory_bp
 
 
-
-def _resolve_media_file(path_value: str | None) -> tuple[str, str] | None:
-    """DB-də saxlanan şəkil yolunu web üçün oxuna bilən fayla çevir."""
+def _resolve_media_file(path_value: str | None):
     if not path_value:
         return None
-
     candidate = os.path.basename(path_value)
     if not candidate:
         return None
-
     search_dirs = [
         os.path.join(os.path.dirname(__file__), "static", "uploads"),
         os.path.join(os.path.dirname(os.path.dirname(__file__)), "desktop", "assets", "menu_images"),
         os.path.join(os.path.dirname(os.path.dirname(__file__)), "desktop", "assets", "table_images"),
     ]
-
     for folder in search_dirs:
         full = os.path.join(folder, candidate)
         if os.path.isfile(full):
@@ -54,7 +34,6 @@ def _resolve_media_file(path_value: str | None) -> tuple[str, str] | None:
 
 
 def create_app(config: dict = None) -> Flask:
-    """Flask tətbiqi fabrikası."""
     app = Flask(
         __name__,
         template_folder="templates",
@@ -62,10 +41,17 @@ def create_app(config: dict = None) -> Flask:
     )
 
     # ── Konfiqurasiya ─────────────────────────────────────────────────────────
-    app.secret_key = os.environ.get("FLASK_SECRET") or os.environ.get("SECRET_KEY") or secrets.token_hex(32)
-    app.config["SESSION_COOKIE_HTTPONLY"] = True
+    app.secret_key = (
+        os.environ.get("FLASK_SECRET")
+        or os.environ.get("SECRET_KEY")
+        or secrets.token_hex(32)
+    )
+    app.config["SESSION_COOKIE_HTTPONLY"]  = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-    app.config["SESSION_COOKIE_SECURE"] = os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
+    app.config["SESSION_COOKIE_SECURE"]   = (
+        os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
+    )
+    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB
 
     if config:
         app.config.update(config)
@@ -82,6 +68,11 @@ def create_app(config: dict = None) -> Flask:
             db.close()
 
     # ── Blueprint-lər ─────────────────────────────────────────────────────────
+    from web.routes import auth_routes, dashboard, tables, menu, orders, reports
+    from web.routes.reservations import reservations_bp
+    from web.routes.loyalty      import loyalty_bp
+    from web.routes.inventory    import inventory_bp
+
     app.register_blueprint(auth_routes.bp)
     app.register_blueprint(dashboard.bp)
     app.register_blueprint(tables.bp)
@@ -97,10 +88,12 @@ def create_app(config: dict = None) -> Flask:
     def inject_globals():
         from datetime import datetime as _dt
         return {
-            "app_name":    "Ramo Pub & TeaHouse",
+            "app_name":     "Ramo Pub & TeaHouse",
             "current_user": session.get("user"),
-            "now":         _dt.now,
-            "media_url":   lambda p: url_for("media_file", filename=os.path.basename(p)) if p else "",
+            "now":          _dt.now,
+            "media_url": lambda p: (
+                url_for("media_file", filename=os.path.basename(p)) if p else ""
+            ),
         }
 
     # ── Kök marşrut ───────────────────────────────────────────────────────────
@@ -109,7 +102,6 @@ def create_app(config: dict = None) -> Flask:
         if "user" not in session:
             return redirect(url_for("auth.login"))
         return redirect(url_for("dashboard.index"))
-
 
     @app.route("/media/<path:filename>")
     def media_file(filename: str):
@@ -122,24 +114,29 @@ def create_app(config: dict = None) -> Flask:
     # ── Xəta səhifələri ───────────────────────────────────────────────────────
     @app.errorhandler(404)
     def page_not_found(e):
+        if "user" not in session:
+            return redirect(url_for("auth.login"))
         return render_template("errors/404.html"), 404
 
     @app.errorhandler(500)
     def internal_error(e):
         return render_template("errors/500.html"), 500
 
+    @app.errorhandler(403)
+    def forbidden(e):
+        return render_template("errors/403.html"), 403
+
     return app
 
 
-
 if __name__ == "__main__":
-
     ok, msg = init_database()
     if not ok:
         print(f"[XƏTA] Verilənlər bazasına qoşulmaq olmadı: {msg}")
         sys.exit(1)
+
     app = create_app()
     print("[OK] Ramo Pub Web Paneli başlayır...")
     print("[OK] http://localhost:5000")
-    debug_enabled = os.environ.get("FLASK_DEBUG", "0") == "1"
-    app.run(host="0.0.0.0", port=5000, debug=debug_enabled)
+    debug_mode = os.environ.get("FLASK_DEBUG", "0") == "1"
+    app.run(host="0.0.0.0", port=5000, debug=debug_mode)

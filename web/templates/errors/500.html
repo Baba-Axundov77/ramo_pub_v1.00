@@ -1,10 +1,10 @@
 {% extends "base.html" %}
-{% block title %}Server Xetasi{% endblock %}
+{% block title %}500 — Server Xətası{% endblock %}
 {% block content %}
-<div class="empty-state" style="padding:80px 20px;">
-    <div style="font-size:72px;">500</div>
-    <h2 style="color:#E74C3C;">Server Xetasi</h2>
-    <p style="color:#8080A0;">Xeta bas verdi. Zehmet olmasa yeniden cehed edin.</p>
-    <a href="/" class="btn btn-primary" style="margin-top:20px;">Ana Sehife</a>
+<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;">
+  <div style="font-size:80px;margin-bottom:16px;">⚠️</div>
+  <h1 style="font-size:48px;color:#E74C3C;margin-bottom:8px;">500</h1>
+  <p style="color:var(--muted);font-size:18px;margin-bottom:24px;">Server xətası baş verdi</p>
+  <a href="/" class="btn btn-secondary">🏠 Ana Səhifə</a>
 </div>
 {% endblock %}
