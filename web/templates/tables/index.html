@@ -320,7 +320,7 @@ async function actNewOrder() {
         { method: "POST" });
     if (res?.ok) {
         toast("Sifariş yaradıldı ✅");
-        setTimeout(() => { window.location.href = res.redirect; }, 500);
+        setTimeout(() => { location.reload(); }, 500);
     } else if (res?.redirect) {
         toast(res.msg, "warning");
         setTimeout(() => { window.location.href = res.redirect; }, 800);
@@ -334,7 +334,7 @@ function actViewOrder() {
     const orderId = _orderId;
     closeActionModal();
     if (!orderId) { toast("Aktiv sifariş yoxdur", "warning"); return; }
-    window.location.href = `/orders/?table_id=${id}&order_id=${orderId}&focus_menu=1`;
+    window.location.href = `/orders/?table_id=${id}&order_id=${orderId}`;
 }
 
 function actPayment() {
