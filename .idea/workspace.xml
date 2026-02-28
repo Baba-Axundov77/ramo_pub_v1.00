@@ -3,6 +3,7 @@
   <component name="ChangeListManager">
     <list default="true" id="86c53497-eb33-44ba-a89f-dc4abf78bd90" name="Changes" comment="27mod">
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/web/static/css/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/css/style.css" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -70,6 +71,11 @@
     <key name="CopyFile.RECENT_KEYS">
       <recent name="C:\Users\Axund\PycharmProjects\ramo_pub" />
     </key>
+  </component>
+  <component name="RunAnythingCache">
+    <option name="myCommands">
+      <command value="menu-item" />
+    </option>
   </component>
   <component name="RunManager" selected="Python.main">
     <configuration name="app (1)" type="PythonConfigurationType" factoryName="Python" temporary="true" nameIsGenerated="true">

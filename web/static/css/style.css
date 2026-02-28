@@ -16,7 +16,7 @@
   --blue:     #3498DB;
   --purple:   #9B59B6;
   --amber:    #E8A045;
-  --sidebar-w: 240px;
+  --sidebar-w: 0px;
   --radius:   12px;
   --shadow:   0 4px 24px rgba(0,0,0,0.5);
   --transition: 0.2s ease;
@@ -92,7 +92,7 @@ body { display: flex; }
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 14px;
+  padding: 10px 0;
   border-radius: 10px;
   color: var(--muted);
   text-decoration: none;
