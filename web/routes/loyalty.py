@@ -6,7 +6,7 @@ from flask import (
     url_for, flash, jsonify,
 )
 from database.connection import get_db
-from web.app import login_required, admin_required
+from web.auth import login_required, admin_required
 
 loyalty_bp = Blueprint("loyalty", __name__, url_prefix="/loyalty")
 

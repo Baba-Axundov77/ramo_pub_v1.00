@@ -16,7 +16,6 @@
     </div>
 </div>
 
-<!-- Stat bar -->
 <div class="mini-stats">
     <span class="mini-stat green">🟢 Boş: {{ stats.available }}</span>
     <span class="mini-stat red">🔴 Dolu: {{ stats.occupied }}</span>
@@ -24,66 +23,61 @@
     <span class="mini-stat blue">🔵 Təmizlik: {{ stats.cleaning }}</span>
 </div>
 
-<!-- Masa cədvəli -->
-<div class="card">
-    <div class="table-responsive">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>Masa</th>
-                    <th>Ad</th>
-                    <th>Tutum</th>
-                    <th>Mərtəbə</th>
-                    <th>Status</th>
-                    <th>Aktiv Sifariş</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for t in tables %}
-                <tr class="table-row" data-floor="{{ t.floor }}">
-                    <td><span class="table-num">{{ t.number }}</span></td>
-                    <td>{{ t.name or "—" }}</td>
-                    <td>
-                        <i class="fas fa-users text-muted"></i>
-                        {{ t.capacity }} nəfər
-                    </td>
-                    <td>{{ t.floor }}. mərtəbə</td>
-                    <td>
-                        {% set status_map = {
-                            'available': ('badge-green',  '🟢 Boş'),
-                            'occupied':  ('badge-red',    '🔴 Dolu'),
-                            'reserved':  ('badge-amber',  '🟡 Rezerv'),
-                            'cleaning':  ('badge-blue',   '🔵 Təmizlik'),
-                        } %}
-                        {% set sc = status_map.get(t.status.value, ('badge-muted', t.status.value)) %}
-                        <span class="badge {{ sc[0] }}">{{ sc[1] }}</span>
-                    </td>
-                    <td>
-                        {% set active = namespace(found=false) %}
-                        {% for o in t.orders %}
-                            {% if o.status.value in ['open','pending'] %}
-                                {% set active.found = true %}
-                                <a href="{{ url_for('orders.index') }}"
-                                   class="badge badge-amber">
-                                    #{{ o.id }} — {{ "%.2f"|format(o.total) }} ₼
-                                </a>
-                            {% endif %}
-                        {% endfor %}
-                        {% if not active.found %}
-                            <span class="text-muted">—</span>
-                        {% endif %}
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+<div class="tables-grid" id="tablesGrid">
+    {% for t in tables %}
+    {% set status_map = {
+        'available': ('available',  'Boş'),
+        'occupied':  ('occupied',   'Dolu'),
+        'reserved':  ('reserved',   'Rezerv'),
+        'cleaning':  ('cleaning',   'Təmizlik'),
+    } %}
+    {% set sc = status_map.get(t.status.value, ('unknown', t.status.value)) %}
+
+    {% set active = namespace(found=false, order_id=None, total=0) %}
+    {% for o in t.orders %}
+        {% if o.status.value in ['new', 'preparing', 'ready', 'served'] and not active.found %}
+            {% set active.found = true %}
+            {% set active.order_id = o.id %}
+            {% set active.total = o.total %}
+        {% endif %}
+    {% endfor %}
+
+    <a class="table-tile table-row" data-floor="{{ t.floor }}"
+       href="{{ url_for('orders.index', table_id=t.id, order_id=active.order_id) }}">
+        <div class="table-header-row">
+            <div class="table-num-badge">{{ t.number }}</div>
+            <div class="table-floor">{{ t.floor }}. mərtəbə</div>
+        </div>
+
+        <div class="table-photo-wrap">
+            {% if t.image_path %}
+            <img src="{{ media_url(t.image_path) }}" alt="{{ t.name or 'Masa ' ~ t.number }}" class="table-photo"
+                 onerror="this.style.display='none';this.nextElementSibling.style.display='flex';">
+            {% endif %}
+            <div class="table-photo-fallback" {% if t.image_path %}style="display:none"{% endif %}>🪑</div>
+        </div>
+
+        <div class="table-name">{{ t.name or ('Masa ' ~ t.number) }}</div>
+
+        <div class="table-order">
+            {% if active.found %}
+                <span class="badge badge-amber">Sifariş #{{ active.order_id }} — {{ "%.2f"|format(active.total) }} ₼</span>
+            {% else %}
+                <span class="text-muted">Sifariş açmaq üçün toxunun</span>
+            {% endif %}
+        </div>
+
+        <div class="table-footer-row">
+            <div class="table-status {{ sc[0] }}">{{ sc[1] }}</div>
+            <div class="table-capacity">{{ t.capacity }} nəfər</div>
+        </div>
+    </a>
+    {% endfor %}
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Mərtəbə filtri
 document.querySelectorAll(".filter-tab").forEach(btn => {
     btn.addEventListener("click", () => {
         document.querySelectorAll(".filter-tab").forEach(b => b.classList.remove("active"));

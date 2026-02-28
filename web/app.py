@@ -15,11 +15,9 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from flask import (
     Flask, render_template, redirect, url_for,
-    session, flash, request, jsonify, g
+    session, flash, request, jsonify, g, send_from_directory, abort
 )
 import secrets
-from functools import wraps
-from typing import Callable, Any
 
 # Verilənlər bazası
 from database.connection import get_db, init_database
@@ -30,6 +28,29 @@ from web.routes import dashboard, tables, menu, orders, reports, auth_routes
 from web.routes.reservations import reservations_bp
 from web.routes.loyalty      import loyalty_bp
 from web.routes.inventory    import inventory_bp
+
+
+
+def _resolve_media_file(path_value: str | None) -> tuple[str, str] | None:
+    """DB-də saxlanan şəkil yolunu web üçün oxuna bilən fayla çevir."""
+    if not path_value:
+        return None
+
+    candidate = os.path.basename(path_value)
+    if not candidate:
+        return None
+
+    search_dirs = [
+        os.path.join(os.path.dirname(__file__), "static", "uploads"),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "desktop", "assets", "menu_images"),
+        os.path.join(os.path.dirname(os.path.dirname(__file__)), "desktop", "assets", "table_images"),
+    ]
+
+    for folder in search_dirs:
+        full = os.path.join(folder, candidate)
+        if os.path.isfile(full):
+            return folder, candidate
+    return None
 
 
 def create_app(config: dict = None) -> Flask:
@@ -79,6 +100,7 @@ def create_app(config: dict = None) -> Flask:
             "app_name":    "Ramo Pub & TeaHouse",
             "current_user": session.get("user"),
             "now":         _dt.now,
+            "media_url":   lambda p: url_for("media_file", filename=os.path.basename(p)) if p else "",
         }
 
     # ── Kök marşrut ───────────────────────────────────────────────────────────
@@ -87,6 +109,15 @@ def create_app(config: dict = None) -> Flask:
         if "user" not in session:
             return redirect(url_for("auth.login"))
         return redirect(url_for("dashboard.index"))
+
+
+    @app.route("/media/<path:filename>")
+    def media_file(filename: str):
+        resolved = _resolve_media_file(filename)
+        if not resolved:
+            abort(404)
+        folder, fname = resolved
+        return send_from_directory(folder, fname)
 
     # ── Xəta səhifələri ───────────────────────────────────────────────────────
     @app.errorhandler(404)
@@ -100,30 +131,9 @@ def create_app(config: dict = None) -> Flask:
     return app
 
 
-# ── Giriş tələb edən decorator ────────────────────────────────────────────────
-def login_required(f: Callable) -> Callable:
-    @wraps(f)
-    def decorated(*args: Any, **kwargs: Any):
-        if "user" not in session:
-            flash("Zəhmət olmasa, əvvəlcə giriş edin.", "warning")
-            return redirect(url_for("auth.login"))
-        return f(*args, **kwargs)
-    return decorated
-
-
-def admin_required(f: Callable) -> Callable:
-    @wraps(f)
-    def decorated(*args: Any, **kwargs: Any):
-        if "user" not in session:
-            return redirect(url_for("auth.login"))
-        if session["user"].get("role") != "admin":
-            flash("Bu səhifəyə giriş icazəniz yoxdur.", "danger")
-            return redirect(url_for("dashboard.index"))
-        return f(*args, **kwargs)
-    return decorated
-
 
 if __name__ == "__main__":
+
     ok, msg = init_database()
     if not ok:
         print(f"[XƏTA] Verilənlər bazasına qoşulmaq olmadı: {msg}")

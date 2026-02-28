@@ -41,6 +41,14 @@ class TableCard(QFrame):
         self.num_lbl.setFont(QFont("Georgia", 26, QFont.Weight.Bold))
         v.addWidget(self.num_lbl)
 
+        from desktop.views.widgets.image_picker import RoundedImageLabel
+        self.image_lbl = RoundedImageLabel(
+            None, width=92, height=56, radius=10,
+            placeholder_icon="🪑", placeholder_text=""
+        )
+        self.image_lbl.setVisible(False)
+        v.addWidget(self.image_lbl, 0, Qt.AlignmentFlag.AlignCenter)
+
         self.name_lbl = QLabel()
         self.name_lbl.setAlignment(Qt.AlignmentFlag.AlignCenter)
         self.name_lbl.setFont(QFont("Segoe UI", 9))
@@ -80,11 +88,14 @@ class TableCard(QFrame):
         self.num_lbl.setText(str(table.number))
         self.num_lbl.setStyleSheet(f"color: {accent};")
 
-        # Şəkil varsa, adı göstər; yoxdursa emoji
-        if getattr(table, "image_path", None):
-            from desktop.views.widgets.image_picker import RoundedImageLabel
-            # Şəkli num_lbl yerinə qoy (sadəcə rəng dəyişdir)
-            self.num_lbl.setStyleSheet(f"color: {accent}; font-size: 20px;")
+        image_path = getattr(table, "image_path", None)
+        if image_path:
+            self.image_lbl.set_image(image_path)
+            self.image_lbl.setVisible(True)
+            self.num_lbl.setStyleSheet(f"color: {accent}; font-size: 18px;")
+        else:
+            self.image_lbl.setVisible(False)
+            self.num_lbl.setStyleSheet(f"color: {accent};")
 
         self.name_lbl.setText(table.name or "")
         self.name_lbl.setStyleSheet("color: rgba(255,255,255,0.7);")
