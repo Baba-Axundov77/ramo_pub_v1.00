@@ -275,7 +275,7 @@
                 <input type="text" id="newOrderNotes" class="form-input" placeholder="Xüsusi istəklər...">
             </div>
             <div style="display:flex; gap:10px;">
-                <button class="btn btn-primary" style="flex:1;" onclick="submitNewOrder()">Yaraδ</button>
+                <button class="btn btn-primary" style="flex:1;" onclick="submitNewOrder()">✅ Yarat</button>
                 <button class="btn btn-secondary" onclick="closeModal('newOrderModal')">Ləğv</button>
             </div>
         </div>
@@ -524,9 +524,9 @@ async function addToOrder(itemId, name, price) {
         body: JSON.stringify({ menu_item_id: itemId, quantity: 1 }),
     });
     if (res?.ok) {
-        showFlash(`${name} əlavə edildi`, "success");
+        showFlash(`${name} əlavə edildi ✅`, "success");
         await loadOrder(activeOrderId);
-        closeModal("menuModal");
+        // Menyu modalını bağlamırıq — istifadəçi daha çox məhsul əlavə edə bilsin
     } else {
         showFlash(res?.msg || "Xəta baş verdi", "danger");
     }
@@ -641,9 +641,9 @@ async function submitPayment() {
         showFlash(`✅ Ödəniş qəbul edildi — ${res.final_amount?.toFixed(2)} ₼`, "success");
         closeModal("payModal");
         closePanel();
-        setTimeout(() => location.reload(), 1200);
+        setTimeout(() => location.reload(), 800);
     } else {
-        showFlash(res?.msg || "Ödəniş uğursuz", "danger");
+        showFlash(res?.msg || "Ödəniş uğursuz oldu. Sifarişin statusunu yoxlayın.", "danger");
     }
 }
 

@@ -16,20 +16,47 @@ from database.connection import get_db, init_database
 
 
 def _resolve_media_file(path_value: str | None):
+    """
+    DB-də saxlanan şəkil yolunu web üçün oxuna bilən fayla çevir.
+    Həm mütləq yol, həm nisbi yol, həm də sadəcə fayl adını dəstəkləyir.
+    """
     if not path_value:
         return None
+
+    # Əgər mütləq yol verilib və fayl mövcuddursa — birbaşa qaytar
+    if os.path.isabs(path_value) and os.path.isfile(path_value):
+        return os.path.dirname(path_value), os.path.basename(path_value)
+
     candidate = os.path.basename(path_value)
     if not candidate:
         return None
+
+    # Kök qovluğu
+    ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    WEB  = os.path.dirname(os.path.abspath(__file__))
+
     search_dirs = [
-        os.path.join(os.path.dirname(__file__), "static", "uploads"),
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), "desktop", "assets", "menu_images"),
-        os.path.join(os.path.dirname(os.path.dirname(__file__)), "desktop", "assets", "table_images"),
+        # Web static uploads
+        os.path.join(WEB,  "static", "uploads"),
+        # Desktop assets (əsas şəkil mənbəyi)
+        os.path.join(ROOT, "assets", "table_images"),
+        os.path.join(ROOT, "assets", "menu_images"),
+        os.path.join(ROOT, "assets"),
+        # Desktop qovluğu altında
+        os.path.join(ROOT, "desktop", "assets", "table_images"),
+        os.path.join(ROOT, "desktop", "assets", "menu_images"),
+        os.path.join(ROOT, "desktop", "assets"),
+        # Fayl özünün qovluğu (mütləq yol deyilsə)
+        os.path.join(ROOT, os.path.dirname(path_value)) if not os.path.isabs(path_value) else None,
     ]
+
     for folder in search_dirs:
+        if not folder:
+            continue
         full = os.path.join(folder, candidate)
         if os.path.isfile(full):
             return folder, candidate
+
     return None
 
 
