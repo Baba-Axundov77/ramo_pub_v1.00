@@ -1,704 +1,1108 @@
 {% extends "base.html" %}
 {% block title %}Sifarişlər{% endblock %}
+{% block breadcrumb %}Sifarişlər{% endblock %}
 
 {% block content %}
-<div class="page-header">
-    <div>
-        <h1 class="page-title">📋 Sifarişlər</h1>
-        <p class="page-sub">Aktiv sifarişlər və masa idarəetməsi</p>
-    </div>
-    <div style="display:flex; gap:10px; align-items:center;">
-        <button class="btn btn-primary" onclick="openNewOrderModal()">➕ Yeni Sifariş</button>
-        <a href="{{ url_for('tables.index') }}" class="btn btn-secondary">🪑 Masalar</a>
-    </div>
-</div>
+<style>
+/* ── Override: full-height POS layout ── */
+.main-content { padding: 0 !important; overflow: hidden; }
 
-<!-- ── Statistika ───────────────────────────────────────────── -->
-<div class="stats-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:20px;">
-    <div class="stat-card stat-blue">
-        <div class="stat-icon">📋</div>
-        <div class="stat-body">
-            <div class="stat-value">{{ summary.total_orders }}</div>
-            <div class="stat-label">Bu gün sifarişlər</div>
-        </div>
-    </div>
-    <div class="stat-card stat-red">
-        <div class="stat-icon">🔥</div>
-        <div class="stat-body">
-            <div class="stat-value">{{ summary.active_orders }}</div>
-            <div class="stat-label">Aktiv</div>
-        </div>
-    </div>
-    <div class="stat-card stat-green">
-        <div class="stat-icon">✅</div>
-        <div class="stat-body">
-            <div class="stat-value">{{ summary.paid_orders }}</div>
-            <div class="stat-label">Ödənildi</div>
-        </div>
-    </div>
-    <div class="stat-card stat-amber">
-        <div class="stat-icon">💰</div>
-        <div class="stat-body">
-            <div class="stat-value">{{ "%.2f"|format(summary.total_revenue) }} ₼</div>
-            <div class="stat-label">Gün gəliri</div>
-        </div>
-    </div>
-</div>
+:root {
+    --cat-w: 190px;
+    --bsk-w: 310px;
+}
 
-<!-- ── 2 sütun layout ───────────────────────────────────────── -->
-<div style="display:grid; grid-template-columns:1fr 420px; gap:20px; align-items:start;">
+/* ════════════════════════════════════════
+   3-SÜTUN POS
+════════════════════════════════════════ */
+.pos-layout {
+    display: grid;
+    grid-template-columns: var(--cat-w) 1fr var(--bsk-w);
+    height: calc(100vh - 48px);
+    overflow: hidden;
+}
 
-    <!-- Sol: Aktiv sifarişlər siyahısı -->
-    <div>
-        <div class="section-header" style="margin-bottom:12px;">
-            <h2>🔥 Aktiv Sifarişlər</h2>
-            <span class="badge badge-red" id="activeCount">{{ active|length }}</span>
+/* ── SOL: Kateqoriyalar ─────────────── */
+.col-cat {
+    background: var(--bg3, #1C1C2E);
+    border-right: 1px solid var(--border, #2E2E4E);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+}
+.col-cat-head {
+    padding: 12px 14px 10px;
+    border-bottom: 1px solid var(--border);
+    font-size: 10px; font-weight: 700;
+    color: var(--muted); text-transform: uppercase; letter-spacing: .8px;
+}
+.cat-list {
+    flex: 1; overflow-y: auto; padding: 6px;
+    scrollbar-width: thin;
+}
+.cat-row {
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 12px; border-radius: 8px;
+    cursor: pointer; font-size: 13px; font-weight: 500;
+    color: var(--muted);
+    border-left: 3px solid transparent;
+    transition: .12s; user-select: none;
+}
+.cat-row:hover { background: rgba(255,255,255,.04); color: var(--text); }
+.cat-row.active {
+    background: rgba(232,160,69,.1);
+    color: var(--accent, #E8A045);
+    border-left-color: var(--accent);
+}
+.cat-ico { font-size: 15px; width: 20px; text-align: center; flex-shrink: 0; }
+
+/* ── ORTA: Məhsullar ─────────────────── */
+.col-prod {
+    display: flex; flex-direction: column;
+    background: var(--bg2, #141420);
+    overflow: hidden;
+}
+.prod-top {
+    padding: 8px 12px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.prod-search {
+    width: 100%;
+    background: var(--bg, #0D0D0D);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 8px 12px;
+    font-size: 13px;
+    outline: none;
+}
+.prod-search:focus { border-color: var(--accent); }
+
+.prod-grid {
+    flex: 1; overflow-y: auto; padding: 10px;
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+    gap: 8px;
+    align-content: start;
+    scrollbar-width: thin;
+}
+.prod-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: border-color .15s, transform .12s;
+    user-select: none;
+    position: relative;
+}
+.prod-card:hover { border-color: var(--accent); transform: translateY(-2px); }
+.prod-card:active { transform: scale(.97); }
+.prod-card.flash-add { animation: addPop .3s ease; }
+@keyframes addPop {
+    0%   { box-shadow: 0 0 0 0 rgba(232,160,69,.6); }
+    100% { box-shadow: 0 0 0 10px rgba(232,160,69,0); }
+}
+.prod-img {
+    height: 85px; background: var(--bg2);
+    display: flex; align-items: center; justify-content: center;
+    overflow: hidden;
+}
+.prod-img img { width: 100%; height: 100%; object-fit: cover; }
+.prod-emoji { font-size: 32px; }
+.prod-body { padding: 7px 9px; }
+.prod-name { font-size: 11px; font-weight: 600; color: var(--text); margin-bottom: 3px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.prod-price { font-size: 12px; font-weight: 700; color: var(--accent); }
+
+/* ── SAĞ: Səbət ──────────────────────── */
+.col-bsk {
+    background: var(--bg3);
+    border-left: 1px solid var(--border);
+    display: flex; flex-direction: column;
+    overflow: hidden;
+}
+.bsk-head {
+    padding: 10px 14px;
+    border-bottom: 1px solid var(--border);
+    flex-shrink: 0;
+}
+.bsk-title {
+    font-size: 13px; font-weight: 700; color: var(--text);
+    display: flex; align-items: center; justify-content: space-between;
+    margin-bottom: 8px;
+}
+.bsk-badge {
+    font-size: 10px; padding: 2px 8px; border-radius: 10px;
+    background: rgba(232,160,69,.15); color: var(--accent); font-weight: 600;
+}
+.bsk-table-sel {
+    width: 100%;
+    background: var(--bg, #0D0D0D);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text);
+    padding: 7px 10px;
+    font-size: 12px;
+    outline: none; cursor: pointer;
+}
+.bsk-table-sel:focus { border-color: var(--accent); }
+
+.bsk-items {
+    flex: 1; overflow-y: auto;
+    scrollbar-width: thin;
+}
+.bsk-empty {
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    height: 100%; color: var(--muted); gap: 8px;
+    padding: 30px 20px; text-align: center;
+}
+.bsk-empty-ico { font-size: 36px; }
+
+.bsk-row {
+    display: flex; align-items: center; gap: 7px;
+    padding: 8px 12px;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.bsk-row:hover { background: rgba(255,255,255,.02); }
+.bsk-row-name { flex: 1; font-size: 12px; color: var(--text); line-height: 1.3; }
+.bsk-qty { display: flex; align-items: center; gap: 3px; }
+.bsk-qty button {
+    width: 22px; height: 22px;
+    background: rgba(255,255,255,.06);
+    border: 1px solid var(--border);
+    border-radius: 5px;
+    color: var(--text); cursor: pointer;
+    font-size: 13px;
+    display: flex; align-items: center; justify-content: center;
+    transition: .12s;
+}
+.bsk-qty button:hover { background: rgba(232,160,69,.15); border-color: var(--accent); color: var(--accent); }
+.bsk-qty span { min-width: 18px; text-align: center; font-size: 12px; font-weight: 600; }
+.bsk-row-price { font-size: 12px; font-weight: 700; color: var(--accent); min-width: 42px; text-align: right; }
+.bsk-row-del {
+    background: none; border: none; color: var(--red, #E74C3C);
+    cursor: pointer; font-size: 13px; padding: 3px; border-radius: 4px;
+    opacity: .4; transition: opacity .15s;
+}
+.bsk-row-del:hover { opacity: 1; }
+
+.bsk-foot {
+    border-top: 1px solid var(--border);
+    padding: 10px 14px; flex-shrink: 0;
+}
+.bsk-sum { margin-bottom: 10px; }
+.bsk-sum-row {
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: var(--muted); margin-bottom: 3px;
+}
+.bsk-sum-row.total {
+    font-size: 15px; font-weight: 700; color: var(--text);
+    margin-top: 7px; padding-top: 7px;
+    border-top: 1px solid var(--border);
+}
+.bsk-sum-row.total span:last-child { color: var(--accent); }
+.bsk-btns { display: flex; gap: 6px; }
+.bsk-btns .btn { flex: 1; justify-content: center; padding: 9px 8px; font-size: 12px; }
+
+/* ════════════════════════════════════════
+   ÖDƏNİŞ MODAL (şəkil 3 kimi)
+════════════════════════════════════════ */
+.pay-modal-box {
+    background: var(--bg2, #141420);
+    border-radius: 16px;
+    width: 480px;
+    max-width: calc(100vw - 32px);
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,.6);
+}
+.pay-modal-hd {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+}
+.pay-modal-hd h2 { font-size: 17px; color: var(--accent); margin: 0 0 3px; font-family: Georgia,serif; }
+.pay-modal-hd p { font-size: 12px; color: var(--muted); margin: 0; }
+.pay-items-list {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    max-height: 180px;
+    overflow-y: auto;
+}
+.pay-item-row {
+    display: flex; justify-content: space-between;
+    font-size: 13px; padding: 4px 0;
+    border-bottom: 1px solid rgba(255,255,255,.04);
+}
+.pay-item-row:last-child { border-bottom: none; }
+.pay-item-name { color: var(--text); }
+.pay-item-price { color: var(--accent); font-weight: 600; white-space: nowrap; }
+
+.pay-section {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+}
+.pay-section-lbl {
+    font-size: 10px; font-weight: 700;
+    color: var(--muted); text-transform: uppercase;
+    letter-spacing: .8px; margin-bottom: 9px;
+}
+.pay-disc-row { display: flex; gap: 8px; }
+.pay-disc-row input {
+    flex: 1; background: var(--bg, #0D0D0D);
+    border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    padding: 9px 12px; font-size: 13px; outline: none;
+    text-transform: uppercase;
+}
+.pay-disc-row input:focus { border-color: var(--accent); }
+.pay-disc-row button {
+    padding: 9px 14px;
+    background: none; border: 1px solid var(--accent);
+    border-radius: 8px; color: var(--accent);
+    cursor: pointer; font-size: 12px; font-weight: 600;
+    white-space: nowrap; transition: .15s;
+}
+.pay-disc-row button:hover { background: rgba(232,160,69,.1); }
+
+.pay-methods { display: flex; gap: 8px; }
+.pay-meth-btn {
+    flex: 1; padding: 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(255,255,255,.04);
+    color: var(--muted); cursor: pointer;
+    font-size: 13px; text-align: center;
+    transition: .15s;
+}
+.pay-meth-btn.active {
+    border-color: var(--green, #2ECC71);
+    background: rgba(46,204,113,.12);
+    color: var(--green);
+}
+.pay-meth-btn:hover:not(.active) { border-color: var(--accent); color: var(--accent); }
+
+/* Nağd verilen məbləğ */
+.pay-cash-box {
+    display: grid; grid-template-columns: 1fr 1fr; gap: 8px;
+    margin-top: 10px;
+}
+.pay-cash-box label { font-size: 11px; color: var(--muted); display: block; margin-bottom: 4px; }
+.pay-cash-box input {
+    width: 100%;
+    background: var(--bg, #0D0D0D);
+    border: 1px solid var(--border);
+    border-radius: 8px; color: var(--text);
+    padding: 8px 10px; font-size: 13px; outline: none;
+}
+.pay-cash-box input:focus { border-color: var(--accent); }
+.pay-cash-box .change-val {
+    padding: 8px 10px;
+    border: 1px solid var(--border);
+    border-radius: 8px; font-size: 13px;
+    background: var(--bg);
+    color: var(--green);
+    font-weight: 700;
+}
+
+.pay-totals { padding: 12px 20px; border-bottom: 1px solid var(--border); }
+.pay-tot-row { display: flex; justify-content: space-between; font-size: 13px; margin-bottom: 5px; }
+.pay-tot-row .lbl { color: var(--muted); }
+.pay-tot-row.disc .val { color: var(--green); }
+.pay-tot-row.grand { font-size: 16px; font-weight: 700; border-top: 1px solid var(--border); padding-top: 8px; margin-top: 5px; }
+.pay-tot-row.grand .val { color: var(--accent); }
+
+.pay-footer { display: flex; gap: 8px; padding: 14px 20px; }
+.pay-footer .btn { flex: 1; justify-content: center; padding: 11px; font-size: 14px; font-weight: 700; }
+
+/* ════════════════════════════════════════
+   ÇEK MODAL (şəkil 4 kimi)
+════════════════════════════════════════ */
+.rcpt-box {
+    background: var(--bg2);
+    border-radius: 16px;
+    width: 520px;
+    max-width: calc(100vw - 32px);
+    max-height: 90vh;
+    overflow-y: auto;
+    box-shadow: 0 24px 60px rgba(0,0,0,.6);
+}
+.rcpt-hd {
+    padding: 16px 20px 12px;
+    border-bottom: 1px solid var(--border);
+    display: flex; justify-content: space-between; align-items: flex-start;
+}
+.rcpt-hd-left h2 { font-size: 16px; color: var(--accent); margin: 0 0 3px; font-family: Georgia,serif; }
+.rcpt-hd-left p { font-size: 11px; color: var(--muted); margin: 0; }
+.rcpt-summary-pills {
+    display: flex; gap: 6px; flex-wrap: wrap;
+    justify-content: flex-end;
+}
+.rcpt-pill {
+    text-align: center; padding: 4px 10px;
+    background: rgba(255,255,255,.05);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+}
+.rcpt-pill .lbl { font-size: 9px; color: var(--muted); display: block; }
+.rcpt-pill .val { font-size: 12px; font-weight: 700; display: block; }
+.rcpt-pill.amber .val { color: var(--accent); }
+.rcpt-pill.green .val { color: var(--green); }
+.rcpt-pill.blue  .val { color: #3498DB; }
+
+.rcpt-preview-lbl {
+    padding: 12px 20px 6px;
+    font-size: 10px; font-weight: 700;
+    color: var(--muted); text-transform: uppercase; letter-spacing: .8px;
+}
+.rcpt-preview {
+    margin: 0 20px 12px;
+    background: #080810;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 14px;
+    font-family: "Courier New", monospace;
+    font-size: 12px; color: #D0D0E0;
+    line-height: 1.6;
+    white-space: pre;
+    overflow-x: auto;
+    max-height: 260px;
+    overflow-y: auto;
+}
+.rcpt-print-lbl {
+    padding: 0 20px 6px;
+    font-size: 10px; font-weight: 700;
+    color: var(--muted); text-transform: uppercase; letter-spacing: .8px;
+    border-top: 1px solid var(--border);
+    padding-top: 12px;
+}
+.rcpt-print-btns { display: flex; gap: 8px; padding: 8px 20px 14px; }
+.rcpt-print-btns button {
+    flex: 1; padding: 9px;
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: rgba(255,255,255,.04);
+    color: var(--text); cursor: pointer;
+    font-size: 12px; font-weight: 600;
+    transition: .15s;
+}
+.rcpt-print-btns button:hover { border-color: var(--accent); color: var(--accent); }
+.rcpt-close-btn {
+    margin: 0 20px 18px;
+    width: calc(100% - 40px);
+    padding: 11px;
+    background: var(--accent);
+    border: none; border-radius: 10px;
+    color: #000; font-size: 14px; font-weight: 700;
+    cursor: pointer; transition: .15s;
+    display: flex; align-items: center; justify-content: center; gap: 6px;
+}
+.rcpt-close-btn:hover { opacity: .85; }
+
+/* ── Yeni Sifariş Modal ─── */
+.simple-modal {
+    background: var(--bg2);
+    border-radius: 14px;
+    width: 380px; max-width: calc(100vw - 32px);
+    box-shadow: 0 20px 50px rgba(0,0,0,.6);
+}
+.sm-hd {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 14px 18px; border-bottom: 1px solid var(--border);
+}
+.sm-hd h3 { font-size: 15px; color: var(--accent); margin: 0; }
+.sm-close { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; }
+.sm-close:hover { color: var(--text); }
+.sm-body { padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; }
+.sm-label { font-size: 10px; font-weight: 700; color: var(--muted);
+    text-transform: uppercase; letter-spacing: .5px; margin-bottom: 4px; display: block; }
+.sm-input {
+    width: 100%;
+    background: var(--bg, #0D0D0D);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    color: var(--text); padding: 9px 12px; font-size: 13px; outline: none;
+}
+.sm-input:focus { border-color: var(--accent); }
+
+/* ── Flash toast ─── */
+.pos-toast {
+    position: fixed; bottom: 18px; right: 18px;
+    padding: 10px 16px; border-radius: 10px;
+    font-size: 13px; z-index: 9999;
+    animation: tIn .25s ease; pointer-events: none;
+    box-shadow: 0 4px 20px rgba(0,0,0,.5);
+}
+.pos-toast.ok  { background: rgba(46,204,113,.15); border: 1px solid #2ECC71; color: #2ECC71; }
+.pos-toast.err { background: rgba(231,76,60,.15);  border: 1px solid #E74C3C; color: #E74C3C; }
+.pos-toast.wrn { background: rgba(232,160,69,.15); border: 1px solid #E8A045; color: #E8A045; }
+@keyframes tIn { from{opacity:0;transform:translateY(8px)} to{opacity:1;transform:translateY(0)} }
+</style>
+
+
+<!-- ══════════════════════════════════════════════════
+     3-SÜTUN POS LAYOUT
+══════════════════════════════════════════════════ -->
+<div class="pos-layout">
+
+    <!-- SOL: Kateqoriyalar -->
+    <div class="col-cat">
+        <div class="col-cat-head">Kateqoriyalar</div>
+        <div class="cat-list">
+            <div class="cat-row active" data-cat="all" onclick="setCat(this,'all')">
+                <span class="cat-ico">🍽️</span> Hamısı
+            </div>
+            {% for cat in categories %}
+            <div class="cat-row" data-cat="{{ cat.id }}" onclick="setCat(this,{{ cat.id }})">
+                <span class="cat-ico">{{ cat.icon or '🍴' }}</span>
+                {{ cat.name }}
+            </div>
+            {% endfor %}
         </div>
+    </div>
 
-        {% if active %}
-        <div id="activeOrdersList" style="display:flex; flex-direction:column; gap:10px;">
-            {% for o in active %}
-            <div class="order-card {{ 'order-selected' if selected_order and selected_order.id == o.id else '' }}"
-                 data-order-id="{{ o.id }}"
-                 onclick="loadOrder({{ o.id }})"
-                 style="cursor:pointer;">
-                <div class="order-card-header">
-                    <div style="display:flex; align-items:center; gap:10px;">
-                        <span class="badge badge-amber" style="font-size:15px;">#{{ o.id }}</span>
-                        {% if o.table %}
-                        <span style="font-weight:700; color:var(--text);">Masa {{ o.table.number }}</span>
-                        <span style="color:var(--muted); font-size:12px;">— {{ o.table.name or '' }}</span>
-                        {% endif %}
-                    </div>
-                    <div style="display:flex; align-items:center; gap:8px;">
-                        {% set st_map = {
-                            'new':       ('badge-blue',   '🆕 Yeni'),
-                            'preparing': ('badge-amber',  '👨‍🍳 Hazırlanır'),
-                            'ready':     ('badge-purple', '✅ Hazırdır'),
-                            'served':    ('badge-muted',  '🍽️ Verilib'),
-                        } %}
-                        {% set sc = st_map.get(o.status.value, ('badge-muted', o.status.value)) %}
-                        <span class="badge {{ sc[0] }}">{{ sc[1] }}</span>
-                        <strong class="text-amber">{{ "%.2f"|format(o.total) }} ₼</strong>
-                    </div>
-                </div>
-                <div class="order-card-body">
-                    <span class="text-muted" style="font-size:12px;">
-                        🕐 {{ o.created_at.strftime("%H:%M") if o.created_at else "—" }}
-                        &nbsp;·&nbsp;
-                        👤 {{ o.waiter.full_name if o.waiter else "—" }}
-                        &nbsp;·&nbsp;
-                        📦 {{ o.items|length }} qələm
-                    </span>
-                    {% if o.items %}
-                    <div style="margin-top:6px; display:flex; flex-wrap:wrap; gap:4px;">
-                        {% for item in o.items[:4] %}
-                        <span style="background:var(--bg2); border:1px solid var(--border); border-radius:6px; padding:2px 8px; font-size:11px;">
-                            {{ item.quantity }}x {{ item.menu_item.name if item.menu_item else '?' }}
-                        </span>
-                        {% endfor %}
-                        {% if o.items|length > 4 %}
-                        <span style="color:var(--muted); font-size:11px; padding:2px 4px;">+{{ o.items|length - 4 }} daha</span>
-                        {% endif %}
-                    </div>
+    <!-- ORTA: Məhsullar -->
+    <div class="col-prod">
+        <div class="prod-top">
+            <input class="prod-search" type="text" id="prodQ"
+                   placeholder="🔍  Məhsul axtar..." oninput="filterProds()">
+        </div>
+        <div class="prod-grid" id="prodGrid">
+            {% for item in menu_items %}
+            <div class="prod-card"
+                 data-cat="{{ item.category_id }}"
+                 data-name="{{ item.name | lower }}"
+                 data-id="{{ item.id }}"
+                 data-price="{{ item.price }}"
+                 onclick="addProd({{ item.id }},'{{ item.name|replace("'","\\'") }}',{{ item.price }})">
+                <div class="prod-img">
+                    {% if item.image_path %}
+                    <img src="{{ media_url(item.image_path) }}" alt="{{ item.name }}"
+                         onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">
+                    <span class="prod-emoji" style="display:none;">🍽️</span>
+                    {% else %}
+                    <span class="prod-emoji">🍽️</span>
                     {% endif %}
+                </div>
+                <div class="prod-body">
+                    <div class="prod-name" title="{{ item.name }}">{{ item.name }}</div>
+                    <div class="prod-price">{{ "%.2f"|format(item.price) }} ₼</div>
                 </div>
             </div>
             {% endfor %}
         </div>
-        {% else %}
-        <div class="empty-state">
-            <div class="empty-icon">📭</div>
-            <div>
-                {% if selected_table %}Bu masa üçün aktiv sifariş yoxdur{% else %}Aktiv sifariş yoxdur{% endif %}
-            </div>
-            {% if selected_table %}
-            <button class="btn btn-primary" style="margin-top:12px;"
-                    onclick="createOrderForTable({{ selected_table.id }}, '{{ selected_table.name or 'Masa ' + selected_table.number|string }}')">
-                ➕ Masa {{ selected_table.number }} üçün sifariş yarat
-            </button>
-            {% endif %}
-        </div>
-        {% endif %}
-
-        <!-- Bu günün bütün sifarişləri -->
-        <div class="section-header" style="margin-top:24px; margin-bottom:12px;">
-            <h2>📅 Bu Günün Sifarişləri</h2>
-            <span class="badge badge-muted">{{ today|length }}</span>
-        </div>
-        <div class="card">
-            <div class="table-responsive">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>#</th><th>Masa</th><th>Məhsullar</th>
-                            <th>Cəmi</th><th>Vaxt</th><th>Status</th><th></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for o in today %}
-                        <tr>
-                            <td><strong>#{{ o.id }}</strong></td>
-                            <td>{{ "Masa " + o.table.number|string if o.table else "—" }}</td>
-                            <td><span class="text-muted">{{ o.items|length }} qələm</span></td>
-                            <td class="text-amber"><strong>{{ "%.2f"|format(o.total) }} ₼</strong></td>
-                            <td class="text-muted text-sm">
-                                {{ o.created_at.strftime("%H:%M") if o.created_at else "—" }}
-                            </td>
-                            <td>
-                                {% set st_map = {
-                                    'new':       ('badge-blue',   'Yeni'),
-                                    'preparing': ('badge-amber',  'Hazırlanır'),
-                                    'ready':     ('badge-purple', 'Hazırdır'),
-                                    'served':    ('badge-muted',  'Verilib'),
-                                    'paid':      ('badge-green',  'Ödənildi'),
-                                    'cancelled': ('badge-red',    'Ləğv'),
-                                } %}
-                                {% set sc = st_map.get(o.status.value, ('badge-muted', o.status.value)) %}
-                                <span class="badge {{ sc[0] }}">{{ sc[1] }}</span>
-                            </td>
-                            <td>
-                                {% if o.status.value not in ['paid', 'cancelled'] %}
-                                <button class="btn btn-sm btn-secondary" onclick="loadOrder({{ o.id }})">
-                                    📂 Aç
-                                </button>
-                                {% endif %}
-                            </td>
-                        </tr>
-                        {% else %}
-                        <tr><td colspan="7" style="text-align:center; color:var(--muted); padding:30px;">
-                            📭 Bu gün sifariş yoxdur
-                        </td></tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
     </div>
 
-    <!-- Sağ: Aktiv sifariş panel -->
-    <div id="orderPanel" style="position:sticky; top:20px;">
-        <div class="card" id="orderPanelCard" style="min-height:400px;">
-            <div id="orderPanelEmpty" style="display:flex; flex-direction:column; align-items:center; justify-content:center; padding:60px 20px; color:var(--muted);">
-                <div style="font-size:48px; margin-bottom:12px;">📋</div>
-                <div>Sifariş seçin və ya yeni sifariş yaradın</div>
-                <button class="btn btn-primary" style="margin-top:16px;" onclick="openNewOrderModal()">
-                    ➕ Yeni Sifariş
-                </button>
+    <!-- SAĞ: Səbət -->
+    <div class="col-bsk">
+        <div class="bsk-head">
+            <div class="bsk-title">
+                🛒 Cari Sifariş
+                <span class="bsk-badge" id="bskBadge">—</span>
             </div>
-            <div id="orderPanelContent" style="display:none;">
-                <!-- Header -->
-                <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 20px; border-bottom:1px solid var(--border);">
-                    <div>
-                        <span class="text-amber" style="font-size:18px; font-weight:700;" id="panelOrderId">#—</span>
-                        <span style="color:var(--muted); margin-left:8px;" id="panelTableName">—</span>
-                    </div>
-                    <div style="display:flex; gap:6px; align-items:center;">
-                        <span class="badge" id="panelStatus" style="font-size:12px;">—</span>
-                        <button class="btn btn-sm btn-secondary" onclick="closePanel()" title="Bağla">✕</button>
-                    </div>
-                </div>
+            <select class="bsk-table-sel" id="tableSelect" onchange="switchTable(this.value)">
+                <option value="">— Masa seçin —</option>
+                {% for t in tables %}
+                <option value="{{ t.id }}"
+                    {% if selected_order and selected_order.table_id == t.id %}selected{% endif %}>
+                    Masa {{ t.number }}{% if t.name and t.name != 'Masa '~t.number %} — {{ t.name }}{% endif %}
+                    ({{ 'Dolu' if t.status.value=='occupied' else 'Boş' }})
+                </option>
+                {% endfor %}
+            </select>
+        </div>
 
-                <!-- Items -->
-                <div id="panelItems" style="padding:12px 20px; max-height:300px; overflow-y:auto;">
-                    <!-- JS ilə doldurulur -->
+        <div class="bsk-items" id="bskItems">
+            {% if selected_order and selected_order.items %}
+                {% for oi in selected_order.items %}
+                <div class="bsk-row" data-oi="{{ oi.id }}">
+                    <div class="bsk-row-name">{{ oi.menu_item.name if oi.menu_item else '?' }}</div>
+                    <div class="bsk-qty">
+                        <button onclick="changeQty({{ oi.id }},-1)">−</button>
+                        <span>{{ oi.quantity }}</span>
+                        <button onclick="changeQty({{ oi.id }},1)">+</button>
+                    </div>
+                    <div class="bsk-row-price">{{ "%.2f"|format(oi.subtotal) }} ₼</div>
+                    <button class="bsk-row-del" onclick="removeItem({{ oi.id }})">✕</button>
                 </div>
+                {% endfor %}
+            {% else %}
+                <div class="bsk-empty" id="bskEmpty">
+                    <div class="bsk-empty-ico">🛒</div>
+                    <div style="font-size:13px;">Məhsul yoxdur</div>
+                    <div style="font-size:11px;color:var(--muted);">Məhsulları sol paneldən seçin</div>
+                </div>
+            {% endif %}
+        </div>
 
-                <!-- Totals -->
-                <div style="padding:12px 20px; border-top:1px solid var(--border); background:var(--bg2); border-radius:0 0 12px 12px;">
-                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                        <span class="text-muted">Ara cəm:</span>
-                        <span id="panelSubtotal">0.00 ₼</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                        <span class="text-muted">Endirim:</span>
-                        <span id="panelDiscount" style="color:var(--green);">0.00 ₼</span>
-                    </div>
-                    <div style="display:flex; justify-content:space-between; font-size:18px; font-weight:700;">
-                        <span>Cəmi:</span>
-                        <span id="panelTotal" class="text-amber">0.00 ₼</span>
-                    </div>
+        <div class="bsk-foot">
+            <div class="bsk-sum">
+                <div class="bsk-sum-row">
+                    <span>Ara cəm:</span>
+                    <span id="bskSub">{{ "%.2f"|format(selected_order.subtotal if selected_order else 0) }} ₼</span>
                 </div>
-
-                <!-- Actions -->
-                <div style="padding:12px 20px; display:flex; flex-direction:column; gap:8px;">
-                    <div style="display:flex; gap:8px;">
-                        <button class="btn btn-secondary" style="flex:1;" onclick="changeStatus('preparing')">👨‍🍳 Hazırlanır</button>
-                        <button class="btn btn-secondary" style="flex:1;" onclick="changeStatus('ready')">✅ Hazırdır</button>
-                    </div>
-                    <div style="display:flex; gap:8px;">
-                        <button class="btn btn-secondary" style="flex:1;" onclick="changeStatus('served')">🍽️ Verilib</button>
-                        <button class="btn" style="flex:1; background:#2ECC71; color:#fff;" onclick="openPayModal()">💳 Ödəniş</button>
-                    </div>
-                    <button class="btn" style="background:#E74C3C22; color:#E74C3C; border:1px solid #E74C3C44;" onclick="cancelOrder()">
-                        🚫 Sifarişi ləğv et
-                    </button>
+                <div class="bsk-sum-row">
+                    <span>Endirim:</span>
+                    <span id="bskDisc" style="color:var(--green);">{{ "%.2f"|format(selected_order.discount_amount if selected_order else 0) }} ₼</span>
                 </div>
-
-                <!-- Add items -->
-                <div style="padding:0 20px 16px;">
-                    <button class="btn btn-primary" style="width:100%;" onclick="openMenuModal()">
-                        ➕ Məhsul əlavə et
-                    </button>
+                <div class="bsk-sum-row total">
+                    <span>CƏMİ:</span>
+                    <span id="bskTotal">{{ "%.2f"|format(selected_order.total if selected_order else 0) }} ₼</span>
                 </div>
+            </div>
+            <div class="bsk-btns">
+                <button class="btn btn-secondary" onclick="newOrderModal()" style="padding:9px 6px;font-size:11px;">➕ Yeni</button>
+                <button class="btn btn-secondary" onclick="cancelOrder()" style="padding:9px 6px;font-size:11px;color:var(--red);">✕ Ləğv</button>
+                <button class="btn" onclick="openPayModal()"
+                        style="background:var(--green,#2ECC71);color:#000;padding:9px 8px;font-size:12px;font-weight:700;">
+                    💳 Ödəniş
+                </button>
             </div>
         </div>
     </div>
 </div>
 
 
-<!-- ════════════════════════════════════════════════════════════
-     MODAL — YENİ SİFARİŞ
-════════════════════════════════════════════════════════════ -->
-<div id="newOrderModal" class="modal-overlay" style="display:none;">
-    <div class="modal-box" style="max-width:400px;">
-        <div class="modal-header">
-            <h3>➕ Yeni Sifariş</h3>
-            <button class="modal-close" onclick="closeModal('newOrderModal')">✕</button>
+<!-- ══════════════════════════════════════════════════
+     ÖDƏNİŞ MODAL (şəkil 3)
+══════════════════════════════════════════════════ -->
+<div id="payModal" class="modal-overlay" style="display:none;">
+    <div class="pay-modal-box">
+        <!-- Başlıq -->
+        <div class="pay-modal-hd">
+            <h2 id="payModalTitle">💳 Ödəniş — Masa —</h2>
+            <p id="payModalSub">Sifariş #— | Ofisant: —</p>
         </div>
-        <div style="padding:20px;">
-            <div class="form-group">
-                <label>Masa seçin *</label>
-                <select id="newOrderTableSelect" class="form-input">
-                    <option value="">— Masa seçin —</option>
+
+        <!-- Məhsullar siyahısı -->
+        <div class="pay-items-list" id="payItemsList"></div>
+
+        <!-- Endirim kodu -->
+        <div class="pay-section">
+            <div class="pay-section-lbl">Endirim Kodu</div>
+            <div class="pay-disc-row">
+                <input type="text" id="payDiscCode" placeholder="Kodu daxil edin (boş buraxın)">
+                <button onclick="applyDiscount()">Tətbiq et</button>
+            </div>
+        </div>
+
+        <!-- Ödəniş üsulu -->
+        <div class="pay-section">
+            <div class="pay-section-lbl">Ödəniş Üsulu</div>
+            <div class="pay-methods">
+                <button class="pay-meth-btn active" data-m="cash" onclick="selMeth(this,'cash')">
+                    💵 Nağd
+                </button>
+                <button class="pay-meth-btn" data-m="card" onclick="selMeth(this,'card')">
+                    💳 Kart
+                </button>
+                <button class="pay-meth-btn" data-m="online" onclick="selMeth(this,'online')">
+                    📱 Online
+                </button>
+            </div>
+            <!-- Nağd: verilən məbləğ -->
+            <div class="pay-cash-box" id="payCashBox">
+                <div>
+                    <label class="sm-label">Verilən məbləğ (₼):</label>
+                    <input type="number" id="payCashGiven" placeholder="0.00" min="0" step="0.01"
+                           oninput="calcChange()">
+                </div>
+                <div>
+                    <label class="sm-label">Qaytarılacaq:</label>
+                    <div class="change-val" id="payCashChange">—</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cəmlər -->
+        <div class="pay-totals">
+            <div class="pay-tot-row">
+                <span class="lbl">Ara cəm:</span>
+                <span class="val" id="paySubtotal">0.00 ₼</span>
+            </div>
+            <div class="pay-tot-row disc">
+                <span class="lbl">Endirim:</span>
+                <span class="val" id="payDiscount">- 0.00 ₼</span>
+            </div>
+            <div class="pay-tot-row grand">
+                <span class="lbl">CƏMİ:</span>
+                <span class="val" id="payGrand">0.00 ₼</span>
+            </div>
+        </div>
+
+        <!-- Düymələr -->
+        <div class="pay-footer">
+            <button class="btn btn-secondary" onclick="closeModal('payModal')">Ləğv et</button>
+            <button class="btn" onclick="submitPay()"
+                    style="background:var(--accent);color:#000;font-weight:700;">
+                ✅ Ödənişi Təsdiqlə
+            </button>
+        </div>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════
+     ÇEK MODAL (şəkil 4)
+══════════════════════════════════════════════════ -->
+<div id="rcptModal" class="modal-overlay" style="display:none;">
+    <div class="rcpt-box">
+        <div class="rcpt-hd">
+            <div class="rcpt-hd-left">
+                <h2 id="rcptTitle">Çek — Sifariş #—</h2>
+                <p id="rcptSub">Masa: — | Ofisant: —</p>
+            </div>
+            <div class="rcpt-summary-pills" id="rcptPills"></div>
+        </div>
+
+        <div class="rcpt-preview-lbl">ÇEK ÖNİZLƏMƏSİ</div>
+        <pre class="rcpt-preview" id="rcptText"></pre>
+
+        <div class="rcpt-print-lbl">ÇAP ÜSULU</div>
+        <div class="rcpt-print-btns">
+            <button onclick="rcptPrint('pdf')">📄 PDF Yarat</button>
+            <button onclick="rcptPrint('text')">📝 Mətni Saxla</button>
+            <button onclick="rcptPrint('copy')">📋 Kopyala</button>
+        </div>
+        <button class="rcpt-close-btn" onclick="closeRcpt()">✅ Bağla</button>
+    </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════════
+     YENİ SİFARİŞ MODAL
+══════════════════════════════════════════════════ -->
+<div id="newOrdModal" class="modal-overlay" style="display:none;">
+    <div class="simple-modal">
+        <div class="sm-hd">
+            <h3>➕ Yeni Sifariş</h3>
+            <button class="sm-close" onclick="closeModal('newOrdModal')">✕</button>
+        </div>
+        <div class="sm-body">
+            <div>
+                <label class="sm-label">Masa *</label>
+                <select id="newOrdTable" class="sm-input">
+                    <option value="">— Seçin —</option>
                     {% for t in tables %}
                     <option value="{{ t.id }}"
-                        {% if t.status.value == 'occupied' %}disabled style="color:var(--red)"{% endif %}>
-                        Masa {{ t.number }}{% if t.name and t.name != 'Masa ' + t.number|string %} — {{ t.name }}{% endif %}
-                        ({{ 'Dolu' if t.status.value == 'occupied' else 'Boş' if t.status.value == 'available' else t.status.value }})
+                        {% if t.status.value=='occupied' %}disabled style="color:var(--red)"{% endif %}>
+                        Masa {{ t.number }}{% if t.name and t.name != 'Masa '~t.number %} — {{ t.name }}{% endif %}
+                        ({{ 'Dolu' if t.status.value=='occupied' else 'Boş' }})
                     </option>
                     {% endfor %}
                 </select>
             </div>
-            <div class="form-group">
-                <label>Qeyd (ixtiyari)</label>
-                <input type="text" id="newOrderNotes" class="form-input" placeholder="Xüsusi istəklər...">
+            <div>
+                <label class="sm-label">Qeyd</label>
+                <input type="text" id="newOrdNote" class="sm-input" placeholder="Xüsusi istəklər...">
             </div>
-            <div style="display:flex; gap:10px;">
-                <button class="btn btn-primary" style="flex:1;" onclick="submitNewOrder()">✅ Yarat</button>
-                <button class="btn btn-secondary" onclick="closeModal('newOrderModal')">Ləğv</button>
+            <div style="display:flex;gap:8px;">
+                <button class="btn btn-primary" style="flex:1;" onclick="submitNewOrd()">✅ Yarat</button>
+                <button class="btn btn-secondary" onclick="closeModal('newOrdModal')">Ləğv</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Toast container -->
+<div id="toastCont"></div>
 
-<!-- ════════════════════════════════════════════════════════════
-     MODAL — MENYU
-════════════════════════════════════════════════════════════ -->
-<div id="menuModal" class="modal-overlay" style="display:none;">
-    <div class="modal-box" style="max-width:620px; max-height:80vh; display:flex; flex-direction:column;">
-        <div class="modal-header">
-            <h3>🍽️ Məhsul Seç</h3>
-            <button class="modal-close" onclick="closeModal('menuModal')">✕</button>
-        </div>
-        <!-- Kateqoriyalar -->
-        <div style="padding:12px 20px; border-bottom:1px solid var(--border); display:flex; flex-wrap:wrap; gap:6px;">
-            <button class="btn btn-secondary btn-sm menu-cat-btn active" data-cat="all" onclick="filterMenu('all')">
-                🍽️ Hamısı
-            </button>
-            {% for cat in categories %}
-            <button class="btn btn-secondary btn-sm menu-cat-btn" data-cat="{{ cat.id }}" onclick="filterMenu({{ cat.id }})">
-                {{ cat.icon or '🍽️' }} {{ cat.name }}
-            </button>
-            {% endfor %}
-        </div>
-        <!-- Axtarış -->
-        <div style="padding:10px 20px; border-bottom:1px solid var(--border);">
-            <input type="text" id="menuSearch" class="form-input" placeholder="🔍 Məhsul axtar..." oninput="filterMenuSearch(this.value)" style="width:100%;">
-        </div>
-        <!-- Məhsul Grid -->
-        <div id="menuGrid" style="padding:16px 20px; overflow-y:auto; display:grid; grid-template-columns:repeat(auto-fill,minmax(160px,1fr)); gap:10px; flex:1;">
-            {% for item in menu_items %}
-            <div class="menu-item-card" data-cat="{{ item.category_id }}"
-                 data-name="{{ item.name.lower() }}"
-                 onclick="addToOrder({{ item.id }}, '{{ item.name|replace("'","\\'")|e }}', {{ item.price }})">
-                <div style="font-size:13px; font-weight:700; margin-bottom:4px;">{{ item.name }}</div>
-                <div style="color:var(--muted); font-size:11px; margin-bottom:8px;">
-                    {{ item.category.name if item.category else '' }}
-                </div>
-                <div class="text-amber" style="font-weight:700;">{{ "%.2f"|format(item.price) }} ₼</div>
-            </div>
-            {% else %}
-            <div style="grid-column:1/-1; text-align:center; color:var(--muted); padding:40px;">
-                Menyu boşdur
-            </div>
-            {% endfor %}
-        </div>
-    </div>
-</div>
-<div class="card">
-    <div class="table-responsive">
-        <table class="data-table">
-            <thead>
-                <tr>
-                    <th>#</th>
-                    <th>Masa</th>
-                    <th>Cəmi</th>
-                    <th>Vaxt</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for o in today %}
-                <tr class="{{ "row-warning" if selected_order and selected_order.id == o.id else "" }}">
-                    <td><strong>#{{ o.id }}</strong></td>
-                    <td>{{ "Masa " + o.table.number|string if o.table else "—" }}</td>
-                    <td class="text-amber"><strong>{{ "%.2f"|format(o.total) }} ₼</strong></td>
-                    <td class="text-muted text-sm">
-                        {{ o.created_at.strftime("%H:%M") if o.created_at else "—" }}
-                    </td>
-                    <td>
-                        {% set st_map = {
-                            'new':       ('badge-blue',  'Yeni'),
-                            'preparing': ('badge-amber', 'Hazırlanır'),
-                            'ready':     ('badge-purple','Hazırdır'),
-                            'served':    ('badge-muted', 'Verilib'),
-                            'paid':      ('badge-green', 'Ödənildi'),
-                            'cancelled': ('badge-red',   'Ləğv edildi'),
-                        } %}
-                        {% set sc = st_map.get(o.status.value, ('badge-muted', o.status.value)) %}
-                        <span class="badge {{ sc[0] }}">{{ sc[1] }}</span>
-                    </td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
-</div>
+{% endblock %}
 
 
-<!-- ════════════════════════════════════════════════════════════
-     STYLES
-════════════════════════════════════════════════════════════ -->
-<style>
-.order-card {
-    background: var(--bg3);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    overflow: hidden;
-    transition: var(--transition);
-}
-.order-card:hover { border-color: var(--accent); transform: translateY(-1px); }
-.order-card.order-selected { border-color: var(--accent); background: rgba(232,160,69,0.06); }
-.order-card-header { display:flex; justify-content:space-between; align-items:center; padding:12px 16px; border-bottom:1px solid var(--border); }
-.order-card-body { padding:10px 16px; }
-
-.menu-item-card {
-    background: var(--bg2);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 12px;
-    cursor: pointer;
-    transition: var(--transition);
-}
-.menu-item-card:hover { border-color: var(--accent); background: rgba(232,160,69,0.08); }
-
-.pay-method-btn {
-    flex: 1;
-    padding: 10px;
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    background: var(--bg2);
-    color: var(--text);
-    cursor: pointer;
-    font-size: 13px;
-    transition: var(--transition);
-}
-.pay-method-btn.active { border-color: var(--accent); color: var(--accent); background: rgba(232,160,69,0.1); }
-
-.panel-item-row {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 0;
-    border-bottom: 1px solid var(--border);
-}
-.panel-item-row:last-child { border-bottom: none; }
-
-.menu-cat-btn.active { border-color: var(--accent); color: var(--accent); }
-</style>
-
-
-<!-- ════════════════════════════════════════════════════════════
-     JAVASCRIPT
-════════════════════════════════════════════════════════════ -->
 {% block extra_js %}
 <script>
 "use strict";
 
-let activeOrderId = null;
-let selectedPayMethod = "cash";
+/* ── Vəziyyət ─────────────────────────────────────────── */
+let activeOrderId = {% if selected_order %}{{ selected_order.id }}{% else %}null{% endif %};
+let payMethod     = "cash";
+let currentDisc   = 0;   // tətbiq edilmiş endirim
+let _orderData    = null; // son yüklənən order obj
 
-const STATUS_MAP = {
-    new:       ["badge-blue",   "🆕 Yeni"],
-    preparing: ["badge-amber",  "👨‍🍳 Hazırlanır"],
-    ready:     ["badge-purple", "✅ Hazırdır"],
-    served:    ["badge-muted",  "🍽️ Verilib"],
-    paid:      ["badge-green",  "💰 Ödənildi"],
-    cancelled: ["badge-red",    "🚫 Ləğv"],
-};
-
-// ── Panel açılması ─────────────────────────────────────────────
-async function loadOrder(orderId) {
-    activeOrderId = orderId;
-    document.querySelectorAll(".order-card").forEach(c => {
-        c.classList.toggle("order-selected", +c.dataset.orderId === orderId);
-    });
-
-    const data = await window.apiFetch(`/orders/api/${orderId}`);
-    if (!data?.ok) {
-        showFlash("Sifariş yüklənmədi", "danger");
-        return;
-    }
-    renderPanel(data.order);
-}
-
-function renderPanel(order) {
-    document.getElementById("orderPanelEmpty").style.display = "none";
-    document.getElementById("orderPanelContent").style.display = "block";
-    document.getElementById("panelOrderId").textContent = `#${order.id}`;
-    document.getElementById("panelTableName").textContent = order.table_number ? `Masa ${order.table_number}` : "—";
-
-    const [cls, label] = STATUS_MAP[order.status] || ["badge-muted", order.status];
-    const statusEl = document.getElementById("panelStatus");
-    statusEl.className = `badge ${cls}`;
-    statusEl.textContent = label;
-
-    // Items
-    const container = document.getElementById("panelItems");
-    if (!order.items.length) {
-        container.innerHTML = `<div style="text-align:center; color:var(--muted); padding:30px;">Hələ məhsul yoxdur</div>`;
-    } else {
-        container.innerHTML = order.items.map(item => `
-            <div class="panel-item-row">
-                <div style="flex:1;">
-                    <div style="font-weight:600; font-size:13px;">${item.name}</div>
-                    <div style="color:var(--muted); font-size:11px;">${item.unit_price.toFixed(2)} ₼ / ədəd</div>
-                </div>
-                <div style="display:flex; align-items:center; gap:6px;">
-                    <button class="btn btn-sm" style="width:26px;height:26px;padding:0;" onclick="updateQty(${item.id}, ${item.quantity - 1})">−</button>
-                    <span style="min-width:24px; text-align:center; font-weight:700;">${item.quantity}</span>
-                    <button class="btn btn-sm" style="width:26px;height:26px;padding:0;" onclick="updateQty(${item.id}, ${item.quantity + 1})">+</button>
-                </div>
-                <div style="min-width:60px; text-align:right; font-weight:700; color:var(--amber);">${item.subtotal.toFixed(2)} ₼</div>
-                <button onclick="removeItem(${item.id})" style="background:none;border:none;color:#E74C3C;cursor:pointer;font-size:16px;padding:0 2px;" title="Sil">🗑</button>
-            </div>
-        `).join("");
-    }
-
-    document.getElementById("panelSubtotal").textContent = `${order.subtotal.toFixed(2)} ₼`;
-    document.getElementById("panelDiscount").textContent = `- ${order.discount_amount.toFixed(2)} ₼`;
-    document.getElementById("panelTotal").textContent = `${order.total.toFixed(2)} ₼`;
-
-    // Pay total
-    document.getElementById("payTotal").textContent = `${order.total.toFixed(2)} ₼`;
-
-    // Hide pay button if already paid/cancelled
-    const isPaidOrCancelled = ["paid", "cancelled"].includes(order.status);
-    document.querySelectorAll("#orderPanelContent .btn").forEach(btn => {
-        if (btn.textContent.includes("Ödəniş") || btn.textContent.includes("Hazırlanır") ||
-            btn.textContent.includes("Hazırdır") || btn.textContent.includes("Verilib") ||
-            btn.textContent.includes("ləğv et")) {
-            btn.disabled = isPaidOrCancelled;
-            btn.style.opacity = isPaidOrCancelled ? "0.4" : "1";
-        }
-    });
-}
-
-function closePanel() {
-    activeOrderId = null;
-    document.getElementById("orderPanelEmpty").style.display = "flex";
-    document.getElementById("orderPanelContent").style.display = "none";
-    document.querySelectorAll(".order-card").forEach(c => c.classList.remove("order-selected"));
-}
-
-// ── Məhsul əməliyyatları ───────────────────────────────────────
-async function addToOrder(itemId, name, price) {
-    if (!activeOrderId) {
-        showFlash("Əvvəlcə bir sifariş seçin", "warning");
-        return;
-    }
-    const res = await window.apiFetch(`/orders/api/${activeOrderId}/add-item`, {
-        method: "POST",
-        body: JSON.stringify({ menu_item_id: itemId, quantity: 1 }),
-    });
-    if (res?.ok) {
-        showFlash(`${name} əlavə edildi ✅`, "success");
-        await loadOrder(activeOrderId);
-        // Menyu modalını bağlamırıq — istifadəçi daha çox məhsul əlavə edə bilsin
-    } else {
-        showFlash(res?.msg || "Xəta baş verdi", "danger");
-    }
-}
-
-async function removeItem(itemId) {
-    if (!confirm("Bu məhsulu sifarişdən çıxarmaq istəyirsiniz?")) return;
-    const res = await window.apiFetch(`/orders/api/item/${itemId}/remove`, { method: "POST" });
-    if (res?.ok) await loadOrder(activeOrderId);
-    else showFlash(res?.msg || "Xəta", "danger");
-}
-
-async function updateQty(itemId, newQty) {
-    if (newQty <= 0) {
-        removeItem(itemId);
-        return;
-    }
-    const res = await window.apiFetch(`/orders/api/item/${itemId}/qty`, {
-        method: "POST",
-        body: JSON.stringify({ quantity: newQty }),
-    });
-    if (res?.ok) await loadOrder(activeOrderId);
-}
-
-// ── Status dəyişmə ─────────────────────────────────────────────
-async function changeStatus(status) {
-    if (!activeOrderId) return;
-    const res = await window.apiFetch(`/orders/api/${activeOrderId}/status`, {
-        method: "POST",
-        body: JSON.stringify({ status }),
-    });
-    if (res?.ok) {
-        showFlash("Status yeniləndi", "success");
-        await loadOrder(activeOrderId);
-        // Siyahıdakı badge-i yenilə
-        setTimeout(() => location.reload(), 1500);
-    } else {
-        showFlash(res?.msg || "Xəta", "danger");
-    }
-}
-
-// ── Ləğvetmə ──────────────────────────────────────────────────
-async function cancelOrder() {
-    if (!activeOrderId) return;
-    if (!confirm("Bu sifarişi ləğv etmək istəyirsiniz? Bu əməliyyat geri qaytarıla bilməz.")) return;
-    const res = await window.apiFetch(`/orders/api/${activeOrderId}/cancel`, { method: "POST" });
-    if (res?.ok) {
-        showFlash("Sifariş ləğv edildi", "success");
-        closePanel();
-        setTimeout(() => location.reload(), 1000);
-    } else {
-        showFlash(res?.msg || "Xəta", "danger");
-    }
-}
-
-// ── Yeni Sifariş ──────────────────────────────────────────────
-function openNewOrderModal() {
-    openModal("newOrderModal");
-}
-
-function createOrderForTable(tableId, tableName) {
-    document.getElementById("newOrderTableSelect").value = tableId;
-    openModal("newOrderModal");
-}
-
-async function submitNewOrder() {
-    const tableId = document.getElementById("newOrderTableSelect").value;
-    const notes   = document.getElementById("newOrderNotes").value;
-    if (!tableId) {
-        showFlash("Masa seçin", "warning");
-        return;
-    }
-    const res = await window.apiFetch("/orders/api/create", {
-        method: "POST",
-        body: JSON.stringify({ table_id: +tableId, notes }),
-    });
-    if (res?.ok) {
-        showFlash(`Sifariş #${res.order_id} yaradıldı ✅`, "success");
-        closeModal("newOrderModal");
-        setTimeout(() => {
-            window.location.href = `/orders/?order_id=${res.order_id}&table_id=${tableId}`;
-        }, 800);
-    } else {
-        showFlash(res?.msg || "Xəta baş verdi", "danger");
-    }
-}
-
-// ── Ödəniş ────────────────────────────────────────────────────
-function openPayModal() {
-    if (!activeOrderId) return;
-    openModal("payModal");
-}
-
-function selectPayMethod(method) {
-    selectedPayMethod = method;
-    document.querySelectorAll(".pay-method-btn").forEach(b => {
-        b.classList.toggle("active", b.dataset.method === method);
-    });
-}
-
-async function submitPayment() {
-    if (!activeOrderId) return;
-    const discountCode = document.getElementById("payDiscountCode").value.trim();
-    const res = await window.apiFetch(`/orders/api/${activeOrderId}/pay`, {
-        method: "POST",
-        body: JSON.stringify({
-            method: selectedPayMethod,
-            discount_code: discountCode,
-        }),
-    });
-    if (res?.ok) {
-        showFlash(`✅ Ödəniş qəbul edildi — ${res.final_amount?.toFixed(2)} ₼`, "success");
-        closeModal("payModal");
-        closePanel();
-        setTimeout(() => location.reload(), 800);
-    } else {
-        showFlash(res?.msg || "Ödəniş uğursuz oldu. Sifarişin statusunu yoxlayın.", "danger");
-    }
-}
-
-// ── Menyu modal ───────────────────────────────────────────────
-function openMenuModal() {
-    if (!activeOrderId) {
-        showFlash("Əvvəlcə sifariş seçin", "warning");
-        return;
-    }
-    openModal("menuModal");
-    filterMenu("all");
-}
-
-function filterMenu(catId) {
-    document.querySelectorAll(".menu-cat-btn").forEach(b => {
-        b.classList.toggle("active", b.dataset.cat == catId || (catId === "all" && b.dataset.cat === "all"));
-    });
-    document.querySelectorAll(".menu-item-card").forEach(card => {
-        card.style.display = (catId === "all" || card.dataset.cat == catId) ? "" : "none";
-    });
-}
-
-function filterMenuSearch(val) {
-    const q = val.toLowerCase();
-    document.querySelectorAll(".menu-item-card").forEach(card => {
-        card.style.display = card.dataset.name.includes(q) ? "" : "none";
-    });
-}
-
-// ── Yardımçı ─────────────────────────────────────────────────
-function openModal(id) { document.getElementById(id).style.display = "flex"; }
-function closeModal(id) { document.getElementById(id).style.display = "none"; }
-
-function showFlash(msg, type = "success") {
-    const div = document.createElement("div");
-    div.className = `flash flash-${type}`;
-    div.style.cssText = "position:fixed;top:20px;right:20px;z-index:9999;min-width:250px;padding:12px 20px;border-radius:10px;font-weight:600;";
-    div.textContent = msg;
-    document.body.appendChild(div);
-    setTimeout(() => { div.style.opacity = "0"; div.style.transition = "opacity 0.5s"; setTimeout(() => div.remove(), 500); }, 3000);
-}
-
-// ── İlk yüklənmə ──────────────────────────────────────────────
-document.addEventListener("DOMContentLoaded", () => {
+/* ── Başlanğıc ────────────────────────────────────────── */
+document.addEventListener('DOMContentLoaded', () => {
+    updateBadge();
     {% if selected_order %}
-    loadOrder({{ selected_order.id }});
+    _orderData = {
+        id: {{ selected_order.id }},
+        table_name: "{{ (selected_order.table.name if selected_order.table else '') or ('Masa ' ~ (selected_order.table.number|string if selected_order.table else '')) }}",
+        waiter: "{{ selected_order.waiter.full_name if selected_order.waiter else '' }}",
+        subtotal: {{ selected_order.subtotal or 0 }},
+        discount_amount: {{ selected_order.discount_amount or 0 }},
+        total: {{ selected_order.total or 0 }},
+        items: [{% for oi in selected_order.items %}
+            { id:{{ oi.id }}, name:"{{ oi.menu_item.name if oi.menu_item else '?' }}", quantity:{{ oi.quantity }}, unit_price:{{ oi.unit_price }}, subtotal:{{ oi.subtotal }} }{% if not loop.last %},{% endif %}
+        {% endfor %}]
+    };
     {% endif %}
 
-    // Modal kənar kliklə bağlan
-    document.querySelectorAll(".modal-overlay").forEach(m => {
-        m.addEventListener("click", e => {
-            if (e.target === m) m.style.display = "none";
-        });
-    });
+    {% if request.args.get('pay') %}
+    if (activeOrderId) setTimeout(openPayModal, 300);
+    {% endif %}
 });
+
+/* ── Kateqoriya ───────────────────────────────────────── */
+let activeCat = 'all';
+function setCat(el, catId) {
+    document.querySelectorAll('.cat-row').forEach(r => r.classList.remove('active'));
+    el.classList.add('active');
+    activeCat = catId;
+    filterProds();
+}
+function filterProds() {
+    const q = document.getElementById('prodQ').value.toLowerCase();
+    document.querySelectorAll('.prod-card').forEach(c => {
+        const ok = c.dataset.name.includes(q) && (activeCat==='all' || c.dataset.cat==activeCat);
+        c.style.display = ok ? '' : 'none';
+    });
+}
+
+/* ── Məhsul əlavə et ──────────────────────────────────── */
+async function addProd(itemId, name, price) {
+    if (!activeOrderId) {
+        toast('Əvvəlcə masa/sifariş seçin', 'wrn');
+        newOrderModal();
+        return;
+    }
+    const card = document.querySelector(`.prod-card[data-id="${itemId}"]`);
+    if (card) { card.classList.add('flash-add'); setTimeout(()=>card.classList.remove('flash-add'),350); }
+
+    const res = await api(`/orders/api/${activeOrderId}/add-item`, {
+        method:'POST', body: JSON.stringify({menu_item_id:itemId, quantity:1})
+    });
+    if (res?.ok) { toast(`✅ ${name} əlavə edildi`, 'ok'); await refreshBasket(); }
+    else toast(res?.msg||'Xəta','err');
+}
+
+/* ── Səbəti yenilə ────────────────────────────────────── */
+async function refreshBasket() {
+    if (!activeOrderId) return;
+    const res = await api(`/orders/api/${activeOrderId}`);
+    if (!res?.ok) return;
+    _orderData = res.order;
+    renderBasket(res.order);
+}
+
+function renderBasket(o) {
+    const cont = document.getElementById('bskItems');
+    if (!o.items || !o.items.length) {
+        cont.innerHTML = `<div class="bsk-empty" id="bskEmpty">
+            <div class="bsk-empty-ico">🛒</div>
+            <div style="font-size:13px;">Məhsul yoxdur</div>
+            <div style="font-size:11px;color:var(--muted);">Məhsulları sol paneldən seçin</div>
+        </div>`;
+    } else {
+        cont.innerHTML = o.items.map(it=>`
+            <div class="bsk-row" data-oi="${it.id}">
+                <div class="bsk-row-name">${it.name}</div>
+                <div class="bsk-qty">
+                    <button onclick="changeQty(${it.id},-1)">−</button>
+                    <span>${it.quantity}</span>
+                    <button onclick="changeQty(${it.id},1)">+</button>
+                </div>
+                <div class="bsk-row-price">${it.subtotal.toFixed(2)} ₼</div>
+                <button class="bsk-row-del" onclick="removeItem(${it.id})">✕</button>
+            </div>`).join('');
+    }
+    document.getElementById('bskSub').textContent   = (o.subtotal||0).toFixed(2)+' ₼';
+    document.getElementById('bskDisc').textContent  = (o.discount_amount||0).toFixed(2)+' ₼';
+    document.getElementById('bskTotal').textContent = (o.total||0).toFixed(2)+' ₼';
+}
+
+/* ── Miqdar ───────────────────────────────────────────── */
+async function changeQty(oiId, delta) {
+    const row = document.querySelector(`.bsk-row[data-oi="${oiId}"]`);
+    const cur = parseInt(row?.querySelector('span')?.textContent||'1');
+    if (cur + delta <= 0) { removeItem(oiId); return; }
+    const res = await api(`/orders/api/item/${oiId}/qty`, {
+        method:'POST', body: JSON.stringify({quantity: cur+delta})
+    });
+    if (res?.ok) await refreshBasket();
+    else toast(res?.msg||'Xəta','err');
+}
+
+async function removeItem(oiId) {
+    const res = await api(`/orders/api/item/${oiId}/remove`, {method:'POST'});
+    if (res?.ok) { await refreshBasket(); toast('Silindi','ok'); }
+    else toast(res?.msg||'Xəta','err');
+}
+
+/* ── Masa dəyiş ───────────────────────────────────────── */
+async function switchTable(tableId) {
+    if (!tableId) { activeOrderId = null; clearBasket(); updateBadge(); return; }
+    const res = await api(`/tables/api/active-order/${tableId}`);
+    if (res?.order) {
+        activeOrderId = res.order.id;
+        updateBadge();
+        await refreshBasket();
+        toast(`Masa sifariş #${activeOrderId} açıldı`,'ok');
+    } else {
+        activeOrderId = null;
+        updateBadge();
+        clearBasket();
+        toast('Aktiv sifariş yoxdur — yeni sifariş yaradın','wrn');
+        document.getElementById('newOrdTable').value = tableId;
+        setTimeout(()=>openModal('newOrdModal'), 500);
+    }
+}
+
+function clearBasket() {
+    document.getElementById('bskItems').innerHTML=`<div class="bsk-empty" id="bskEmpty">
+        <div class="bsk-empty-ico">🛒</div>
+        <div style="font-size:13px;">Məhsul yoxdur</div>
+        <div style="font-size:11px;color:var(--muted);">Məhsulları sol paneldən seçin</div>
+    </div>`;
+    ['bskSub','bskDisc','bskTotal'].forEach(id=>document.getElementById(id).textContent='0.00 ₼');
+    _orderData = null;
+}
+
+function updateBadge() {
+    const sel = document.getElementById('tableSelect');
+    const opt = sel.selectedIndex > 0 ? sel.options[sel.selectedIndex] : null;
+    document.getElementById('bskBadge').textContent = opt
+        ? opt.text.split('(')[0].trim()
+        : '— Masa yoxdur';
+}
+
+/* ── Yeni Sifariş ─────────────────────────────────────── */
+function newOrderModal() { openModal('newOrdModal'); }
+async function submitNewOrd() {
+    const tableId = document.getElementById('newOrdTable').value;
+    const notes   = document.getElementById('newOrdNote').value;
+    if (!tableId) { toast('Masa seçin','wrn'); return; }
+    const res = await api('/orders/api/create',{method:'POST',body:JSON.stringify({table_id:+tableId,notes})});
+    if (res?.ok) {
+        activeOrderId = res.order_id;
+        closeModal('newOrdModal');
+        document.getElementById('tableSelect').value = tableId;
+        updateBadge();
+        await refreshBasket();
+        toast(`Sifariş #${res.order_id} yaradıldı ✅`,'ok');
+    } else toast(res?.msg||'Xəta','err');
+}
+
+/* ── Sifarişi ləğv et ─────────────────────────────────── */
+async function cancelOrder() {
+    if (!activeOrderId) return;
+    if (!confirm('Bu sifarişi ləğv etmək istəyirsiniz?')) return;
+    const res = await api(`/orders/api/${activeOrderId}/cancel`,{method:'POST'});
+    if (res?.ok) {
+        toast('Ləğv edildi','ok');
+        activeOrderId = null; _orderData = null;
+        clearBasket();
+        document.getElementById('tableSelect').value = '';
+        updateBadge();
+    } else toast(res?.msg||'Xəta','err');
+}
+
+/* ── ÖDƏNİŞ MODAL ────────────────────────────────────── */
+function openPayModal() {
+    if (!activeOrderId) { toast('Aktiv sifariş yoxdur','wrn'); return; }
+    if (!_orderData) { toast('Sifariş məlumatları yüklənmədi','err'); return; }
+
+    const o = _orderData;
+    // Başlıq
+    document.getElementById('payModalTitle').textContent =
+        `💳 Ödəniş — ${o.table_name||'Masa'}`;
+    document.getElementById('payModalSub').textContent =
+        `Sifariş #${o.id} | Ofisant: ${o.waiter||'—'}`;
+
+    // Məhsullar
+    const listEl = document.getElementById('payItemsList');
+    listEl.innerHTML = (o.items||[]).map(it=>`
+        <div class="pay-item-row">
+            <span class="pay-item-name">${it.name} ×${it.quantity}</span>
+            <span class="pay-item-price">${it.subtotal.toFixed(2)} ₼</span>
+        </div>`).join('');
+
+    // Cəmlər
+    document.getElementById('paySubtotal').textContent = (o.subtotal||0).toFixed(2)+' ₼';
+    document.getElementById('payDiscount').textContent = '- '+(o.discount_amount||0).toFixed(2)+' ₼';
+    document.getElementById('payGrand').textContent    = (o.total||0).toFixed(2)+' ₼';
+
+    // Reset
+    document.getElementById('payDiscCode').value = '';
+    document.getElementById('payCashGiven').value = '';
+    document.getElementById('payCashChange').textContent = '—';
+    document.getElementById('payCashBox').style.display = 'grid';
+    payMethod = 'cash';
+    document.querySelectorAll('.pay-meth-btn').forEach(b=>b.classList.toggle('active',b.dataset.m==='cash'));
+
+    openModal('payModal');
+}
+
+function selMeth(btn, m) {
+    payMethod = m;
+    document.querySelectorAll('.pay-meth-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    document.getElementById('payCashBox').style.display = m==='cash' ? 'grid' : 'none';
+}
+
+function calcChange() {
+    const grandEl = document.getElementById('payGrand');
+    const total = parseFloat(grandEl.textContent) || 0;
+    const given = parseFloat(document.getElementById('payCashGiven').value) || 0;
+    const change = given - total;
+    const el = document.getElementById('payCashChange');
+    el.textContent = change >= 0 ? change.toFixed(2)+' ₼' : '—';
+    el.style.color = change >= 0 ? 'var(--green)' : 'var(--red)';
+}
+
+async function applyDiscount() {
+    const code = document.getElementById('payDiscCode').value.trim();
+    if (!code) { toast('Kod daxil edin','wrn'); return; }
+    // Backend preview yoxdursa sadəcə göstər — real tətbiq submitda olur
+    toast('Kod tətbiq ediləcək','ok');
+}
+
+async function submitPay() {
+    if (!activeOrderId) return;
+    const code = document.getElementById('payDiscCode').value.trim();
+
+    if (payMethod === 'cash') {
+        const grandEl = document.getElementById('payGrand');
+        const total = parseFloat(grandEl.textContent)||0;
+        const given = parseFloat(document.getElementById('payCashGiven').value)||0;
+        if (given > 0 && given < total) {
+            toast(`Verilən məbləğ (${given.toFixed(2)} ₼) cəmidən azdır!`,'err');
+            return;
+        }
+    }
+
+    const res = await api(`/orders/api/${activeOrderId}/pay`, {
+        method:'POST',
+        body: JSON.stringify({method:payMethod, discount_code:code||null})
+    });
+
+    if (res?.ok) {
+        closeModal('payModal');
+        toast('✅ Ödəniş tamamlandı','ok');
+        showReceipt(res);
+    } else {
+        toast(res?.msg||'Ödəniş uğursuz','err');
+    }
+}
+
+/* ── ÇEK MODAL ────────────────────────────────────────── */
+function showReceipt(payRes) {
+    // payRes: {ok, order_id, table_name, waiter, amount, discount_amount, final_amount, method, items, ...}
+    const methodMap = {cash:'Nağd', card:'Kart', online:'Online'};
+    const method = methodMap[payRes.method] || payRes.method || 'Nağd';
+    const ordId  = payRes.order_id || activeOrderId || '—';
+    const table  = payRes.table_name || _orderData?.table_name || '—';
+    const waiter = payRes.waiter     || _orderData?.waiter || '—';
+    const amount = payRes.amount     || _orderData?.subtotal || 0;
+    const disc   = payRes.discount_amount || 0;
+    const final  = payRes.final_amount    || _orderData?.total || 0;
+    const items  = payRes.items  || _orderData?.items || [];
+
+    document.getElementById('rcptTitle').textContent = `Çek — Sifariş #${ordId}`;
+    document.getElementById('rcptSub').textContent   = `Masa: ${table} | Ofisant: ${waiter}`;
+
+    // Summary pills
+    document.getElementById('rcptPills').innerHTML = `
+        <div class="rcpt-pill amber"><span class="lbl">Məbləğ</span><span class="val">${amount.toFixed(2)} ₼</span></div>
+        <div class="rcpt-pill green"><span class="lbl">Endirim</span><span class="val">-${disc.toFixed(2)} ₼</span></div>
+        <div class="rcpt-pill amber"><span class="lbl">CƏMİ</span><span class="val">${final.toFixed(2)} ₼</span></div>
+        <div class="rcpt-pill blue"><span class="lbl">Üsul</span><span class="val">${method}</span></div>`;
+
+    // Çek mətni
+    const sep  = '='.repeat(44);
+    const sep2 = '-'.repeat(44);
+    const now  = new Date();
+    const dt   = now.toLocaleDateString('az-AZ')+' '+now.toLocaleTimeString('az-AZ',{hour:'2-digit',minute:'2-digit'});
+
+    let rows = '';
+    for (const it of items) {
+        const sub = (it.subtotal||it.unit_price*it.quantity||0).toFixed(2);
+        rows += `  ${it.name}\n    x${it.quantity}  ${(it.unit_price||0).toFixed(2)}  ${sub} AZN\n`;
+    }
+
+    const txt = `${sep}\n` +
+        `        Ramo Pub & TeaHouse\n` +
+        `          Bakı, Azərbaycan\n` +
+        `        +994 12 000 00 00\n` +
+        `${sep}\n` +
+        `Çek: #${ordId}         ${dt}\n` +
+        `Masa: ${table}     Ofis.: ${waiter}\n` +
+        `${sep2}\n` +
+        `Məhsul                   Qiym.  Cəm\n` +
+        `${sep2}\n` +
+        rows +
+        `${sep2}\n` +
+        `Ara cəm:        ${amount.toFixed(2)} AZN\n` +
+        (disc>0?`Endirim:       -${disc.toFixed(2)} AZN\n`:``) +
+        `${sep2}\n` +
+        `CƏMİ:           ${final.toFixed(2)} AZN\n` +
+        `Ödəniş üsulu: ${method}\n` +
+        `${sep}\n` +
+        `   Xidmətinizdən məmnun olduq!\n` +
+        `${sep}`;
+
+    document.getElementById('rcptText').textContent = txt;
+    window._receiptText = txt;
+
+    openModal('rcptModal');
+
+    // Səbəti təmizlə
+    activeOrderId = null; _orderData = null;
+    clearBasket();
+    document.getElementById('tableSelect').value = '';
+    updateBadge();
+}
+
+function rcptPrint(type) {
+    const txt = window._receiptText || '';
+    if (type === 'copy') {
+        navigator.clipboard.writeText(txt).then(()=>toast('Kopyalandı ✅','ok'));
+    } else if (type === 'text') {
+        const blob = new Blob([txt],{type:'text/plain'});
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = `cek-${Date.now()}.txt`;
+        a.click();
+        toast('Fayl yükləndi','ok');
+    } else if (type === 'pdf') {
+        const win = window.open('','_blank');
+        win.document.write(`<html><body><pre style="font-family:Courier New;font-size:12px;">${txt}</pre></body></html>`);
+        win.print();
+        win.close();
+    }
+}
+
+function closeRcpt() {
+    closeModal('rcptModal');
+    location.reload();
+}
+
+/* ── Helpers ──────────────────────────────────────────── */
+function openModal(id)  { document.getElementById(id).style.display='flex'; }
+function closeModal(id) { document.getElementById(id).style.display='none'; }
+document.querySelectorAll('.modal-overlay').forEach(m=>
+    m.addEventListener('click',e=>{if(e.target===m)m.style.display='none';}));
+
+function toast(msg, type='ok') {
+    const d = document.createElement('div');
+    d.className = `pos-toast ${type}`;
+    d.textContent = msg;
+    document.getElementById('toastCont').appendChild(d);
+    setTimeout(()=>d.remove(), 2800);
+}
+
+async function api(url, opts={}) {
+    try {
+        const r = await fetch(url,{
+            headers:{'Content-Type':'application/json',...(opts.headers||{})},
+            ...opts
+        });
+        if (!r.ok) throw new Error('HTTP '+r.status);
+        return await r.json();
+    } catch(e) {
+        console.error('[API]',url,e);
+        return null;
+    }
+}
 </script>
-{% endblock %}
 {% endblock %}

@@ -5,6 +5,7 @@ from flask import (
     url_for, g, request, jsonify, flash
 )
 from modules.orders.order_service import OrderService
+from modules.orders.workflow_service import order_workflow_service
 from modules.tables.table_service import TableService
 from modules.menu.menu_service import MenuService
 
@@ -48,6 +49,8 @@ def index():
     selected_order = None
     if order_id:
         selected_order = svc.get_order(g.db, order_id)
+    elif selected_table and active:
+        selected_order = active[0]
 
     # Menyu kateqoriya + məhsullar
     categories = menu_svc.get_categories(g.db)
@@ -267,6 +270,11 @@ def api_pay(order_id: int):
     method        = data.get("method", "cash")
     discount_code = data.get("discount_code", "")
 
+    # Sifarişi əvvəlcə yüklə (çek üçün lazım olan məlumatlar)
+    order = svc.get_order(g.db, order_id)
+    if not order:
+        return jsonify({"ok": False, "msg": "Sifariş tapılmadı"}), 404
+
     try:
         from modules.pos.pos_service import pos_service
         ok, result = pos_service.process_payment(
@@ -278,14 +286,36 @@ def api_pay(order_id: int):
         )
         if not ok:
             return jsonify({"ok": False, "msg": str(result)}), 400
-        return jsonify({
-            "ok":           True,
-            "final_amount": float(result.final_amount),
-            "msg":          "Ödəniş qəbul edildi ✅",
-        })
-    except Exception as e:
-        return jsonify({"ok": False, "msg": str(e)}), 500
 
+        # Çek üçün məhsul siyahısı
+        items_data = []
+        for oi in order.items:
+            items_data.append({
+                "name":       oi.menu_item.name if oi.menu_item else "?",
+                "quantity":   oi.quantity,
+                "unit_price": float(oi.unit_price),
+                "subtotal":   float(oi.subtotal),
+            })
+
+        table_name = ""
+        if order.table:
+            table_name = order.table.name or f"Masa {order.table.number}"
+
+        return jsonify({
+            "ok":             True,
+            "order_id":       order_id,
+            "table_name":     table_name,
+            "waiter":         order.waiter.full_name if order.waiter else "—",
+            "amount":         float(result.amount),
+            "discount_amount":float(result.discount_amount),
+            "final_amount":   float(result.final_amount),
+            "method":         result.method.value,
+            "items":          items_data,
+            "msg":            f"Ödəniş tamamlandı — {result.final_amount:.2f} ₼",
+        })
+
+    except Exception as e:
+        return jsonify({"ok": False, "msg": f"Ödəniş xətası: {str(e)}"}), 500
 
 # ─────────────────────────────────────────────────────────────────────────────
 # API — AKTİV SİFARİŞLƏR (dashboard refresh)

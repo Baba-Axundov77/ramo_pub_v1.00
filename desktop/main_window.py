@@ -63,6 +63,7 @@ class MainWindow(QMainWindow):
         from modules.tables.table_service import TableService
         from modules.menu.menu_service import MenuService
         from modules.orders.order_service import OrderService
+        from modules.orders.workflow_service import OrderWorkflowService
         from modules.pos.pos_service import POSService
         from modules.inventory.inventory_service import InventoryService
         from modules.reservation.reservation_service import ReservationService
@@ -74,6 +75,7 @@ class MainWindow(QMainWindow):
         self._services["tables"] = TableService()
         self._services["menu"] = MenuService()
         self._services["orders"] = OrderService()
+        self._services["order_workflow"] = OrderWorkflowService()
         self._services["pos"] = POSService()
         self._services["inventory"] = InventoryService()
         self._services["reservation"] = ReservationService()
@@ -223,7 +225,11 @@ class MainWindow(QMainWindow):
 
         # ── Sifarişlər ────────────────────────────────────────────────────────
         orders_view = OrdersView(
-            self.db, self._services["orders"], self._services["menu"], self.auth
+            self.db,
+            self._services["orders"],
+            self._services["menu"],
+            self.auth,
+            workflow_service=self._services["order_workflow"],
         )
         orders_view.payment_requested.connect(self._open_payment)
         self._views["orders"] = orders_view
@@ -259,12 +265,18 @@ class MainWindow(QMainWindow):
             self.db, self._services["loyalty"], self.auth
         )
 
-        # ── Placeholder-lar ───────────────────────────────────────────────────
-        for key, icon, title, color in [
-            ("settings", "⚙️",  "Tənzimləmələr", "#95A5A6"),
-            ("pos",      "💳", "Kassa",         "#E8A045"),
-        ]:
-            self._views[key] = self._make_placeholder(icon, title, color)
+        # ── Kassa ─────────────────────────────────────────────────────────────
+        from desktop.views.pos_dashboard_view import POSDashboardView
+        self._views["pos"] = POSDashboardView(
+            self.db,
+            self._services["orders"],
+            self._services["pos"],
+            self._open_payment,
+        )
+
+        # ── Tənzimləmələr ─────────────────────────────────────────────────────
+        from desktop.views.settings_view import SettingsView
+        self._views["settings"] = SettingsView()
 
         for widget in self._views.values():
             self.stack.addWidget(widget)

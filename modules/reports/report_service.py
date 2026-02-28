@@ -120,6 +120,31 @@ class ReportService:
             "total_orders":    sum(monthly_orders),
         }
 
+
+    def completed_sales(self, db: Session, target_date: date, limit: int = 50) -> List[Dict]:
+        start = datetime.combine(target_date, datetime.min.time())
+        end = datetime.combine(target_date, datetime.max.time())
+        rows = (
+            db.query(Order, Payment)
+            .join(Payment, Payment.order_id == Order.id)
+            .filter(Payment.created_at >= start, Payment.created_at <= end)
+            .order_by(Payment.created_at.desc())
+            .limit(limit)
+            .all()
+        )
+        data: List[Dict] = []
+        for order, payment in rows:
+            data.append({
+                "order_id": order.id,
+                "table": order.table.number if order.table else None,
+                "status": order.status.value,
+                "items": len(order.items),
+                "method": payment.method.value,
+                "amount": float(payment.final_amount or 0),
+                "paid_at": payment.created_at,
+            })
+        return data
+
     def hourly_heatmap(self, db: Session, target_date: date) -> Dict:
         start = datetime.combine(target_date, datetime.min.time())
         end   = datetime.combine(target_date, datetime.max.time())

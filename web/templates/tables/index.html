@@ -58,8 +58,6 @@
             <div class="table-photo-fallback" {% if t.image_path %}style="display:none"{% endif %}>🪑</div>
         </div>
 
-        <div class="table-num-badge">{{ t.number }}</div>
-        <div class="table-name">{{ t.name or ('Masa ' ~ t.number) }}</div>
         <div class="table-meta">👥 {{ t.capacity }} nəfər • {{ t.floor }}. mərtəbə</div>
         <div class="table-status {{ sc[0] }}">{{ sc[1] }}</div>
 
@@ -209,7 +207,7 @@ const STATUS_LABEL = {
 let _card = null;
 let _orderId = null;
 
-/* ── Utilities ───────────────────────────────────────────── */
+/* ── Utilities ─────────────────────────────────── */
 function openModal(id)  { document.getElementById(id).style.display = "flex"; }
 function closeModal(id) { document.getElementById(id).style.display = "none"; }
 
@@ -240,22 +238,20 @@ function makeBtn(label, color, onclick) {
     return b;
 }
 
-/* ── Klik handler ────────────────────────────────────────── */
+/* ── Masa klik ─────────────────────────────────── */
 async function onTableClick(card) {
     _card = card;
     const { id, status, number, name } = card.dataset;
 
-    // Aktiv sifarişi yoxla
-    const res = await window.apiFetch(`/tables/api/active-order/${id}`);
+    // Aktiv sifarişi yoxla — app.js-dəki apiFetch istifadə et
+    const res = await apiFetch(`/tables/api/active-order/${id}`);
     _orderId = res?.order?.id || null;
 
-    // Modal başlıq
-    document.getElementById("taTitle").textContent  = `🪑  Masa #${number}  —  ${name}`;
+    document.getElementById("taTitle").textContent  = `🪑  Masa ${number}  —  ${name}`;
     const stEl = document.getElementById("taStatus");
     stEl.textContent = `Status: ${STATUS_LABEL[status] || status}`;
     stEl.style.color = STATUS_COLOR[status] || "#fff";
 
-    // Aktiv sifariş info
     const oEl = document.getElementById("taOrderInfo");
     if (_orderId && res.order) {
         oEl.style.display = "block";
@@ -264,7 +260,6 @@ async function onTableClick(card) {
         oEl.style.display = "none";
     }
 
-    // Düymələri qur
     buildButtons(status);
     openModal("tableActionModal");
 }
@@ -273,7 +268,6 @@ function buildButtons(status) {
     const wrap = document.getElementById("taButtons");
     wrap.innerHTML = "";
 
-    /* Status-a görə düymələr — Desktop TableActionDialog ilə eyni */
     if (status === "available") {
         wrap.appendChild(makeBtn("📋  Yeni Sifariş",  "#2ECC71", actNewOrder));
         wrap.appendChild(makeBtn("📅  Rezerv et",      "#F39C12", actReserve));
@@ -287,22 +281,19 @@ function buildButtons(status) {
         wrap.appendChild(makeBtn("✅  Təmizlik bitti", "#2ECC71", actSetAvailable));
     }
 
-    // Hər zaman: Təmizlənir
     if (status !== "cleaning") {
         wrap.appendChild(makeBtn("🧹  Təmizlənir", "#3498DB", actSetCleaning));
     }
 
-    // Admin: Redaktə
     if (IS_ADMIN) {
         const sep = document.createElement("div");
         sep.style.cssText = "height:1px;background:var(--border);margin:2px 0;";
         wrap.appendChild(sep);
-
         const eb = makeBtn("⚙️  Masanı redaktə et", "var(--muted)", actEdit);
-        eb.style.fontSize   = "12px";
-        eb.style.color      = "var(--muted)";
+        eb.style.fontSize    = "12px";
+        eb.style.color       = "var(--muted)";
         eb.style.borderColor = "var(--border)";
-        eb.style.fontWeight = "500";
+        eb.style.fontWeight  = "500";
         wrap.appendChild(eb);
     }
 }
@@ -312,100 +303,147 @@ function closeActionModal() {
     _card = null; _orderId = null;
 }
 
-/* ── Əməliyyatlar ────────────────────────────────────────── */
+/* ── Əməliyyatlar ──────────────────────────────── */
 
 async function actNewOrder() {
     const tableId = _card?.dataset.id;
     closeActionModal();
     if (!tableId) { toast("Masa seçilmədi", "warning"); return; }
-    const res = await window.apiFetch(`/tables/api/create-order/${tableId}`,
-        { method: "POST" });
-    if (res?.ok) {
-        toast("Sifariş yaradıldı ✅");
-        setTimeout(() => { window.location.href = res.redirect; }, 500);
-    } else if (res?.redirect) {
-        toast(res.msg, "warning");
-        setTimeout(() => { window.location.href = res.redirect; }, 800);
+
+    const res = await apiFetch(`/tables/api/create-order/${tableId}`, { method: "POST" });
+
+    if (res?.redirect) {
+        // Həm yeni sifariş (ok:true), həm mövcud sifariş (ok:false) → redirect
+        toast(res.ok ? "Sifariş yaradıldı ✅" : (res.msg || "Mövcud sifariş açılır"), res.ok ? "success" : "warning");
+        setTimeout(() => { window.location.href = res.redirect; }, 400);
     } else {
-        toast(res?.msg || "Xəta", "danger");
+        toast(res?.msg || "Xəta baş verdi", "danger");
     }
 }
 
 function actViewOrder() {
-    const id = _card?.dataset.id;
+    const id      = _card?.dataset.id;
+    const orderId = _orderId;
     closeActionModal();
-    if (!_orderId) { toast("Aktiv sifariş yoxdur", "warning"); return; }
-    window.location.href = `/orders/?table_id=${id}&order_id=${_orderId}`;
+    if (!orderId) { toast("Aktiv sifariş yoxdur", "warning"); return; }
+    window.location.href = `/orders/?table_id=${id}&order_id=${orderId}`;
 }
 
 function actPayment() {
-    const id = _card?.dataset.id;
+    const id      = _card?.dataset.id;
+    const orderId = _orderId;
     closeActionModal();
-    if (!_orderId) { toast("Aktiv sifariş yoxdur", "warning"); return; }
-    window.location.href = `/orders/?table_id=${id}&order_id=${_orderId}&pay=1`;
+    if (!orderId) { toast("Aktiv sifariş yoxdur", "warning"); return; }
+    window.location.href = `/orders/?table_id=${id}&order_id=${orderId}&pay=1`;
 }
 
 async function actReserve() {
     const id = _card?.dataset.id; if (!id) return; closeActionModal();
-    const res = await window.apiFetch(`/tables/api/reserve/${id}`, { method: "POST" });
+    const res = await apiFetch(`/tables/api/reserve/${id}`, { method: "POST" });
     res?.ok ? (toast("Masa rezerv edildi 📅"), setTimeout(() => location.reload(), 700))
             : toast(res?.msg || "Xəta", "danger");
 }
 
 async function actCancelReserve() {
     const id = _card?.dataset.id; if (!id) return; closeActionModal();
-    const res = await window.apiFetch(`/tables/api/free/${id}`, { method: "POST" });
+    const res = await apiFetch(`/tables/api/free/${id}`, { method: "POST" });
     res?.ok ? (toast("Rezerv ləğv edildi"), setTimeout(() => location.reload(), 700))
             : toast(res?.msg || "Xəta", "danger");
 }
 
 async function actOccupy() {
     const id = _card?.dataset.id; if (!id) return; closeActionModal();
-    const res = await window.apiFetch(`/tables/api/status/${id}`,
-        { method: "POST", body: JSON.stringify({ status: "occupied" }) });
+    const res = await apiFetch(`/tables/api/status/${id}`, { method:"POST", body:JSON.stringify({status:"occupied"}) });
     res?.ok ? (toast("Masa dolu edildi 🔴"), setTimeout(() => location.reload(), 700))
             : toast(res?.msg || "Xəta", "danger");
 }
 
 async function actSetAvailable() {
     const id = _card?.dataset.id; if (!id) return; closeActionModal();
-    const res = await window.apiFetch(`/tables/api/free/${id}`, { method: "POST" });
+    const res = await apiFetch(`/tables/api/free/${id}`, { method: "POST" });
     res?.ok ? (toast("Masa boş edildi ✅"), setTimeout(() => location.reload(), 700))
             : toast(res?.msg || "Xəta", "danger");
 }
 
 async function actSetCleaning() {
     const id = _card?.dataset.id; if (!id) return; closeActionModal();
-    const res = await window.apiFetch(`/tables/api/clean/${id}`, { method: "POST" });
+    const res = await apiFetch(`/tables/api/clean/${id}`, { method: "POST" });
     res?.ok ? (toast("Masa təmizlənir 🧹"), setTimeout(() => location.reload(), 700))
             : toast(res?.msg || "Xəta", "danger");
 }
 
 function actEdit() {
-    const c = _card; closeActionModal();
-    document.getElementById("editTableId").value    = c.dataset.id;
-    document.getElementById("editTableName").value  = c.dataset.name;
-    document.getElementById("editTableCap").value   = c.dataset.capacity;
-    document.getElementById("editTableFloor").value = c.dataset.floor;
-    document.getElementById("editTableTitle").textContent =
-        `⚙️ Masa #${c.dataset.number} — redaktə`;
+    closeActionModal();
+    const t = _card.dataset;
+    document.getElementById("editTableId").value    = t.id;
+    document.getElementById("editTableName").value  = t.name;
+    document.getElementById("editTableCap").value   = t.capacity;
+    document.getElementById("editTableFloor").value = t.floor || 1;
     openModal("editTableModal");
 }
 
-async function submitEditTable() {
-    const id = document.getElementById("editTableId").value;
-    const res = await window.apiFetch(`/tables/api/update/${id}`, {
+/* ── Mərtəbə filteri ───────────────────────────── */
+document.querySelectorAll(".filter-tab[data-floor]").forEach(tab => {
+    tab.addEventListener("click", () => {
+        document.querySelectorAll(".filter-tab[data-floor]").forEach(t => t.classList.remove("active"));
+        tab.classList.add("active");
+        const floor = tab.dataset.floor;
+        document.querySelectorAll(".table-row").forEach(row => {
+            row.style.display = (floor === "all" || row.dataset.floor == floor) ? "" : "none";
+        });
+    });
+});
+
+/* ── Modal kənarından klik ─────────────────────── */
+document.querySelectorAll(".modal-overlay").forEach(m => {
+    m.addEventListener("click", e => { if (e.target === m) m.style.display = "none"; });
+});
+
+/* ── Hover effekti ─────────────────────────────── */
+document.querySelectorAll(".table-tile").forEach(t => {
+    t.addEventListener("mouseenter", () => {
+        t.style.transform = "translateY(-3px)";
+        t.style.boxShadow = "0 8px 24px rgba(0,0,0,.4)";
+    });
+    t.addEventListener("mouseleave", () => {
+        t.style.transform = "";
+        t.style.boxShadow = "";
+    });
+});
+
+/* ── Yeni Masa ─────────────────────────────────── */
+async function submitAddTable() {
+    const num   = document.getElementById("newTableNum").value;
+    const name  = document.getElementById("newTableName").value;
+    const cap   = document.getElementById("newTableCap").value;
+    const floor = document.getElementById("newTableFloor").value;
+    if (!num) { toast("Masa nömrəsini daxil edin", "warning"); return; }
+    const res = await apiFetch("/tables/api/add", {
         method: "POST",
-        body: JSON.stringify({
-            name:     document.getElementById("editTableName").value.trim() || null,
-            capacity: +document.getElementById("editTableCap").value   || 4,
-            floor:    +document.getElementById("editTableFloor").value || 1,
-        }),
+        body: JSON.stringify({ number:+num, name, capacity:+cap, floor:+floor }),
     });
     if (res?.ok) {
-        toast("Masa yeniləndi ✅");
+        toast("Masa əlavə edildi ✅");
+        closeModal("addTableModal");
+        setTimeout(() => location.reload(), 600);
+    } else {
+        toast(res?.msg || "Xəta", "danger");
+    }
+}
+
+async function submitEditTable() {
+    const id    = document.getElementById("editTableId").value;
+    const name  = document.getElementById("editTableName").value;
+    const cap   = document.getElementById("editTableCap").value;
+    const floor = document.getElementById("editTableFloor").value;
+    const res = await apiFetch(`/tables/api/edit/${id}`, {
+        method: "POST",
+        body: JSON.stringify({ name, capacity:+cap, floor:+floor }),
+    });
+    if (res?.ok) {
+        toast("Saxlanıldı ✅");
         closeModal("editTableModal");
-        setTimeout(() => location.reload(), 700);
+        setTimeout(() => location.reload(), 600);
     } else {
         toast(res?.msg || "Xəta", "danger");
     }

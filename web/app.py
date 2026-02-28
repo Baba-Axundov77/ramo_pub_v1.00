@@ -33,7 +33,7 @@ def _resolve_media_file(path_value: str | None):
 
     # Kök qovluğu
     ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    WEB  = os.path.dirname(os.path.abspath(__file__))
+    WEB = os.path.dirname(os.path.abspath(__file__))
 
     search_dirs = [
         # Web static uploads
@@ -73,9 +73,9 @@ def create_app(config: dict = None) -> Flask:
         or os.environ.get("SECRET_KEY")
         or secrets.token_hex(32)
     )
-    app.config["SESSION_COOKIE_HTTPONLY"]  = True
+    app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-    app.config["SESSION_COOKIE_SECURE"]   = (
+    app.config["SESSION_COOKIE_SECURE"] = (
         os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
     )
     app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB
@@ -94,11 +94,19 @@ def create_app(config: dict = None) -> Flask:
         if db is not None:
             db.close()
 
+    @app.after_request
+    def set_security_headers(resp):
+        resp.headers.setdefault("X-Frame-Options", "DENY")
+        resp.headers.setdefault("X-Content-Type-Options", "nosniff")
+        resp.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+        resp.headers.setdefault("Permissions-Policy", "camera=(), microphone=(), geolocation=()")
+        return resp
+
     # ── Blueprint-lər ─────────────────────────────────────────────────────────
     from web.routes import auth_routes, dashboard, tables, menu, orders, reports
     from web.routes.reservations import reservations_bp
-    from web.routes.loyalty      import loyalty_bp
-    from web.routes.inventory    import inventory_bp
+    from web.routes.loyalty import loyalty_bp
+    from web.routes.inventory import inventory_bp
 
     app.register_blueprint(auth_routes.bp)
     app.register_blueprint(dashboard.bp)
