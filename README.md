@@ -18,7 +18,7 @@ Python 3.10+ | PyQt6 Desktop | Flask Web Panel | PostgreSQL
    python -m web.app
    Open: http://localhost:5000
 
-Default login: admin / admin123
+Default login: admin / <RAMO_DEFAULT_ADMIN_PASSWORD or generated at first startup>
 
 ## Modules
 

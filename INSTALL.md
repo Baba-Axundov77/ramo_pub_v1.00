@@ -47,7 +47,7 @@ Edit .env and set your DB_PASSWORD.
   Desktop: python main.py
   Web panel: python -m web.app
 
-Login: admin / admin123
+Login: admin / <RAMO_DEFAULT_ADMIN_PASSWORD or generated at first startup>
 
 ## Common Errors
 
