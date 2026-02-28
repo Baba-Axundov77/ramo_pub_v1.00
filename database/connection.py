@@ -33,6 +33,11 @@ _MIGRATIONS = [
 ]
 
 
+def _sqlite_fallback_url() -> str:
+    db_file = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "ramo_pub_dev.db")
+    return f"sqlite:///{db_file}"
+
+
 def _auto_migrate(conn):
     """Eksik sutunlari DB-ye elave et - movcud cedveller deyisdirilmir."""
     try:
@@ -82,6 +87,19 @@ def init_database():
 
         return True, "Verilənlər bazasına ugurla qosuldu."
     except OperationalError as e:
+        if os.getenv("DB_FALLBACK_SQLITE", "1") == "1":
+            try:
+                fallback_url = _sqlite_fallback_url()
+                engine = create_engine(fallback_url, pool_pre_ping=True, echo=False)
+                with engine.connect() as conn:
+                    conn.execute(text("SELECT 1"))
+                SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+                from database.models import create_all_tables
+                create_all_tables(engine)
+                print(f"[WARN] PostgreSQL əlçatmazdır, SQLite fallback aktivdir: {fallback_url}")
+                return True, "SQLite fallback ilə başladıldı."
+            except Exception as sqlite_err:
+                return False, f"Baglanti xetasi: {str(e)} | SQLite fallback xetasi: {sqlite_err}"
         return False, f"Baglanti xetasi: {str(e)}"
     except Exception as e:
         return False, f"Xeta: {str(e)}"

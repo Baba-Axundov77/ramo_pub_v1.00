@@ -61,7 +61,7 @@
                     <td>
                         {% set active = namespace(found=false) %}
                         {% for o in t.orders %}
-                            {% if o.status.value in ['open','pending'] %}
+                            {% if o.status.value in ['new','preparing','ready','served'] %}
                                 {% set active.found = true %}
                                 <a href="{{ url_for('orders.index') }}"
                                    class="badge badge-amber">
