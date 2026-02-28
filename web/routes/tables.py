@@ -117,7 +117,7 @@ def create_order(table_id: int):
             "ok":       False,
             "msg":      f"Bu masada artıq aktiv sifariş var (#{existing.id}).",
             "order_id": existing.id,
-            "redirect": f"/orders/?table_id={table_id}&order_id={existing.id}",
+            "redirect": f"/orders/?table_id={table_id}&order_id={existing.id}&focus_menu=1",
         }), 409
 
     ok, result = order_svc.create_order(
@@ -131,7 +131,7 @@ def create_order(table_id: int):
     return jsonify({
         "ok":       True,
         "order_id": result.id,
-        "redirect": f"/orders/?table_id={table_id}&order_id={result.id}",
+        "redirect": f"/orders/?table_id={table_id}&order_id={result.id}&focus_menu=1",
         "msg":      f"Sifariş #{result.id} yaradıldı",
     })
 
