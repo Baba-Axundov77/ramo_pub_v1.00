@@ -31,7 +31,7 @@
          data-name="{{ item.name|lower }}">
         <div class="menu-card-img">
             {% if item.image_path %}
-            <img src="{{ url_for('static', filename='uploads/' + item.image_path|basename) }}"
+            <img src="{{ media_url(item.image_path) }}"
                  alt="{{ item.name }}" onerror="this.style.display='none'">
             {% else %}
             <div class="menu-placeholder">🍽️</div>

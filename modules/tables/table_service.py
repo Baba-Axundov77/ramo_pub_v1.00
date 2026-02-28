@@ -74,8 +74,10 @@ class TableService:
         available = sum(1 for t in tables if t.status == TableStatus.available)
         occupied  = sum(1 for t in tables if t.status == TableStatus.occupied)
         reserved  = sum(1 for t in tables if t.status == TableStatus.reserved)
+        cleaning  = sum(1 for t in tables if t.status == TableStatus.cleaning)
         return {"total": total, "available": available,
-                "occupied": occupied, "reserved": reserved}
+                "occupied": occupied, "reserved": reserved,
+                "cleaning": cleaning}
 
     def seed_defaults(self, db: Session, count: int = 12):
         """İlk işə salma üçün default masalar yarat."""
