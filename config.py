@@ -39,8 +39,10 @@ DATABASE_URL = os.getenv("DATABASE_URL") or str(
 # User Roles
 ROLES = {
     "admin": "Admin",
+    "manager": "Menecer",
     "waiter": "Ofisiant",
     "cashier": "Kassir",
+    "kitchen": "Mətbəx",
 }
 
 # Table Status

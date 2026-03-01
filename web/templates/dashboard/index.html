@@ -82,12 +82,14 @@
         </div>
     </div>
 
+    {% if can('view_reports') %}
     <div class="chart-card chart-wide">
         <div class="chart-title">📈 Bu Günkü Saatlıq Sifariş</div>
         <div class="chart-wrap">
             <canvas id="hourlyChart" height="200"></canvas>
         </div>
     </div>
+    {% endif %}
 </div>
 
 <!-- ── Sürətli Keçid Düymələri ─────────────────────────────── -->
@@ -100,10 +102,10 @@
         <i class="fas fa-utensils"></i>
         <span>Menyu</span>
     </a>
-    <a href="{{ url_for('reports.index') }}" class="quick-link">
+    {% if can('view_reports') %}<a href="{{ url_for('reports.index') }}" class="quick-link">
         <i class="fas fa-chart-bar"></i>
         <span>Hesabatlar</span>
-    </a>
+    </a>{% endif %}
     <a href="{{ url_for('tables.index') }}" class="quick-link">
         <i class="fas fa-chair"></i>
         <span>Masalar</span>
@@ -181,10 +183,13 @@ new Chart(methodCtx, {
 });
 
 // ── Saatlıq Sifariş ──────────────────────────────────────────
+{% if can('view_reports') %}
 fetch("/reports/api/hourly")
     .then(r => r.json())
     .then(data => {
-        const ctx = document.getElementById("hourlyChart").getContext("2d");
+        const canvas = document.getElementById("hourlyChart");
+        if (!canvas) return;
+        const ctx = canvas.getContext("2d");
         new Chart(ctx, {
             type: "bar",
             data: {
@@ -209,5 +214,6 @@ fetch("/reports/api/hourly")
         });
     })
     .catch(() => {});
+{% endif %}
 </script>
 {% endblock %}

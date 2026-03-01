@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Tənzimləmələr{% endblock %}
+{% block breadcrumb %}Tənzimləmələr{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Sistem Tənzimləmələri (Read-Only)</h2>
+  <form method="post" action="{{ url_for('settings.save') }}">
+    <table class="table"><tbody>
+      {% for k,v in settings.items() %}
+      <tr><th>{{ k }}</th><td><input value="{{ v }}" readonly></td></tr>
+      {% endfor %}
+    </tbody></table>
+    <button class="btn">Yenidən yadda saxla</button>
+  </form>
+  <p class="text-muted">Qeyd: aktiv mühitdə parametrləri .env ilə idarə edin.</p>
+</div>
+{% endblock %}

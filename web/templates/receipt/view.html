@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+{% block title %}Çek{% endblock %}
+{% block breadcrumb %}Çek{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Ödəniş çeki</h2>
+  {% if payment %}
+  <ul>
+    <li>ID: {{ payment.id }}</li>
+    <li>Order ID: {{ payment.order_id }}</li>
+    <li>Məbləğ: {{ '%.2f'|format(payment.amount or 0) }} ₼</li>
+    <li>Endirim: {{ '%.2f'|format(payment.discount_amount or 0) }} ₼</li>
+    <li>Final: <strong>{{ '%.2f'|format(payment.final_amount or 0) }} ₼</strong></li>
+    <li>Metod: {{ payment.method.value if payment.method else '-' }}</li>
+    <li>Tarix: {{ payment.created_at }}</li>
+  </ul>
+  {% else %}
+  <p>Ödəniş tapılmadı.</p>
+  {% endif %}
+</div>
+{% endblock %}

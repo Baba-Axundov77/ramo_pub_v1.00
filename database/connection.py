@@ -80,9 +80,10 @@ def init_database():
         from database.models import create_all_tables
         create_all_tables(engine)
 
-        # Eksik sutunlari elave et
-        with engine.connect() as conn:
-            _auto_migrate(conn)
+        # Legacy avtomatik ALTER strategiyası yalnız istəyə bağlıdır.
+        if os.getenv("ENABLE_LEGACY_AUTOMIGRATE", "0") == "1":
+            with engine.connect() as conn:
+                _auto_migrate(conn)
 
         return True, "Verilənlər bazasına ugurla qosuldu."
     except OperationalError as e:

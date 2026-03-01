@@ -7,13 +7,13 @@ from flask import (
     url_for, flash, session, jsonify,
 )
 from database.connection import get_db
-from web.auth import login_required
+from web.auth import login_required, permission_required
 
 reservations_bp = Blueprint("reservations", __name__, url_prefix="/reservations")
 
 
 @reservations_bp.route("/")
-@login_required
+@permission_required("manage_reservations")
 def index():
     from modules.reservation.reservation_service import reservation_service
     from modules.tables.table_service import TableService
@@ -38,7 +38,7 @@ def index():
 
 
 @reservations_bp.route("/create", methods=["POST"])
-@login_required
+@permission_required("manage_reservations")
 def create():
     from modules.reservation.reservation_service import reservation_service
     db = get_db()
@@ -65,7 +65,7 @@ def create():
 
 
 @reservations_bp.route("/<int:res_id>/cancel", methods=["POST"])
-@login_required
+@permission_required("manage_reservations")
 def cancel(res_id: int):
     from modules.reservation.reservation_service import reservation_service
     db = get_db()

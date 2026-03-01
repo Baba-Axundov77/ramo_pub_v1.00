@@ -13,6 +13,7 @@ from flask import (
 )
 
 from database.connection import get_db, init_database
+from modules.auth.permissions import permission_service
 
 
 def _resolve_media_file(path_value: str | None):
@@ -107,6 +108,11 @@ def create_app(config: dict = None) -> Flask:
     from web.routes.reservations import reservations_bp
     from web.routes.loyalty import loyalty_bp
     from web.routes.inventory import inventory_bp
+    from web.routes.staff import staff_bp
+    from web.routes.pos import pos_bp
+    from web.routes.settings import settings_bp
+    from web.routes.receipt import receipt_bp
+    from web.routes.kitchen import kitchen_bp
 
     app.register_blueprint(auth_routes.bp)
     app.register_blueprint(dashboard.bp)
@@ -117,6 +123,11 @@ def create_app(config: dict = None) -> Flask:
     app.register_blueprint(reservations_bp)
     app.register_blueprint(loyalty_bp)
     app.register_blueprint(inventory_bp)
+    app.register_blueprint(staff_bp)
+    app.register_blueprint(pos_bp)
+    app.register_blueprint(settings_bp)
+    app.register_blueprint(receipt_bp)
+    app.register_blueprint(kitchen_bp)
 
     # ── Şablon kontekst prosessoru ────────────────────────────────────────────
     @app.context_processor
@@ -129,6 +140,7 @@ def create_app(config: dict = None) -> Flask:
             "media_url": lambda p: (
                 url_for("media_file", filename=os.path.basename(p)) if p else ""
             ),
+            "can": lambda perm: permission_service.has_permission(session.get("user", {}).get("role"), perm),
         }
 
     # ── Kök marşrut ───────────────────────────────────────────────────────────
