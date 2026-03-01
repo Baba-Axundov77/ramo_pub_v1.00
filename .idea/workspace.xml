@@ -1,10 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="86c53497-eb33-44ba-a89f-dc4abf78bd90" name="Changes" comment="27mod">
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/static/css/style.css" beforeDir="false" afterPath="$PROJECT_DIR$/web/static/css/style.css" afterDir="false" />
-    </list>
+    <list default="true" id="86c53497-eb33-44ba-a89f-dc4abf78bd90" name="Changes" comment="27mod" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
