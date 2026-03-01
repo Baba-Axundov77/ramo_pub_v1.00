@@ -304,6 +304,34 @@
             <span class="ni-icon"><i class="fas fa-boxes"></i></span>
             <span class="ni-label">Anbar</span>
         </a>
+        {% if can('process_payment') %}
+        <a href="{{ url_for('pos.index') }}"
+           class="nav-item {% if request.blueprint=='pos' %}active{% endif %}">
+            <span class="ni-icon"><i class="fas fa-cash-register"></i></span>
+            <span class="ni-label">Kassa</span>
+        </a>
+        {% endif %}
+        {% if can('manage_users') %}
+        <a href="{{ url_for('staff.index') }}"
+           class="nav-item {% if request.blueprint=='staff' %}active{% endif %}">
+            <span class="ni-icon"><i class="fas fa-users"></i></span>
+            <span class="ni-label">İşçilər</span>
+        </a>
+        {% endif %}
+        {% if can('manage_kitchen') %}
+        <a href="{{ url_for('kitchen.index') }}"
+           class="nav-item {% if request.blueprint=='kitchen' %}active{% endif %}">
+            <span class="ni-icon"><i class="fas fa-kitchen-set"></i></span>
+            <span class="ni-label">Mətbəx</span>
+        </a>
+        {% endif %}
+        {% if can('manage_settings') %}
+        <a href="{{ url_for('settings.index') }}"
+           class="nav-item {% if request.blueprint=='settings' %}active{% endif %}">
+            <span class="ni-icon"><i class="fas fa-cog"></i></span>
+            <span class="ni-label">Tənzimləmələr</span>
+        </a>
+        {% endif %}
     </nav>
 
     <div class="sb-foot">

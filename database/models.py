@@ -13,8 +13,10 @@ import enum
 
 class UserRole(enum.Enum):
     admin   = "admin"
+    manager = "manager"
     waiter  = "waiter"
     cashier = "cashier"
+    kitchen = "kitchen"
 
 class TableStatus(enum.Enum):
     available = "available"
@@ -66,11 +68,14 @@ class Table(Base):
     capacity   = Column(Integer, default=4)
     status     = Column(Enum(TableStatus), default=TableStatus.available)
     floor      = Column(Integer, default=1)
+    zone       = Column(String(50), nullable=True)
+    current_order_id = Column(Integer, ForeignKey("orders.id"), nullable=True)
     image_path = Column(String(255), nullable=True)
     is_active  = Column(Boolean, default=True)
 
-    orders       = relationship("Order", back_populates="table")
+    orders       = relationship("Order", back_populates="table", foreign_keys="Order.table_id")
     reservations = relationship("Reservation", back_populates="table")
+    current_order = relationship("Order", foreign_keys=[current_order_id], post_update=True)
 
 
 # ─── MENYU KATEQORİYALARI ─────────────────────────────────────────────────────
@@ -80,9 +85,12 @@ class MenuCategory(Base):
 
     id          = Column(Integer, primary_key=True, index=True)
     name        = Column(String(100), nullable=False)
+    name_az     = Column(String(100), nullable=True)
+    name_en     = Column(String(100), nullable=True)
     description = Column(Text)
     icon        = Column(String(50))   # emoji və ya icon adı
     sort_order  = Column(Integer, default=0)
+    parent_id   = Column(Integer, ForeignKey("menu_categories.id"), nullable=True)
     is_active   = Column(Boolean, default=True)
 
     items = relationship("MenuItem", back_populates="category")
@@ -99,6 +107,8 @@ class MenuItem(Base):
     description = Column(Text)
     price       = Column(Float, nullable=False)
     cost_price  = Column(Float, default=0.0)   # Maya dəyəri
+    image_url   = Column(Text, nullable=True)
+    prep_time_min = Column(Integer, default=0)
     image_path  = Column(String(255))
     is_available = Column(Boolean, default=True)
     is_active   = Column(Boolean, default=True)
@@ -119,14 +129,17 @@ class Order(Base):
     customer_id    = Column(Integer, ForeignKey("customers.id"), nullable=True)
     status         = Column(Enum(OrderStatus), default=OrderStatus.new)
     subtotal       = Column(Float, default=0.0)
+    total_amount   = Column(Float, default=0.0)
     discount_amount = Column(Float, default=0.0)
     total          = Column(Float, default=0.0)
     notes          = Column(Text)
+    note           = Column(Text)
     created_at     = Column(DateTime, server_default=func.now())
     updated_at     = Column(DateTime, onupdate=func.now())
     paid_at        = Column(DateTime, nullable=True)
+    closed_at      = Column(DateTime, nullable=True)
 
-    table    = relationship("Table", back_populates="orders")
+    table    = relationship("Table", back_populates="orders", foreign_keys=[table_id])
     waiter   = relationship("User", back_populates="orders")
     customer = relationship("Customer", back_populates="orders")
     items    = relationship("OrderItem", back_populates="order")
@@ -143,6 +156,8 @@ class OrderItem(Base):
     unit_price   = Column(Float, nullable=False)
     subtotal     = Column(Float, nullable=False)
     notes        = Column(String(255))
+    note         = Column(Text)
+    sent_to_kitchen_at = Column(DateTime, nullable=True)
     status       = Column(Enum(OrderStatus), default=OrderStatus.new)
     created_at   = Column(DateTime, server_default=func.now())
 
@@ -162,6 +177,7 @@ class Payment(Base):
     final_amount   = Column(Float, nullable=False)
     method         = Column(Enum(PaymentMethod), nullable=False)
     cashier_id     = Column(Integer, ForeignKey("users.id"))
+    paid_at        = Column(DateTime, nullable=True)
     created_at     = Column(DateTime, server_default=func.now())
 
     order = relationship("Order", back_populates="payment")
@@ -225,6 +241,8 @@ class Reservation(Base):
     customer_phone = Column(String(20))
     date          = Column(Date, nullable=False)
     time          = Column(Time, nullable=False)
+    reserved_at   = Column(DateTime, nullable=True)
+    status        = Column(String(20), default="pending")
     guest_count   = Column(Integer, default=2)
     notes         = Column(Text)
     is_confirmed  = Column(Boolean, default=False)

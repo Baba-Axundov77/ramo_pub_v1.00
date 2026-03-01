@@ -8,6 +8,7 @@ from modules.orders.order_service import OrderService
 from modules.orders.workflow_service import order_workflow_service
 from modules.tables.table_service import TableService
 from modules.menu.menu_service import MenuService
+from web.auth import permission_required, permission_required_api
 
 bp        = Blueprint("orders", __name__, url_prefix="/orders")
 svc       = OrderService()
@@ -29,6 +30,7 @@ def _user_id():
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/")
+@permission_required("take_orders")
 def index():
     c = _check()
     if c:
@@ -74,10 +76,8 @@ def index():
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/create", methods=["POST"])
+@permission_required_api("take_orders")
 def api_create():
-    if "user" not in session:
-        return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
-
     data     = request.get_json(silent=True) or {}
     table_id = data.get("table_id")
     notes    = data.get("notes", "")
@@ -106,10 +106,8 @@ def api_create():
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/<int:order_id>")
+@permission_required_api("take_orders")
 def api_get(order_id: int):
-    if "user" not in session:
-        return jsonify({"ok": False}), 401
-
     order = svc.get_order(g.db, order_id)
     if not order:
         return jsonify({"ok": False, "msg": "Sifariş tapılmadı"}), 404
@@ -147,10 +145,8 @@ def api_get(order_id: int):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/<int:order_id>/add-item", methods=["POST"])
+@permission_required_api("take_orders")
 def api_add_item(order_id: int):
-    if "user" not in session:
-        return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
-
     data         = request.get_json(silent=True) or {}
     menu_item_id = data.get("menu_item_id")
     quantity     = int(data.get("quantity", 1))
@@ -178,10 +174,8 @@ def api_add_item(order_id: int):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/item/<int:item_id>/remove", methods=["POST"])
+@permission_required_api("take_orders")
 def api_remove_item(item_id: int):
-    if "user" not in session:
-        return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
-
     ok, result = svc.remove_item(g.db, item_id)
     if not ok:
         return jsonify({"ok": False, "msg": str(result)}), 400
@@ -199,10 +193,8 @@ def api_remove_item(item_id: int):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/item/<int:item_id>/qty", methods=["POST"])
+@permission_required_api("take_orders")
 def api_update_qty(item_id: int):
-    if "user" not in session:
-        return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
-
     data     = request.get_json(silent=True) or {}
     quantity = int(data.get("quantity", 1))
 
@@ -222,10 +214,8 @@ def api_update_qty(item_id: int):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/<int:order_id>/status", methods=["POST"])
+@permission_required_api("take_orders")
 def api_status(order_id: int):
-    if "user" not in session:
-        return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
-
     data   = request.get_json(silent=True) or {}
     status = data.get("status", "")
 
@@ -249,10 +239,8 @@ def api_status(order_id: int):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/<int:order_id>/cancel", methods=["POST"])
+@permission_required_api("take_orders")
 def api_cancel(order_id: int):
-    if "user" not in session:
-        return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
-
     ok, msg = svc.cancel_order(g.db, order_id)
     return jsonify({"ok": ok, "msg": str(msg)})
 
@@ -262,10 +250,8 @@ def api_cancel(order_id: int):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/<int:order_id>/pay", methods=["POST"])
+@permission_required_api("process_payment")
 def api_pay(order_id: int):
-    if "user" not in session:
-        return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
-
     data          = request.get_json(silent=True) or {}
     method        = data.get("method", "cash")
     discount_code = data.get("discount_code", "")

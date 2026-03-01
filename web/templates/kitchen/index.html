@@ -1,0 +1,60 @@
+{% extends "base.html" %}
+{% block title %}Mətbəx Ekranı{% endblock %}
+{% block breadcrumb %}Mətbəx{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>🍳 Mətbəx Queue (KDS)</h2>
+  <p class="text-muted">Canlı yenilənmə: hər 10 saniyə.</p>
+</div>
+
+<div id="kitchenQueue" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:12px;"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function postJSON(url) {
+  const r = await fetch(url, {method:'POST', headers:{'Content-Type':'application/json'}});
+  return r.json();
+}
+
+function rowItem(it) {
+  const st = it.status;
+  const color = st === 'ready' ? '#2ecc71' : (st === 'preparing' ? '#f39c12' : '#95a5a6');
+  return `<li style="display:flex;justify-content:space-between;gap:8px;align-items:center;">
+    <span>${it.name} x${it.qty}</span>
+    <span style="color:${color};font-weight:bold">${st}</span>
+  </li>`;
+}
+
+function card(order) {
+  return `<div class="card" style="border:1px solid #2E2E4E;">
+    <h3>#${order.id} — ${order.table}</h3>
+    <p><b>Status:</b> ${order.status} | <b>Vaxt:</b> ${order.created_at}</p>
+    <ul>${order.items.map(rowItem).join('')}</ul>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;">
+      <button class="btn" onclick="setPreparing(${order.id})">Hazırlanır</button>
+      <button class="btn btn-primary" onclick="setReady(${order.id})">Sifariş Hazır</button>
+      ${order.items.filter(i=>i.status!=='ready' && i.status!=='cancelled').map(i=>`<button class='btn btn-secondary' onclick='setItemReady(${i.id})'>${i.name} hazır</button>`).join('')}
+    </div>
+  </div>`;
+}
+
+async function loadQueue() {
+  const r = await fetch('{{ url_for("kitchen.api_queue") }}');
+  const data = await r.json();
+  const el = document.getElementById('kitchenQueue');
+  if (!data.ok || !data.queue.length) {
+    el.innerHTML = '<div class="card"><p>Növbədə aktiv sifariş yoxdur.</p></div>';
+    return;
+  }
+  el.innerHTML = data.queue.map(card).join('');
+}
+
+async function setPreparing(orderId){ await postJSON(`/kitchen/api/${orderId}/preparing`); loadQueue(); }
+async function setReady(orderId){ await postJSON(`/kitchen/api/${orderId}/ready`); loadQueue(); }
+async function setItemReady(itemId){ await postJSON(`/kitchen/api/item/${itemId}/ready`); loadQueue(); }
+
+loadQueue();
+setInterval(loadQueue, 10000);
+</script>
+{% endblock %}
