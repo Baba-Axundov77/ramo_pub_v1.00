@@ -15,6 +15,11 @@
 ## D. Migration strategy
 - [x] Added Alembic env and baseline version migration.
 - [x] Add incremental revision for schema-alignment fields (0002).
+- [ ] Enforce permission checks on every mutable API endpoint.
+
+## D. Migration strategy
+- [x] Added Alembic env and baseline version migration.
+- [ ] Add incremental revisions for future schema changes.
 
 ## E. Deploy stack
 - [x] Added Dockerfile, docker-compose, .env.example.
