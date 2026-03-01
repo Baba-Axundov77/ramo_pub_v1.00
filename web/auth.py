@@ -7,6 +7,8 @@ from flask import flash, redirect, session, url_for, jsonify
 
 from modules.auth.permissions import permission_service
 
+from modules.auth.permissions import permission_service
+
 
 def login_required(f: Callable) -> Callable:
     @wraps(f)
