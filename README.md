@@ -22,7 +22,7 @@ Default login: admin / <RAMO_DEFAULT_ADMIN_PASSWORD or generated at first startu
 
 ## Modules
 
-- Login & Auth (3 roles: Admin, Waiter, Cashier)
+- Login & Auth (5 roles: Admin, Manager, Waiter, Cashier, Kitchen)
 - Tables (image support, status management)
 - Orders (add/remove items, status tracking)
 - Menu (categories, images, CRUD)

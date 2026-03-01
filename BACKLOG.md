@@ -10,6 +10,11 @@
 
 ## C. RBAC hardening
 - [x] Centralized permission map and web permission decorators.
+- [x] Enforce permission checks on mutable API endpoints for tables/orders/inventory/reservations/staff/pos/settings.
+
+## D. Migration strategy
+- [x] Added Alembic env and baseline version migration.
+- [x] Add incremental revision for schema-alignment fields (0002).
 - [ ] Enforce permission checks on every mutable API endpoint.
 
 ## D. Migration strategy

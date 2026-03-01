@@ -63,3 +63,14 @@ def test_staff_route_accessible_for_admin(client):
     ok = c.get("/staff/", follow_redirects=True)
     assert ok.status_code == 200
     assert b"I\xc5\x9f\xc3\xa7" in ok.data or b"staff" in ok.data.lower()
+
+
+def test_tables_mutation_denied_for_cashier(client):
+    c, SessionLocal = client
+    _seed_user(SessionLocal, "cash1", UserRole.cashier)
+
+    c.post("/auth/login", data={"username": "cash1", "password": "pass123"}, follow_redirects=True)
+    denied = c.post("/tables/api/status/1", json={"status": "cleaning"})
+    assert denied.status_code == 403
+    data = denied.get_json()
+    assert data and data.get("ok") is False

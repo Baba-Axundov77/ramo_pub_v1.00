@@ -6,6 +6,7 @@ from typing import Dict, Iterable, Set
 
 ROLE_PERMISSIONS: Dict[str, Set[str]] = {
     "admin": {
+        "manage_kitchen",
         "manage_users",
         "manage_menu",
         "manage_inventory",
@@ -18,6 +19,15 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
         "manage_settings",
         "print_receipts",
     },
+    "manager": {
+        "manage_menu",
+        "manage_inventory",
+        "view_reports",
+        "manage_discounts",
+        "manage_tables",
+        "take_orders",
+        "manage_reservations",
+    },
     "waiter": {
         "manage_tables",
         "take_orders",
@@ -27,6 +37,9 @@ ROLE_PERMISSIONS: Dict[str, Set[str]] = {
         "process_payment",
         "view_reports",
         "print_receipts",
+    },
+    "kitchen": {
+        "manage_kitchen",
     },
 }
 

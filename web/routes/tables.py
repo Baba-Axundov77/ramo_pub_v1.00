@@ -6,6 +6,7 @@ from flask import (
 )
 from modules.tables.table_service import TableService
 from modules.orders.workflow_service import order_workflow_service
+from web.auth import permission_required, permission_required_api
 
 bp = Blueprint("tables", __name__, url_prefix="/tables")
 svc = TableService()
@@ -25,6 +26,7 @@ def _user_id():
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/")
+@permission_required("manage_tables")
 def index():
     c = _check()
     if c:
@@ -58,10 +60,8 @@ def api_all():
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/status/<int:table_id>", methods=["POST"])
+@permission_required_api("manage_tables")
 def set_status(table_id: int):
-    if "user" not in session:
-        return jsonify({"error": "Giriş tələb olunur"}), 401
-
     payload = request.get_json(silent=True) or {}
     status = str(payload.get("status", "available")).strip().lower()
 
@@ -79,9 +79,6 @@ def set_status(table_id: int):
 
 @bp.route("/api/active-order/<int:table_id>")
 def active_order(table_id: int):
-    if "user" not in session:
-        return jsonify({"error": "Giriş tələb olunur"}), 401
-
     table = svc.get_by_id(g.db, table_id)
     if not table:
         return jsonify({"ok": False, "msg": "Masa tapılmadı."}), 404
@@ -105,10 +102,8 @@ def active_order(table_id: int):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/create-order/<int:table_id>", methods=["POST"])
+@permission_required_api("manage_tables")
 def create_order(table_id: int):
-    if "user" not in session:
-        return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
-
     ok, result = order_workflow_service.ensure_order_for_table(
         g.db,
         table_id=table_id,
@@ -139,10 +134,8 @@ def create_order(table_id: int):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/reserve/<int:table_id>", methods=["POST"])
+@permission_required_api("manage_tables")
 def reserve_table(table_id: int):
-    if "user" not in session:
-        return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
-
     # Aktiv sifariş varsa rezerv etmə
     active = svc.get_active_order(g.db, table_id)
     if active:
@@ -157,10 +150,8 @@ def reserve_table(table_id: int):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/clean/<int:table_id>", methods=["POST"])
+@permission_required_api("manage_tables")
 def clean_table(table_id: int):
-    if "user" not in session:
-        return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
-
     ok, result = svc.set_status(g.db, table_id, "cleaning")
     return jsonify({"ok": ok, "msg": "Masa təmizlənir" if ok else str(result)})
 
@@ -170,10 +161,8 @@ def clean_table(table_id: int):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/free/<int:table_id>", methods=["POST"])
+@permission_required_api("manage_tables")
 def free_table(table_id: int):
-    if "user" not in session:
-        return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
-
     # Aktiv sifariş varsa boş etmə
     active = svc.get_active_order(g.db, table_id)
     if active:
@@ -191,6 +180,7 @@ def free_table(table_id: int):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/create", methods=["POST"])
+@permission_required_api("manage_tables")
 def api_create_table():
     if "user" not in session:
         return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
@@ -227,6 +217,7 @@ def api_stats():
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/update/<int:table_id>", methods=["POST"])
+@permission_required_api("manage_tables")
 def api_update_table(table_id: int):
     if "user" not in session:
         return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401

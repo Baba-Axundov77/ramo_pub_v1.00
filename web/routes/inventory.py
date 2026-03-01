@@ -6,7 +6,7 @@ from flask import (
     url_for, flash, jsonify,
 )
 from database.connection import get_db
-from web.auth import login_required, admin_required
+from web.auth import login_required, permission_required
 
 inventory_bp = Blueprint("inventory", __name__, url_prefix="/inventory")
 
@@ -32,7 +32,7 @@ def index():
 
 
 @inventory_bp.route("/create", methods=["POST"])
-@admin_required
+@permission_required("manage_inventory")
 def create():
     from modules.inventory.inventory_service import inventory_service
     db = get_db()
@@ -50,7 +50,7 @@ def create():
 
 
 @inventory_bp.route("/<int:item_id>/adjust", methods=["POST"])
-@login_required
+@permission_required("manage_inventory")
 def adjust(item_id: int):
     from modules.inventory.inventory_service import inventory_service
     db     = get_db()
@@ -65,7 +65,7 @@ def adjust(item_id: int):
 
 
 @inventory_bp.route("/<int:item_id>/delete", methods=["POST"])
-@admin_required
+@permission_required("manage_inventory")
 def delete(item_id: int):
     from modules.inventory.inventory_service import inventory_service
     ok, msg = inventory_service.delete(get_db(), item_id)
