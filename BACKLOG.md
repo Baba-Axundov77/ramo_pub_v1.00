@@ -6,6 +6,7 @@
 
 ## B. Web module parity
 - [x] Added web routes/pages for Staff, POS, Settings, Receipt.
+- [x] Kitchen/KDS web module added with queue + status update actions.
 - [ ] Expand all CRUD/actions to match desktop feature depth.
 
 ## C. RBAC hardening

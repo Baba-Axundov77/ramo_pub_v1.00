@@ -112,6 +112,7 @@ def create_app(config: dict = None) -> Flask:
     from web.routes.pos import pos_bp
     from web.routes.settings import settings_bp
     from web.routes.receipt import receipt_bp
+    from web.routes.kitchen import kitchen_bp
 
     app.register_blueprint(auth_routes.bp)
     app.register_blueprint(dashboard.bp)
@@ -126,6 +127,7 @@ def create_app(config: dict = None) -> Flask:
     app.register_blueprint(pos_bp)
     app.register_blueprint(settings_bp)
     app.register_blueprint(receipt_bp)
+    app.register_blueprint(kitchen_bp)
 
     # ── Şablon kontekst prosessoru ────────────────────────────────────────────
     @app.context_processor

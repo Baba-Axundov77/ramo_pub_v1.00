@@ -74,3 +74,23 @@ def test_tables_mutation_denied_for_cashier(client):
     assert denied.status_code == 403
     data = denied.get_json()
     assert data and data.get("ok") is False
+
+
+def test_kitchen_page_access_for_kitchen_role(client):
+    c, SessionLocal = client
+    _seed_user(SessionLocal, "kitchen1", UserRole.kitchen)
+
+    c.post("/auth/login", data={"username": "kitchen1", "password": "pass123"}, follow_redirects=True)
+    ok = c.get("/kitchen/", follow_redirects=True)
+    assert ok.status_code == 200
+    assert b"kitchen" in ok.data.lower() or b"queue" in ok.data.lower()
+
+
+def test_kitchen_page_denied_for_waiter(client):
+    c, SessionLocal = client
+    _seed_user(SessionLocal, "waitx", UserRole.waiter)
+
+    c.post("/auth/login", data={"username": "waitx", "password": "pass123"}, follow_redirects=True)
+    denied = c.get("/kitchen/", follow_redirects=True)
+    assert denied.status_code == 200
+    assert b"icaz" in denied.data.lower()

@@ -49,6 +49,7 @@ http://localhost:5000/reports   - Reports
 http://localhost:5000/reservations - Reservations
 http://localhost:5000/loyalty   - Loyalty & Customers
 http://localhost:5000/inventory - Inventory
+http://localhost:5000/kitchen   - Kitchen (KDS)
 
 ## Loyalty System
 
