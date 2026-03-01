@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}Kassa{% endblock %}
+{% block breadcrumb %}Kassa{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>Kassa / Ödəniş</h2>
+  <form method="post" action="{{ url_for('pos.pay') }}" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-items:end;">
+    <select name="order_id" required>
+      {% for o in active_orders %}<option value="{{ o.id }}">#{{ o.id }} / Masa {{ o.table.number if o.table else '-' }} / {{ '%.2f'|format(o.total or o.subtotal or 0) }} ₼</option>{% endfor %}
+    </select>
+    <select name="method"><option value="cash">Nağd</option><option value="card">Kart</option><option value="online">Online</option></select>
+    <input name="discount_code" placeholder="Endirim kodu">
+    <input name="loyalty_points_used" type="number" min="0" placeholder="Loyallıq xal">
+    <button class="btn btn-primary">Ödənişi tamamla</button>
+  </form>
+</div>
+{% endblock %}

@@ -63,3 +63,22 @@ http://localhost:5000/inventory - Inventory
 users, tables, menu_categories, menu_items, orders, order_items,
 payments, inventory_items, shifts, customers, loyalty_transactions,
 reservations, discounts, receipt_logs
+
+
+## Database Migrations (Alembic)
+
+- Initialize DB schema: `alembic upgrade head`
+- Create new migration: `alembic revision --autogenerate -m "message"`
+- Rollback one step: `alembic downgrade -1`
+
+## Containerized Run
+
+- Start services: `docker compose up --build`
+- Web panel: `http://localhost:5000`
+
+## Web Module Parity Additions
+
+- `/staff` — staff + shifts
+- `/pos` — payment workflow
+- `/settings` — runtime settings (read-only)
+- `/receipt/<payment_id>` — payment receipt view

@@ -1,0 +1,31 @@
+services:
+  db:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: ramo_pub
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+
+  web:
+    build: .
+    depends_on:
+      - db
+    env_file:
+      - .env.example
+    environment:
+      DB_HOST: db
+      DB_PORT: 5432
+      DB_NAME: ramo_pub
+      DB_USER: postgres
+      DB_PASSWORD: postgres
+      DATABASE_URL: postgresql+psycopg2://postgres:postgres@db:5432/ramo_pub
+    ports:
+      - "5000:5000"
+    command: python -m web.app
+
+volumes:
+  pgdata:
