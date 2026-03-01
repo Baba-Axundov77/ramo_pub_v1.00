@@ -6,6 +6,7 @@ import binascii
 from sqlalchemy.orm import Session
 from database.models import User, UserRole
 from config import ROLES
+from modules.auth.permissions import permission_service
 
 
 def _pbkdf2_hash(plain: str) -> str:
@@ -100,20 +101,7 @@ class AuthService:
     def has_permission(self, permission: str) -> bool:
         if not self.current_user:
             return False
-        permissions = {
-            UserRole.admin: [
-                "manage_users", "manage_menu", "manage_inventory",
-                "view_reports", "manage_discounts", "manage_tables",
-                "take_orders", "process_payment", "manage_reservations"
-            ],
-            UserRole.waiter: [
-                "manage_tables", "take_orders", "manage_reservations"
-            ],
-            UserRole.cashier: [
-                "process_payment", "view_reports"
-            ],
-        }
-        return permission in permissions.get(self.current_user.role, [])
+        return permission_service.has_permission(self.current_user.role.value, permission)
 
 
 # Global instance
