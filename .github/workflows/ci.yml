@@ -1,0 +1,8 @@
+name: Environment-Check
+on: [push]
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "IT Muhiti aktivdir."
