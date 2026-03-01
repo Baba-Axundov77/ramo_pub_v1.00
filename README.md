@@ -83,3 +83,13 @@ reservations, discounts, receipt_logs
 - `/pos` — payment workflow
 - `/settings` — runtime settings (read-only)
 - `/receipt/<payment_id>` — payment receipt view
+
+
+## Production Run (Nginx + Gunicorn + TLS)
+
+- Prepare `.env` and SSL files in `deploy/certs`:
+  - `deploy/certs/fullchain.pem`
+  - `deploy/certs/privkey.pem`
+- Start production profile:
+  - `docker compose -f docker-compose.prod.yml up --build -d`
+- Reverse proxy config: `deploy/nginx/default.conf`

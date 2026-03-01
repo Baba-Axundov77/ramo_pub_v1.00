@@ -1,5 +1,6 @@
 {% extends "base.html" %}
 {% block title %}Menyu{% endblock %}
+{% block breadcrumb %}Menyu{% endblock %}
 
 {% block content %}
 <div class="page-header">
@@ -13,72 +14,86 @@
     </div>
 </div>
 
-<!-- Kateqoriya filtri -->
+<div class="card" style="margin-bottom:12px;">
+  <h3>Yeni Kateqoriya</h3>
+  <form method="post" action="{{ url_for('menu.create_category') }}" style="display:grid;grid-template-columns:120px 2fr 1fr 120px 140px;gap:8px;">
+    <input name="icon" placeholder="🍽️" value="🍽️">
+    <input name="name" placeholder="Kateqoriya adı" required>
+    <input name="description" placeholder="Açıqlama">
+    <input name="sort_order" type="number" value="0" min="0">
+    <button class="btn btn-primary">Yarat</button>
+  </form>
+</div>
+
+<div class="card" style="margin-bottom:12px;">
+  <h3>Yeni Məhsul</h3>
+  <form method="post" action="{{ url_for('menu.create_item') }}" style="display:grid;grid-template-columns:1.4fr 2fr 1fr 1fr 2fr 140px;gap:8px;">
+    <select name="category_id" required>
+      <option value="">Kateqoriya seç</option>
+      {% for c in categories %}<option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>{% endfor %}
+    </select>
+    <input name="name" placeholder="Məhsul adı" required>
+    <input name="price" type="number" step="0.01" min="0" placeholder="Qiymət" required>
+    <input name="cost_price" type="number" step="0.01" min="0" placeholder="Maya">
+    <input name="description" placeholder="Açıqlama">
+    <button class="btn btn-primary">Əlavə et</button>
+  </form>
+</div>
+
 <div class="cat-tabs" id="catTabs">
-    <button class="cat-tab active" data-cat="all">🍽️ Hamısı</button>
+    <a href="{{ url_for('menu.index') }}" class="cat-tab {{ 'active' if not selected_category else '' }}">🍽️ Hamısı</a>
     {% for cat in categories %}
-    <button class="cat-tab" data-cat="{{ cat.id }}">
+    <a href="{{ url_for('menu.index', category_id=cat.id) }}" class="cat-tab {{ 'active' if selected_category == cat.id else '' }}">
         {{ cat.icon }} {{ cat.name }}
-    </button>
+    </a>
     {% endfor %}
 </div>
 
-<!-- Məhsul kartları -->
 <div class="menu-grid" id="menuGrid">
     {% for item in items %}
     <div class="menu-card {{ 'unavailable' if not item.is_available }}"
-         data-cat="{{ item.category_id }}"
          data-name="{{ item.name|lower }}">
         <div class="menu-card-img">
             {% if item.image_path %}
-            <img src="{{ media_url(item.image_path) }}"
-                 alt="{{ item.name }}" onerror="this.style.display='none'">
+            <img src="{{ media_url(item.image_path) }}" alt="{{ item.name }}" onerror="this.style.display='none'">
             {% else %}
             <div class="menu-placeholder">🍽️</div>
             {% endif %}
         </div>
         <div class="menu-card-body">
             <div class="menu-card-name">{{ item.name }}</div>
-            {% if item.description %}
-            <div class="menu-card-desc">{{ item.description[:60] }}...</div>
-            {% endif %}
+            {% if item.description %}<div class="menu-card-desc">{{ item.description[:80] }}</div>{% endif %}
             <div class="menu-card-footer">
                 <span class="menu-price">{{ "%.2f"|format(item.price) }} ₼</span>
-                {% if item.is_available %}
-                    <span class="badge badge-green">Mövcud</span>
-                {% else %}
-                    <span class="badge badge-red">Mövcud deyil</span>
-                {% endif %}
+                {% if item.is_available %}<span class="badge badge-green">Mövcud</span>{% else %}<span class="badge badge-red">Mövcud deyil</span>{% endif %}
+            </div>
+            <div style="display:flex;gap:8px;margin-top:8px;">
+                <form method="post" action="{{ url_for('menu.toggle_item', item_id=item.id) }}"><button class="btn btn-secondary" type="submit">Status</button></form>
+                <form method="post" action="{{ url_for('menu.delete_item', item_id=item.id) }}" onsubmit="return confirm('Məhsulu deaktiv edək?')"><button class="btn btn-danger" type="submit">Sil</button></form>
             </div>
         </div>
     </div>
     {% endfor %}
 </div>
+
+<div class="card" style="margin-top:12px;">
+  <h3>Kateqoriyalar</h3>
+  <table class="table"><thead><tr><th>ID</th><th>Ad</th><th>Sıra</th><th></th></tr></thead><tbody>
+    {% for c in categories %}
+    <tr><td>{{ c.id }}</td><td>{{ c.icon }} {{ c.name }}</td><td>{{ c.sort_order }}</td>
+      <td><form method="post" action="{{ url_for('menu.delete_category', cat_id=c.id) }}" onsubmit="return confirm('Kateqoriyanı deaktiv edək?')"><button class="btn btn-danger" type="submit">Sil</button></form></td></tr>
+    {% endfor %}
+  </tbody></table>
+</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-// Kateqoriya filtri
-document.querySelectorAll(".cat-tab").forEach(btn => {
-    btn.addEventListener("click", () => {
-        document.querySelectorAll(".cat-tab").forEach(b => b.classList.remove("active"));
-        btn.classList.add("active");
-        const cat = btn.dataset.cat;
-        filterMenu();
+document.getElementById("menuSearch").addEventListener("input", () => {
+    const q = document.getElementById("menuSearch").value.toLowerCase();
+    document.querySelectorAll(".menu-card").forEach(card => {
+        card.style.display = card.dataset.name.includes(q) ? "" : "none";
     });
 });
-
-// Axtarış
-document.getElementById("menuSearch").addEventListener("input", filterMenu);
-
-function filterMenu() {
-    const cat    = document.querySelector(".cat-tab.active").dataset.cat;
-    const search = document.getElementById("menuSearch").value.toLowerCase();
-    document.querySelectorAll(".menu-card").forEach(card => {
-        const matchCat  = cat === "all" || card.dataset.cat === cat;
-        const matchName = card.dataset.name.includes(search);
-        card.style.display = (matchCat && matchName) ? "" : "none";
-    });
-}
 </script>
 {% endblock %}
