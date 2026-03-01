@@ -6,13 +6,13 @@ from flask import (
     url_for, flash, jsonify,
 )
 from database.connection import get_db
-from web.auth import login_required, admin_required
+from web.auth import login_required, admin_required, permission_required
 
 loyalty_bp = Blueprint("loyalty", __name__, url_prefix="/loyalty")
 
 
 @loyalty_bp.route("/")
-@login_required
+@permission_required("manage_discounts")
 def index():
     from modules.loyalty.loyalty_service import loyalty_service
     db      = get_db()
@@ -30,7 +30,7 @@ def index():
 
 
 @loyalty_bp.route("/customers/create", methods=["POST"])
-@login_required
+@permission_required("manage_discounts")
 def create_customer():
     from modules.loyalty.loyalty_service import loyalty_service
     from datetime import date
@@ -68,7 +68,7 @@ def delete_customer(customer_id: int):
 
 
 @loyalty_bp.route("/customers/<int:customer_id>/points", methods=["POST"])
-@login_required
+@permission_required("manage_discounts")
 def adjust_points(customer_id: int):
     from modules.loyalty.loyalty_service import loyalty_service
     db     = get_db()
