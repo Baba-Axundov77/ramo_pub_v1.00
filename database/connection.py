@@ -16,20 +16,39 @@ SessionLocal = None
 # ── Avtomatik migration: DB-ye eksik sutunlari elave et ──────────────────────
 # (table_name, column_name, column_sql_definition)
 _MIGRATIONS = [
-    ("tables",       "image_path",      "VARCHAR(255)"),
-    ("tables",       "floor",           "INTEGER DEFAULT 1"),
-    ("tables",       "name",            "VARCHAR(50)"),
-    ("menu_items",   "image_path",      "VARCHAR(255)"),
-    ("menu_items",   "cost_price",      "FLOAT DEFAULT 0.0"),
-    ("menu_items",   "is_available",    "BOOLEAN DEFAULT TRUE"),
-    ("orders",       "customer_id",     "INTEGER"),
-    ("orders",       "subtotal",        "FLOAT DEFAULT 0.0"),
-    ("orders",       "discount_amount", "FLOAT DEFAULT 0.0"),
-    ("orders",       "paid_at",         "TIMESTAMP"),
-    ("order_items",  "notes",           "VARCHAR(255)"),
-    ("payments",     "discount_amount", "FLOAT DEFAULT 0.0"),
-    ("users",        "updated_at",      "TIMESTAMP"),
-    ("users",        "phone",           "VARCHAR(20)"),
+    # tables
+    ("tables",       "image_path",        "VARCHAR(255)"),
+    ("tables",       "floor",             "INTEGER DEFAULT 1"),
+    ("tables",       "name",              "VARCHAR(50)"),
+
+    # menu_items — inventory_item_id və digər eksik sütunlar əlavə edildi
+    ("menu_items",   "image_path",        "VARCHAR(255)"),
+    ("menu_items",   "image_url",         "TEXT"),
+    ("menu_items",   "cost_price",        "FLOAT DEFAULT 0.0"),
+    ("menu_items",   "prep_time_min",     "INTEGER DEFAULT 0"),
+    ("menu_items",   "is_available",      "BOOLEAN DEFAULT 1"),
+    ("menu_items",   "inventory_item_id", "INTEGER"),           # ← ƏSAS FIX
+
+    # orders
+    ("orders",       "customer_id",       "INTEGER"),
+    ("orders",       "subtotal",          "FLOAT DEFAULT 0.0"),
+    ("orders",       "discount_amount",   "FLOAT DEFAULT 0.0"),
+    ("orders",       "paid_at",           "TIMESTAMP"),
+
+    # order_items
+    ("order_items",  "notes",             "VARCHAR(255)"),
+
+    # payments
+    ("payments",     "discount_amount",   "FLOAT DEFAULT 0.0"),
+
+    # users
+    ("users",        "updated_at",        "TIMESTAMP"),
+    ("users",        "phone",             "VARCHAR(20)"),
+
+    # inventory_items
+    ("inventory_items", "supplier",       "VARCHAR(100)"),
+    ("inventory_items", "min_quantity",   "FLOAT DEFAULT 5.0"),
+    ("inventory_items", "cost_per_unit",  "FLOAT DEFAULT 0.0"),
 ]
 
 
@@ -44,8 +63,10 @@ def _auto_migrate(conn):
             existing_cols = [c["name"] for c in insp.get_columns(table)]
             if column not in existing_cols:
                 try:
+                    # IF NOT EXISTS SQLite 3.37+ tələb edir,
+                    # try/except artıq qoruyur — sildik
                     conn.execute(text(
-                        f'ALTER TABLE "{table}" ADD COLUMN IF NOT EXISTS "{column}" {col_def}'
+                        f'ALTER TABLE "{table}" ADD COLUMN "{column}" {col_def}'
                     ))
                     conn.commit()
                     print(f"[MIGRATE] {table}.{column} elave edildi")
@@ -80,10 +101,9 @@ def init_database():
         from database.models import create_all_tables
         create_all_tables(engine)
 
-        # Legacy avtomatik ALTER strategiyası yalnız istəyə bağlıdır.
-        if os.getenv("ENABLE_LEGACY_AUTOMIGRATE", "0") == "1":
-            with engine.connect() as conn:
-                _auto_migrate(conn)
+        # AUTO-MIGRATE həmişə işləyir — env flag silindi
+        with engine.connect() as conn:
+            _auto_migrate(conn)
 
         return True, "Verilənlər bazasına ugurla qosuldu."
     except OperationalError as e:
