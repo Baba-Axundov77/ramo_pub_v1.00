@@ -4,6 +4,7 @@ from datetime import date
 from flask import Blueprint, render_template, session, redirect, url_for, g, jsonify, request
 from modules.reports.report_service import ReportService
 from modules.orders.order_service import OrderService
+from modules.inventory.inventory_service import inventory_service
 from web.auth import permission_required, permission_required_api
 
 bp      = Blueprint("reports", __name__, url_prefix="/reports")
@@ -25,6 +26,7 @@ def index():
     completed_sales = svc.completed_sales(g.db, today, limit=100)
     # Sifarişlər bölməsindən köçürülmüş statistika
     summary         = ord_svc.get_today_summary(g.db)
+    purchase_receipts = inventory_service.list_purchase_receipts(g.db, limit=30)
     return render_template(
         "reports/index.html",
         daily=daily,
@@ -32,6 +34,7 @@ def index():
         today=today,
         completed_sales=completed_sales,
         summary=summary,
+        purchase_receipts=purchase_receipts,
     )
 
 @bp.route("/api/monthly")

@@ -110,12 +110,14 @@ class MenuItem(Base):
     image_url   = Column(Text, nullable=True)
     prep_time_min = Column(Integer, default=0)
     image_path  = Column(String(255))
+    inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=True)
     is_available = Column(Boolean, default=True)
     is_active   = Column(Boolean, default=True)
     created_at  = Column(DateTime, server_default=func.now())
 
     category    = relationship("MenuCategory", back_populates="items")
     order_items = relationship("OrderItem", back_populates="menu_item")
+    inventory_item = relationship("InventoryItem", back_populates="menu_items")
 
 
 # ─── SİFARİŞLƏR ───────────────────────────────────────────────────────────────
@@ -196,6 +198,39 @@ class InventoryItem(Base):
     cost_per_unit = Column(Float, default=0.0)
     supplier      = Column(String(100))
     last_updated  = Column(DateTime, server_default=func.now(), onupdate=func.now())
+
+    menu_items = relationship("MenuItem", back_populates="inventory_item")
+    purchase_items = relationship("PurchaseReceiptItem", back_populates="inventory_item")
+
+
+class PurchaseReceipt(Base):
+    __tablename__ = "purchase_receipts"
+
+    id = Column(Integer, primary_key=True, index=True)
+    purchased_at = Column(DateTime, nullable=False, server_default=func.now())
+    store_name = Column(String(120), nullable=True)
+    note = Column(Text, nullable=True)
+    total_amount = Column(Float, nullable=False, default=0.0)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    items = relationship("PurchaseReceiptItem", back_populates="receipt", cascade="all, delete-orphan")
+
+
+class PurchaseReceiptItem(Base):
+    __tablename__ = "purchase_receipt_items"
+
+    id = Column(Integer, primary_key=True, index=True)
+    receipt_id = Column(Integer, ForeignKey("purchase_receipts.id"), nullable=False)
+    inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=False)
+    item_name = Column(String(150), nullable=False)
+    unit = Column(String(30), nullable=False)
+    quantity = Column(Float, nullable=False)
+    unit_cost = Column(Float, nullable=False)
+    line_total = Column(Float, nullable=False)
+
+    receipt = relationship("PurchaseReceipt", back_populates="items")
+    inventory_item = relationship("InventoryItem", back_populates="purchase_items")
 
 
 # ─── İŞÇİLƏR & NÖVBƏLƏr ──────────────────────────────────────────────────────
