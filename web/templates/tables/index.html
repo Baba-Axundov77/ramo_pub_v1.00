@@ -59,18 +59,17 @@
         </div>
 
         <div class="table-meta">👥 {{ t.capacity }} nəfər • {{ t.floor }}. mərtəbə</div>
-        <div class="table-status {{ sc[0] }}">{{ sc[1] }}</div>
-
-        <div class="table-order" style="margin-top:8px; min-height:22px;">
-            {% set active = namespace(found=false) %}
-            {% for o in t.orders %}
-                {% if o.status.value in ['new','preparing','ready','served'] %}
-                    {% set active.found = true %}
-                    <span class="badge badge-amber" style="font-size:11px;">
-                        #{{ o.id }} — {{ "%.2f"|format(o.total) }} ₼
-                    </span>
-                {% endif %}
-            {% endfor %}
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-top:8px;gap:8px;">
+            <div class="table-status {{ sc[0] }}" style="margin:0;">{{ sc[1] }}</div>
+            <div class="table-order" style="min-height:22px;text-align:right;">
+                {% set active = namespace(found=false) %}
+                {% for o in t.orders %}
+                    {% if o.status.value in ['new','preparing','ready','served'] %}
+                        {% set active.found = true %}
+                        <span class="badge badge-amber" style="font-size:11px;">#{{ o.id }} — {{ "%.2f"|format(o.total) }} ₼</span>
+                    {% endif %}
+                {% endfor %}
+            </div>
         </div>
     </article>
     {% endfor %}
@@ -353,9 +352,15 @@ async function actCancelReserve() {
 
 async function actOccupy() {
     const id = _card?.dataset.id; if (!id) return; closeActionModal();
+    const ensure = await apiFetch(`/tables/api/create-order/${id}`, { method:"POST" });
+    if (ensure?.order_id) {
+        toast("Müştəri gəldi — sifariş açıldı ✅");
+        setTimeout(() => { window.location.href = ensure.redirect || `/orders/?table_id=${id}&order_id=${ensure.order_id}`; }, 350);
+        return;
+    }
     const res = await apiFetch(`/tables/api/status/${id}`, { method:"POST", body:JSON.stringify({status:"occupied"}) });
     res?.ok ? (toast("Masa dolu edildi 🔴"), setTimeout(() => location.reload(), 700))
-            : toast(res?.msg || "Xəta", "danger");
+            : toast((ensure?.msg || res?.msg || "Xəta"), "danger");
 }
 
 async function actSetAvailable() {

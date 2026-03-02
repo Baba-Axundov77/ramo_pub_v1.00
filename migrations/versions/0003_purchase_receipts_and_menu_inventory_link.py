@@ -1,0 +1,47 @@
+"""purchase receipts and menu inventory link
+
+Revision ID: 0003_purchase_receipts_and_menu_inventory_link
+Revises: 0002_schema_alignment_rbac_roles
+Create Date: 2026-03-02
+"""
+from alembic import op
+import sqlalchemy as sa
+
+revision = '0003_purchase_receipts_and_menu_inventory_link'
+down_revision = '0002_schema_alignment_rbac_roles'
+branch_labels = None
+depends_on = None
+
+
+def upgrade() -> None:
+    op.add_column('menu_items', sa.Column('inventory_item_id', sa.Integer(), nullable=True))
+    op.create_foreign_key('fk_menu_items_inventory_item_id', 'menu_items', 'inventory_items', ['inventory_item_id'], ['id'])
+
+    op.create_table(
+        'purchase_receipts',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('purchased_at', sa.DateTime(), nullable=False),
+        sa.Column('store_name', sa.String(length=120), nullable=True),
+        sa.Column('note', sa.Text(), nullable=True),
+        sa.Column('total_amount', sa.Float(), nullable=False, server_default='0'),
+        sa.Column('created_by', sa.Integer(), sa.ForeignKey('users.id'), nullable=True),
+        sa.Column('created_at', sa.DateTime(), server_default=sa.text('CURRENT_TIMESTAMP'), nullable=True),
+    )
+    op.create_table(
+        'purchase_receipt_items',
+        sa.Column('id', sa.Integer(), primary_key=True),
+        sa.Column('receipt_id', sa.Integer(), sa.ForeignKey('purchase_receipts.id'), nullable=False),
+        sa.Column('inventory_item_id', sa.Integer(), sa.ForeignKey('inventory_items.id'), nullable=False),
+        sa.Column('item_name', sa.String(length=150), nullable=False),
+        sa.Column('unit', sa.String(length=30), nullable=False),
+        sa.Column('quantity', sa.Float(), nullable=False),
+        sa.Column('unit_cost', sa.Float(), nullable=False),
+        sa.Column('line_total', sa.Float(), nullable=False),
+    )
+
+
+def downgrade() -> None:
+    op.drop_table('purchase_receipt_items')
+    op.drop_table('purchase_receipts')
+    op.drop_constraint('fk_menu_items_inventory_item_id', 'menu_items', type_='foreignkey')
+    op.drop_column('menu_items', 'inventory_item_id')

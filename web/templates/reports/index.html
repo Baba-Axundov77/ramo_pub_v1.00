@@ -125,7 +125,7 @@
     </div>
     <div class="chart-card chart-wide">
         <div class="chart-title">⏰ Saatlıq Sifariş (Bu Gün)</div>
-        <canvas id="hourlyChart2" height="220"></canvas>
+        <canvas id="hourlyChart2" height="260"></canvas>
     </div>
 </div>
 
@@ -147,7 +147,7 @@
                 <tr>
                     <td>#{{ s.order_id }}</td>
                     <td>{{ s.table if s.table else "—" }}</td>
-                    <td>{{ s.items }}</td>
+                    <td>{{ s["items"] }}</td>
                     <td>{{ {"cash":"Nağd","card":"Kart","online":"Online"}.get(s.method, s.method) }}</td>
                     <td><strong class="text-green">{{ "%.2f"|format(s.amount) }} ₼</strong></td>
                     <td>{{ s.paid_at.strftime("%H:%M") if s.paid_at else "—" }}</td>
@@ -159,6 +159,24 @@
         </table>
     </div>
 </div>
+
+<div class="card" style="margin-top:20px;">
+    <div class="section-header">
+        <h2>📦 Alış Çekləri (xronoloji)</h2>
+        <span class="badge badge-amber">{{ purchase_receipts|length }}</span>
+    </div>
+    <div class="table-wrap">
+      <table class="table">
+        <thead><tr><th>#</th><th>Tarix</th><th>Mağaza</th><th>Məhsullar</th><th>Cəm</th></tr></thead>
+        <tbody>
+          {% for r in purchase_receipts %}
+          <tr><td>#{{ r.id }}</td><td>{{ r.purchased_at.strftime('%d.%m.%Y %H:%M') if r.purchased_at else '-' }}</td><td>{{ r.store_name or '-' }}</td><td>{% for li in r.items %}{{ li.item_name }}({{ li.quantity }} {{ li.unit }}){% if not loop.last %}, {% endif %}{% endfor %}</td><td>{{ '%.2f'|format(r.total_amount or 0) }} ₼</td></tr>
+          {% else %}<tr><td colspan="5">Alış çeki yoxdur</td></tr>{% endfor %}
+        </tbody>
+      </table>
+    </div>
+</div>
+
 {% endblock %}
 
 {% block extra_js %}

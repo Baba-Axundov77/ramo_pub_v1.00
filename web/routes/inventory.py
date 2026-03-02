@@ -1,12 +1,9 @@
-# web/routes/inventory.py  —  Python 3.10
 from __future__ import annotations
 
-from flask import (
-    Blueprint, render_template, request, redirect,
-    url_for, flash, jsonify,
-)
-from database.connection import get_db
-from web.auth import login_required, admin_required
+from datetime import datetime
+from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, g
+from web.auth import login_required, permission_required
+from modules.inventory.inventory_service import inventory_service
 
 inventory_bp = Blueprint("inventory", __name__, url_prefix="/inventory")
 
@@ -14,61 +11,83 @@ inventory_bp = Blueprint("inventory", __name__, url_prefix="/inventory")
 @inventory_bp.route("/")
 @login_required
 def index():
-    from modules.inventory.inventory_service import inventory_service
-    db       = get_db()
+    db = g.db
     low_only = request.args.get("low", "") == "1"
-    search   = request.args.get("q", "").strip().lower()
-    items    = inventory_service.get_all(db, low_stock_only=low_only)
+    search = request.args.get("q", "").strip().lower()
+    items = inventory_service.get_all(db, low_stock_only=low_only)
     if search:
         items = [i for i in items if search in i.name.lower()]
-    return render_template(
-        "inventory/index.html",
-        items       = items,
-        low_only    = low_only,
-        search      = search,
-        low_count   = inventory_service.get_low_stock_count(db),
-        total_value = inventory_service.get_total_value(db),
-    )
+    receipts = inventory_service.list_purchase_receipts(db, limit=30)
+    return render_template("inventory/index.html", items=items, low_only=low_only, search=search,
+                           low_count=inventory_service.get_low_stock_count(db),
+                           total_value=inventory_service.get_total_value(db),
+                           receipts=receipts)
 
 
 @inventory_bp.route("/create", methods=["POST"])
-@admin_required
+@permission_required("manage_inventory")
 def create():
-    from modules.inventory.inventory_service import inventory_service
-    db = get_db()
+    db = g.db
     ok, result = inventory_service.create(
         db,
-        name          = request.form["name"].strip(),
-        unit          = request.form["unit"].strip(),
-        quantity      = float(request.form.get("quantity", 0)),
-        min_quantity  = float(request.form.get("min_quantity", 5)),
-        cost_per_unit = float(request.form.get("cost_per_unit", 0)),
-        supplier      = request.form.get("supplier", "").strip(),
+        name=request.form["name"].strip(),
+        unit=request.form["unit"].strip(),
+        quantity=float(request.form.get("quantity", 0)),
+        min_quantity=float(request.form.get("min_quantity", 5)),
+        cost_per_unit=float(request.form.get("cost_per_unit", 0)),
+        supplier=request.form.get("supplier", "").strip(),
     )
     flash(f"{'✅  Stok əlavə edildi.' if ok else '❌  ' + str(result)}", "success" if ok else "danger")
     return redirect(url_for("inventory.index"))
 
 
+@inventory_bp.route("/receipt/create", methods=["POST"])
+@permission_required("manage_inventory")
+def create_receipt():
+    db = g.db
+    names = request.form.getlist("line_name[]")
+    qtys = request.form.getlist("line_qty[]")
+    units = request.form.getlist("line_unit[]")
+    costs = request.form.getlist("line_cost[]")
+    lines = []
+    for idx, name in enumerate(names):
+        lines.append({"name": name, "quantity": qtys[idx] if idx < len(qtys) else 0, "unit": units[idx] if idx < len(units) else "ədəd", "unit_cost": costs[idx] if idx < len(costs) else 0})
+    purchased_at = datetime.fromisoformat(request.form.get("purchased_at")) if request.form.get("purchased_at") else datetime.now()
+    ok, result = inventory_service.create_purchase_receipt(
+        db,
+        purchased_at=purchased_at,
+        store_name=request.form.get("store_name", "").strip(),
+        note=request.form.get("note", "").strip(),
+        created_by=session.get("user", {}).get("id"),
+        lines=lines,
+    )
+    flash("✅ Alış çeki yaradıldı və stok yeniləndi." if ok else f"❌ {result}", "success" if ok else "danger")
+    return redirect(url_for("inventory.index"))
+
+
+@inventory_bp.route("/receipt/<int:receipt_id>/delete", methods=["POST"])
+@permission_required("manage_inventory")
+def delete_receipt(receipt_id: int):
+    ok, msg = inventory_service.delete_purchase_receipt(g.db, receipt_id)
+    flash(("✅ " if ok else "❌ ") + msg, "success" if ok else "danger")
+    return redirect(url_for("inventory.index"))
+
+
 @inventory_bp.route("/<int:item_id>/adjust", methods=["POST"])
-@login_required
+@permission_required("manage_inventory")
 def adjust(item_id: int):
-    from modules.inventory.inventory_service import inventory_service
-    db     = get_db()
-    mode   = request.form.get("mode", "add")
+    db = g.db
+    mode = request.form.get("mode", "add")
     amount = float(request.form.get("amount", 0))
-    if mode == "add":
-        ok, result = inventory_service.add_stock(db, item_id, amount)
-    else:
-        ok, result = inventory_service.remove_stock(db, item_id, amount)
+    ok, result = inventory_service.add_stock(db, item_id, amount) if mode == "add" else inventory_service.remove_stock(db, item_id, amount)
     flash(f"{'✅  Stok yeniləndi.' if ok else '❌  ' + str(result)}", "success" if ok else "danger")
     return redirect(url_for("inventory.index"))
 
 
 @inventory_bp.route("/<int:item_id>/delete", methods=["POST"])
-@admin_required
+@permission_required("manage_inventory")
 def delete(item_id: int):
-    from modules.inventory.inventory_service import inventory_service
-    ok, msg = inventory_service.delete(get_db(), item_id)
+    ok, msg = inventory_service.delete(g.db, item_id)
     flash(f"{'✅' if ok else '❌'}  {msg}", "success" if ok else "danger")
     return redirect(url_for("inventory.index"))
 
@@ -76,11 +95,5 @@ def delete(item_id: int):
 @inventory_bp.route("/api/low-stock")
 @login_required
 def api_low_stock():
-    from modules.inventory.inventory_service import inventory_service
-    db    = get_db()
-    items = inventory_service.get_all(db, low_stock_only=True)
-    return jsonify([{
-        "id": i.id, "name": i.name,
-        "quantity": i.quantity, "min_quantity": i.min_quantity,
-        "unit": i.unit,
-    } for i in items])
+    items = inventory_service.get_all(g.db, low_stock_only=True)
+    return jsonify([{"id": i.id, "name": i.name, "quantity": i.quantity, "min_quantity": i.min_quantity, "unit": i.unit} for i in items])

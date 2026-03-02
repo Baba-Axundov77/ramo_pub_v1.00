@@ -1,12 +1,9 @@
-# modules/menu/menu_service.py — Menyu İş Məntiqi
 from sqlalchemy.orm import Session
-from database.models import MenuCategory, MenuItem
+from sqlalchemy import func
+from database.models import MenuCategory, MenuItem, InventoryItem
 
 
 class MenuService:
-
-    # ── KATEQORİYALAR ─────────────────────────────────────────────────────────
-
     def get_categories(self, db: Session, active_only: bool = True):
         q = db.query(MenuCategory)
         if active_only:
@@ -15,34 +12,31 @@ class MenuService:
 
     def create_category(self, db: Session, name: str, description: str = None,
                         icon: str = "🍽️", sort_order: int = 0):
-        cat = MenuCategory(name=name, description=description,
-                           icon=icon, sort_order=sort_order)
+        cat = MenuCategory(name=name, description=description, icon=icon, sort_order=sort_order)
         db.add(cat); db.commit(); db.refresh(cat)
         return True, cat
 
     def update_category(self, db: Session, cat_id: int, **kwargs):
         cat = db.query(MenuCategory).filter(MenuCategory.id == cat_id).first()
-        if not cat: return False, "Kateqoriya tapılmadı."
+        if not cat:
+            return False, "Kateqoriya tapılmadı."
         for k, v in kwargs.items():
-            if hasattr(cat, k): setattr(cat, k, v)
-        db.commit(); return True, cat
+            if hasattr(cat, k):
+                setattr(cat, k, v)
+        db.commit(); db.refresh(cat)
+        return True, cat
 
     def delete_category(self, db: Session, cat_id: int):
         cat = db.query(MenuCategory).filter(MenuCategory.id == cat_id).first()
-        if not cat: return False, "Kateqoriya tapılmadı."
-        items = db.query(MenuItem).filter(
-            MenuItem.category_id == cat_id,
-            MenuItem.is_active == True
-        ).count()
+        if not cat:
+            return False, "Kateqoriya tapılmadı."
+        items = db.query(MenuItem).filter(MenuItem.category_id == cat_id, MenuItem.is_active == True).count()
         if items > 0:
             return False, f"Bu kateqoriyada {items} aktiv məhsul var."
         cat.is_active = False; db.commit()
         return True, "Kateqoriya silindi."
 
-    # ── MƏHSULLAR ─────────────────────────────────────────────────────────────
-
-    def get_items(self, db: Session, category_id: int = None,
-                  active_only: bool = True, available_only: bool = False):
+    def get_items(self, db: Session, category_id: int = None, active_only: bool = True, available_only: bool = False):
         q = db.query(MenuItem)
         if active_only:
             q = q.filter(MenuItem.is_active == True)
@@ -55,82 +49,70 @@ class MenuService:
     def get_item(self, db: Session, item_id: int):
         return db.query(MenuItem).filter(MenuItem.id == item_id).first()
 
+    def _find_or_create_inventory_item(self, db: Session, stock_name: str, unit: str, cost_price: float):
+        normalized = stock_name.strip().lower()
+        item = db.query(InventoryItem).filter(func.lower(InventoryItem.name) == normalized).first()
+        if item:
+            if unit and not item.unit:
+                item.unit = unit
+            if cost_price and (item.cost_per_unit or 0) <= 0:
+                item.cost_per_unit = cost_price
+            return item
+        item = InventoryItem(name=stock_name.strip(), unit=unit or "ədəd", quantity=0.0, cost_per_unit=cost_price or 0.0)
+        db.add(item)
+        db.flush()
+        return item
+
     def create_item(self, db: Session, category_id: int, name: str, price: float,
-                    description: str = None, cost_price: float = 0.0):
-        item = MenuItem(category_id=category_id, name=name, price=price,
-                        description=description, cost_price=cost_price)
+                    description: str = None, cost_price: float = 0.0, image_path: str = None,
+                    inventory_item_id: int | None = None, stock_name: str | None = None, stock_unit: str | None = None):
+        inv_id = inventory_item_id
+        if stock_name and stock_name.strip():
+            inv = self._find_or_create_inventory_item(db, stock_name, stock_unit or "ədəd", cost_price)
+            inv_id = inv.id
+
+        item = MenuItem(
+            category_id=category_id,
+            name=name,
+            price=price,
+            description=description,
+            cost_price=cost_price,
+            image_path=(image_path or None),
+            inventory_item_id=inv_id,
+        )
         db.add(item); db.commit(); db.refresh(item)
         return True, item
 
     def update_item(self, db: Session, item_id: int, **kwargs):
         item = self.get_item(db, item_id)
-        if not item: return False, "Məhsul tapılmadı."
+        if not item:
+            return False, "Məhsul tapılmadı."
+
+        stock_name = kwargs.pop("stock_name", None)
+        stock_unit = kwargs.pop("stock_unit", None)
+        if stock_name and stock_name.strip():
+            inv = self._find_or_create_inventory_item(db, stock_name, stock_unit or "ədəd", kwargs.get("cost_price", item.cost_price or 0))
+            kwargs["inventory_item_id"] = inv.id
+
         for k, v in kwargs.items():
-            if hasattr(item, k): setattr(item, k, v)
-        db.commit(); return True, item
+            if hasattr(item, k):
+                setattr(item, k, v)
+        db.commit(); db.refresh(item)
+        return True, item
 
     def toggle_available(self, db: Session, item_id: int):
         item = self.get_item(db, item_id)
-        if not item: return False, "Tapılmadı."
+        if not item:
+            return False, "Tapılmadı."
         item.is_available = not item.is_available
         db.commit(); return True, item
 
     def delete_item(self, db: Session, item_id: int):
         item = self.get_item(db, item_id)
-        if not item: return False, "Tapılmadı."
+        if not item:
+            return False, "Tapılmadı."
         item.is_active = False; db.commit()
         return True, "Məhsul silindi."
-
-    def search(self, db: Session, query: str):
-        return db.query(MenuItem).filter(
-            MenuItem.is_active == True,
-            MenuItem.name.ilike(f"%{query}%")
-        ).all()
-
-    # ── SEED ──────────────────────────────────────────────────────────────────
-
-    def seed_defaults(self, db: Session):
-        if db.query(MenuCategory).count() > 0:
-            return
-        defaults = [
-            ("🍺", "Pivə & İçkilər", [
-                ("Xırdalan Pivə",      3.50, 1.20),
-                ("Efes Pilsner",       4.00, 1.50),
-                ("Heineken",           5.00, 2.00),
-                ("Çay (dəmli)",        2.00, 0.30),
-                ("Türk Çayı",          2.50, 0.50),
-                ("Limonad",            3.00, 0.80),
-            ]),
-            ("🍖", "Qəlyanaltılar", [
-                ("Quzu qabırğası",    12.00, 4.00),
-                ("Toyuq qanadları",    8.00, 2.50),
-                ("Qızardılmış soğan",  4.00, 0.80),
-                ("Pendirli kartof",    5.00, 1.20),
-            ]),
-            ("🥗", "Salatlar", [
-                ("Yunan salatı",       7.00, 2.00),
-                ("Cezar salatı",       8.00, 2.50),
-                ("Mevsim salatı",      5.00, 1.20),
-            ]),
-            ("🍕", "Əsas Yeməklər", [
-                ("Lamb chop",         18.00, 6.00),
-                ("Burger",            12.00, 3.50),
-                ("Lahmacun",           6.00, 1.50),
-                ("Pide",               8.00, 2.00),
-            ]),
-            ("🍰", "Desertlər", [
-                ("Baklava",            5.00, 1.20),
-                ("Çokolad kek",        6.00, 1.80),
-                ("Dondurma",           4.00, 1.00),
-            ]),
-        ]
-        for icon, cat_name, items in defaults:
-            cat = MenuCategory(name=cat_name, icon=icon)
-            db.add(cat); db.flush()
-            for item_name, price, cost in items:
-                db.add(MenuItem(category_id=cat.id, name=item_name,
-                                price=price, cost_price=cost))
-        db.commit()
 
 
 menu_service = MenuService()

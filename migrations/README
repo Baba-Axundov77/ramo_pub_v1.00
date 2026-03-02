@@ -1,1 +1,6 @@
-Generic single-database configuration.
+Alembic migrations for Ramo Pub.
+
+Usage:
+  alembic upgrade head
+  alembic revision --autogenerate -m "message"
+  alembic downgrade -1

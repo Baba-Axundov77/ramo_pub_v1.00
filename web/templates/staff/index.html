@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+{% block title %}İşçilər{% endblock %}
+{% block breadcrumb %}İşçilər{% endblock %}
+{% block content %}
+<div class="card">
+  <h2>İşçilər</h2>
+  <form method="post" action="{{ url_for('staff.create') }}" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px;">
+    <input name="username" placeholder="username" required>
+    <input name="full_name" placeholder="Ad soyad" required>
+    <input name="password" type="password" placeholder="Şifrə" required>
+    <select name="role" id="staffRoleSelect"><option value="waiter">waiter</option><option value="cashier">cashier</option><option value="manager">manager</option><option value="kitchen">kitchen</option><option value="admin">admin</option></select>
+    <input name="phone" placeholder="Telefon">
+    <button class="btn btn-primary">Əlavə et</button>
+  </form>
+  <table class="table"><thead><tr><th>ID</th><th>Ad</th><th>Rol</th><th>Telefon</th><th>Status</th><th></th></tr></thead><tbody>
+  {% for u in users %}
+    <tr>
+      <td>{{ u.id }}</td><td>{{ u.full_name }}</td><td>{{ u.role.value }}</td><td>{{ u.phone or '-' }}</td><td>{{ 'Aktiv' if u.is_active else 'Passiv' }}</td>
+      <td>{% if u.is_active %}<form method="post" action="{{ url_for('staff.deactivate', user_id=u.id) }}"><button class="btn btn-danger">Deaktiv et</button></form>{% endif %}</td>
+    </tr>
+  {% endfor %}
+  </tbody></table>
+</div>
+<div class="card" style="margin-top:12px;">
+  <h3>Bugünkü növbələr</h3>
+  <form method="post" action="{{ url_for('staff.create_shift') }}" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px;">
+    <select name="user_id">{% for u in users %}<option value="{{ u.id }}">{{ u.full_name }}</option>{% endfor %}</select>
+    <input name="date" type="date" required>
+    <input name="start" type="time" value="09:00">
+    <input name="end" type="time" value="21:00">
+    <input name="notes" placeholder="Qeyd">
+    <button class="btn">Növbə əlavə et</button>
+  </form>
+  <ul>{% for s in shifts %}<li>{{ s.user.full_name if s.user else '-' }} — {{ s.start_time }} - {{ s.end_time }}</li>{% else %}<li>Yoxdur</li>{% endfor %}</ul>
+</div>
+{% endblock %}
+
+{% block extra_js %}<script>
+const roleSelects=document.querySelectorAll('form[action="{{ url_for('staff.create') }}"] select[name="role"]');
+roleSelects.forEach((el,idx)=>{ if(idx>0) el.remove(); });
+</script>{% endblock %}

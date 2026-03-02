@@ -4,6 +4,8 @@ from datetime import date
 from flask import Blueprint, render_template, session, redirect, url_for, g, jsonify, request
 from modules.reports.report_service import ReportService
 from modules.orders.order_service import OrderService
+from modules.inventory.inventory_service import inventory_service
+from web.auth import permission_required, permission_required_api
 
 bp      = Blueprint("reports", __name__, url_prefix="/reports")
 svc     = ReportService()
@@ -14,6 +16,7 @@ def _check():
         return redirect(url_for("auth.login"))
 
 @bp.route("/")
+@permission_required("view_reports")
 def index():
     c = _check()
     if c: return c
@@ -23,6 +26,7 @@ def index():
     completed_sales = svc.completed_sales(g.db, today, limit=100)
     # Sifarişlər bölməsindən köçürülmüş statistika
     summary         = ord_svc.get_today_summary(g.db)
+    purchase_receipts = inventory_service.list_purchase_receipts(g.db, limit=30)
     return render_template(
         "reports/index.html",
         daily=daily,
@@ -30,12 +34,12 @@ def index():
         today=today,
         completed_sales=completed_sales,
         summary=summary,
+        purchase_receipts=purchase_receipts,
     )
 
 @bp.route("/api/monthly")
+@permission_required_api("view_reports")
 def api_monthly():
-    if "user" not in session:
-        return jsonify({"error": "401"}), 401
     year  = int(request.args.get("year",  date.today().year))
     month = int(request.args.get("month", date.today().month))
     data  = svc.monthly_summary(g.db, year, month)
@@ -46,15 +50,13 @@ def api_monthly():
     })
 
 @bp.route("/api/hourly")
+@permission_required_api("view_reports")
 def api_hourly():
-    if "user" not in session:
-        return jsonify({"error": "401"}), 401
     data = svc.hourly_heatmap(g.db, date.today())
     return jsonify(data)
 
 @bp.route("/api/top_items")
+@permission_required_api("view_reports")
 def api_top_items():
-    if "user" not in session:
-        return jsonify({"error": "401"}), 401
     items = svc.top_items(g.db, limit=10)
     return jsonify(items)

@@ -724,6 +724,7 @@ let _orderData    = null; // son yüklənən order obj
 /* ── Başlanğıc ────────────────────────────────────────── */
 document.addEventListener('DOMContentLoaded', () => {
     updateBadge();
+    filterProds();
     {% if selected_order %}
     _orderData = {
         id: {{ selected_order.id }},
@@ -748,13 +749,13 @@ let activeCat = 'all';
 function setCat(el, catId) {
     document.querySelectorAll('.cat-row').forEach(r => r.classList.remove('active'));
     el.classList.add('active');
-    activeCat = catId;
+    activeCat = String(catId);
     filterProds();
 }
 function filterProds() {
     const q = document.getElementById('prodQ').value.toLowerCase();
     document.querySelectorAll('.prod-card').forEach(c => {
-        const ok = c.dataset.name.includes(q) && (activeCat==='all' || c.dataset.cat==activeCat);
+        const ok = c.dataset.name.includes(q) && (activeCat==='all' || String(c.dataset.cat)===activeCat);
         c.style.display = ok ? '' : 'none';
     });
 }
@@ -831,16 +832,19 @@ async function removeItem(oiId) {
 
 /* ── Masa dəyiş ───────────────────────────────────────── */
 async function switchTable(tableId) {
-    if (!tableId) { activeOrderId = null; clearBasket(); updateBadge(); return; }
+    if (!tableId) { activeOrderId = null; clearBasket(); updateBadge();
+    filterProds(); return; }
     const res = await api(`/tables/api/active-order/${tableId}`);
     if (res?.order) {
         activeOrderId = res.order.id;
         updateBadge();
+    filterProds();
         await refreshBasket();
         toast(`Masa sifariş #${activeOrderId} açıldı`,'ok');
     } else {
         activeOrderId = null;
         updateBadge();
+    filterProds();
         clearBasket();
         toast('Aktiv sifariş yoxdur — yeni sifariş yaradın','wrn');
         document.getElementById('newOrdTable').value = tableId;
@@ -878,6 +882,7 @@ async function submitNewOrd() {
         closeModal('newOrdModal');
         document.getElementById('tableSelect').value = tableId;
         updateBadge();
+    filterProds();
         await refreshBasket();
         toast(`Sifariş #${res.order_id} yaradıldı ✅`,'ok');
     } else toast(res?.msg||'Xəta','err');
@@ -894,6 +899,7 @@ async function cancelOrder() {
         clearBasket();
         document.getElementById('tableSelect').value = '';
         updateBadge();
+    filterProds();
     } else toast(res?.msg||'Xəta','err');
 }
 
@@ -1051,6 +1057,7 @@ function showReceipt(payRes) {
     clearBasket();
     document.getElementById('tableSelect').value = '';
     updateBadge();
+    filterProds();
 }
 
 function rcptPrint(type) {
