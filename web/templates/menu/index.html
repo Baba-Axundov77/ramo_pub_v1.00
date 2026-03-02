@@ -28,6 +28,7 @@
 <div class="card" style="margin-bottom:12px;">
   <h3>Yeni Məhsul</h3>
   <form method="post" action="{{ url_for('menu.create_item') }}" style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr 1fr 140px;gap:8px;">
+  <form method="post" action="{{ url_for('menu.create_item') }}" style="display:grid;grid-template-columns:1.4fr 2fr 1fr 1fr 2fr 140px;gap:8px;">
     <select name="category_id" required>
       <option value="">Kateqoriya seç</option>
       {% for c in categories %}<option value="{{ c.id }}">{{ c.icon }} {{ c.name }}</option>{% endfor %}
@@ -38,6 +39,7 @@
     <select name="inventory_item_id"><option value="">Anbardan seç</option>{% for i in inventory_items %}<option value="{{ i.id }}">{{ i.name }} ({{ i.unit or '-' }})</option>{% endfor %}</select>
     <input name="stock_name" placeholder="və ya yeni stok adı">
     <input name="stock_unit" placeholder="stok vahidi (ədəd/kq)">
+    <input name="description" placeholder="Açıqlama">
     <button class="btn btn-primary">Əlavə et</button>
   </form>
 </div>
@@ -46,12 +48,24 @@
     <a href="{{ url_for('menu.index') }}" class="cat-tab {{ 'active' if not selected_category else '' }}">🍽️ Hamısı</a>
     {% for cat in categories %}
     <a href="{{ url_for('menu.index', category_id=cat.id) }}" class="cat-tab {{ 'active' if selected_category == cat.id else '' }}">{{ cat.icon }} {{ cat.name }}</a>
+    <a href="{{ url_for('menu.index', category_id=cat.id) }}" class="cat-tab {{ 'active' if selected_category == cat.id else '' }}">
+        {{ cat.icon }} {{ cat.name }}
+    </a>
     {% endfor %}
 </div>
 
 <div class="menu-grid" id="menuGrid">
     {% for item in items %}
     <div class="menu-card {{ 'unavailable' if not item.is_available }}" data-name="{{ item.name|lower }}">
+    <div class="menu-card {{ 'unavailable' if not item.is_available }}"
+         data-name="{{ item.name|lower }}">
+        <div class="menu-card-img">
+            {% if item.image_path %}
+            <img src="{{ media_url(item.image_path) }}" alt="{{ item.name }}" onerror="this.style.display='none'">
+            {% else %}
+            <div class="menu-placeholder">🍽️</div>
+            {% endif %}
+        </div>
         <div class="menu-card-body">
             <div class="menu-card-name">{{ item.name }}</div>
             {% if item.description %}<div class="menu-card-desc">{{ item.description[:80] }}</div>{% endif %}
@@ -102,6 +116,10 @@
       </td>
       <td><form method="post" action="{{ url_for('menu.delete_category', cat_id=c.id) }}" onsubmit="return confirm('Kateqoriyanı deaktiv edək?')"><button class="btn btn-danger" type="submit">Sil</button></form></td>
     </tr>
+  <table class="table"><thead><tr><th>ID</th><th>Ad</th><th>Sıra</th><th></th></tr></thead><tbody>
+    {% for c in categories %}
+    <tr><td>{{ c.id }}</td><td>{{ c.icon }} {{ c.name }}</td><td>{{ c.sort_order }}</td>
+      <td><form method="post" action="{{ url_for('menu.delete_category', cat_id=c.id) }}" onsubmit="return confirm('Kateqoriyanı deaktiv edək?')"><button class="btn btn-danger" type="submit">Sil</button></form></td></tr>
     {% endfor %}
   </tbody></table>
 </div>

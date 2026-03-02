@@ -4,6 +4,9 @@ from flask import Blueprint, render_template, redirect, url_for, g, request, fla
 
 from modules.menu.menu_service import MenuService
 from modules.inventory.inventory_service import inventory_service
+from flask import Blueprint, render_template, session, redirect, url_for, g, request, flash
+
+from modules.menu.menu_service import MenuService
 from web.auth import permission_required
 
 bp = Blueprint("menu", __name__, url_prefix="/menu")
@@ -24,6 +27,7 @@ def index():
         inventory_items=inventory_items,
         selected_category=category_id,
     )
+    return render_template("menu/index.html", categories=categories, items=items, selected_category=category_id)
 
 
 @bp.route("/categories/create", methods=["POST"])

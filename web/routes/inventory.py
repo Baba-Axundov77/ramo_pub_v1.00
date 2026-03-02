@@ -4,6 +4,12 @@ from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, g
 from web.auth import login_required, permission_required
 from modules.inventory.inventory_service import inventory_service
+from flask import (
+    Blueprint, render_template, request, redirect,
+    url_for, flash, jsonify,
+)
+from database.connection import get_db
+from web.auth import login_required, permission_required
 
 inventory_bp = Blueprint("inventory", __name__, url_prefix="/inventory")
 
