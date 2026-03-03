@@ -1,5 +1,7 @@
 # web/routes/tables.py — Masa Marşrutları (Tam versiya)
 from __future__ import annotations
+import os
+import uuid
 from flask import (
     Blueprint, render_template, session, redirect,
     url_for, g, jsonify, request, flash
@@ -10,6 +12,25 @@ from web.auth import permission_required, permission_required_api
 
 bp = Blueprint("tables", __name__, url_prefix="/tables")
 svc = TableService()
+
+UPLOAD_FOLDER = os.path.join("assets", "table_images")
+ALLOWED_EXTENSIONS = {"png", "jpg", "jpeg", "gif", "webp"}
+
+
+def _allowed_file(filename: str) -> bool:
+    return "." in filename and filename.rsplit(".", 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def _save_uploaded_image(file) -> str | None:
+    if not file or not file.filename:
+        return None
+    if not _allowed_file(file.filename):
+        return None
+    os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+    ext = file.filename.rsplit(".", 1)[1].lower()
+    filename = f"{uuid.uuid4().hex}.{ext}"
+    file.save(os.path.join(UPLOAD_FOLDER, filename))
+    return f"table_images/{filename}"
 
 
 def _check():
@@ -225,11 +246,21 @@ def api_update_table(table_id: int):
         return jsonify({"ok": False, "msg": "İcazə yoxdur"}), 403
 
     data = request.get_json(silent=True) or {}
+    if request.form:
+        data = request.form
+
+    image_path = (data.get("image_path") or "").strip() or None
+    if "image_file" in request.files:
+        uploaded = _save_uploaded_image(request.files["image_file"])
+        if uploaded:
+            image_path = uploaded
+
     ok, result = svc.update(
         g.db, table_id,
         name=data.get("name"),
-        capacity=int(data.get("capacity", 4)),
-        floor=int(data.get("floor", 1)),
+        capacity=int(data.get("capacity", 4) or 4),
+        floor=int(data.get("floor", 1) or 1),
+        image_path=image_path,
     )
     if not ok:
         return jsonify({"ok": False, "msg": str(result)}), 400
