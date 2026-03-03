@@ -44,7 +44,7 @@ class MenuService:
             q = q.filter(MenuItem.is_available == True)
         if category_id:
             q = q.filter(MenuItem.category_id == category_id)
-        return q.order_by(MenuItem.name).all()
+        return q.order_by(MenuItem.sort_order, MenuItem.name).all()
 
     def get_item(self, db: Session, item_id: int):
         return db.query(MenuItem).filter(MenuItem.id == item_id).first()
@@ -65,7 +65,8 @@ class MenuService:
 
     def create_item(self, db: Session, category_id: int, name: str, price: float,
                     description: str = None, cost_price: float = 0.0, image_path: str = None,
-                    inventory_item_id: int | None = None, stock_name: str | None = None, stock_unit: str | None = None):
+                    inventory_item_id: int | None = None, stock_name: str | None = None,
+                    stock_unit: str | None = None, sort_order: int = 0):
         inv_id = inventory_item_id
         if stock_name and stock_name.strip():
             inv = self._find_or_create_inventory_item(db, stock_name, stock_unit or "ədəd", cost_price)
@@ -79,6 +80,7 @@ class MenuService:
             cost_price=cost_price,
             image_path=(image_path or None),
             inventory_item_id=inv_id,
+            sort_order=sort_order or 0,
         )
         db.add(item); db.commit(); db.refresh(item)
         return True, item

@@ -28,6 +28,7 @@ _MIGRATIONS = [
     ("menu_items",   "prep_time_min",     "INTEGER DEFAULT 0"),
     ("menu_items",   "is_available",      "BOOLEAN DEFAULT 1"),
     ("menu_items",   "inventory_item_id", "INTEGER"),           # ← ƏSAS FIX
+    ("menu_items",   "sort_order",        "INTEGER DEFAULT 0"),
 
     # orders
     ("orders",       "customer_id",       "INTEGER"),

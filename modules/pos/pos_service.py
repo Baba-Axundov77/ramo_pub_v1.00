@@ -85,10 +85,14 @@ class POSService:
             return False, "Endirim kodu tapılmadı."
         if disc.valid_from and disc.valid_from > today:
             return False, "Endirim kodu hələ aktiv deyil."
-        if disc.valid_until and disc.valid_until < today:
-            return False, "Endirim kodunun vaxtı keçib."
-        if disc.usage_limit > 0 and disc.used_count >= disc.usage_limit:
-            return False, "Endirim kodunun istifadə limiti dolub."
+        is_expired = bool(disc.valid_until and disc.valid_until < today)
+        is_limit_over = bool(disc.usage_limit > 0 and disc.used_count >= disc.usage_limit)
+        if is_expired and is_limit_over:
+            return False, "Bu endirim kodunun vaxtı bitib və istifadə limiti də qurtarıb."
+        if is_expired:
+            return False, "Bu endirim kodunun vaxtı bitib."
+        if is_limit_over:
+            return False, "Bu endirim kodunun istifadə limiti qurtarıb."
         if order.subtotal < disc.min_order:
             return False, f"Minimum sifariş məbləği {disc.min_order:.2f} ₼ olmalıdır."
 
@@ -156,10 +160,14 @@ class POSService:
         ).first()
         if not disc:
             return False, "Endirim kodu tapılmadı."
-        if disc.valid_until and disc.valid_until < today:
-            return False, "Endirim kodunun vaxtı keçib."
-        if disc.usage_limit > 0 and disc.used_count >= disc.usage_limit:
-            return False, "Limit dolub."
+        is_expired = bool(disc.valid_until and disc.valid_until < today)
+        is_limit_over = bool(disc.usage_limit > 0 and disc.used_count >= disc.usage_limit)
+        if is_expired and is_limit_over:
+            return False, "Bu endirim kodunun vaxtı bitib və istifadə limiti də qurtarıb."
+        if is_expired:
+            return False, "Bu endirim kodunun vaxtı bitib."
+        if is_limit_over:
+            return False, "Bu endirim kodunun istifadə limiti qurtarıb."
         if order_subtotal < disc.min_order:
             return False, f"Min. məbləğ: {disc.min_order:.2f} ₼"
         if disc.type == "percent":
