@@ -1,20 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="ChangeListManager">
-    <list default="true" id="86c53497-eb33-44ba-a89f-dc4abf78bd90" name="Changes" comment="27mod">
-      <change beforePath="$PROJECT_DIR$/.env" beforeDir="false" afterPath="$PROJECT_DIR$/.env" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/ramo_pub.iml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/ramo_pub.iml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/database/connection.py" beforeDir="false" afterPath="$PROJECT_DIR$/database/connection.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/modules/orders/order_service.py" beforeDir="false" afterPath="$PROJECT_DIR$/modules/orders/order_service.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/inventory.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/inventory.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/menu.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/menu.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/orders.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/orders.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/routes/reports.py" beforeDir="false" afterPath="$PROJECT_DIR$/web/routes/reports.py" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/inventory/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/inventory/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/menu/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/menu/index.html" afterDir="false" />
-      <change beforePath="$PROJECT_DIR$/web/templates/reports/index.html" beforeDir="false" afterPath="$PROJECT_DIR$/web/templates/reports/index.html" afterDir="false" />
-    </list>
+    <list default="true" id="86c53497-eb33-44ba-a89f-dc4abf78bd90" name="Changes" comment="27mod" />
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
     <option name="HIGHLIGHT_NON_ACTIVE_CHANGELIST" value="false" />
