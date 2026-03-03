@@ -1,9 +1,12 @@
+# web/routes/inventory.py
 from __future__ import annotations
 
+import os
 from datetime import datetime
 from flask import Blueprint, render_template, request, redirect, url_for, flash, jsonify, session, g
 from web.auth import login_required, permission_required
 from modules.inventory.inventory_service import inventory_service
+from database.connection import get_db
 
 inventory_bp = Blueprint("inventory", __name__, url_prefix="/inventory")
 
@@ -51,7 +54,14 @@ def create_receipt():
     costs = request.form.getlist("line_cost[]")
     lines = []
     for idx, name in enumerate(names):
-        lines.append({"name": name, "quantity": qtys[idx] if idx < len(qtys) else 0, "unit": units[idx] if idx < len(units) else "ədəd", "unit_cost": costs[idx] if idx < len(costs) else 0})
+        if not name.strip():
+            continue
+        lines.append({
+            "name": name,
+            "quantity": qtys[idx] if idx < len(qtys) else 0,
+            "unit": units[idx] if idx < len(units) else "ədəd",
+            "unit_cost": costs[idx] if idx < len(costs) else 0
+        })
     purchased_at = datetime.fromisoformat(request.form.get("purchased_at")) if request.form.get("purchased_at") else datetime.now()
     ok, result = inventory_service.create_purchase_receipt(
         db,
@@ -62,6 +72,45 @@ def create_receipt():
         lines=lines,
     )
     flash("✅ Alış çeki yaradıldı və stok yeniləndi." if ok else f"❌ {result}", "success" if ok else "danger")
+    return redirect(url_for("inventory.index"))
+
+
+@inventory_bp.route("/receipt/<int:receipt_id>/edit", methods=["POST"])
+@permission_required("manage_inventory")
+def edit_receipt(receipt_id: int):
+    """Mövcud çeki sil, sonra yeni data ilə yenidən yarat (stock rollback + reapply)"""
+    db = g.db
+    # Köhnəni sil (stoku geri al)
+    ok, msg = inventory_service.delete_purchase_receipt(db, receipt_id)
+    if not ok:
+        flash(f"❌ {msg}", "danger")
+        return redirect(url_for("inventory.index"))
+
+    # Yeni data ilə yenidən yarat
+    names = request.form.getlist("line_name[]")
+    qtys  = request.form.getlist("line_qty[]")
+    units = request.form.getlist("line_unit[]")
+    costs = request.form.getlist("line_cost[]")
+    lines = []
+    for idx, name in enumerate(names):
+        if not name.strip():
+            continue
+        lines.append({
+            "name": name,
+            "quantity": qtys[idx] if idx < len(qtys) else 0,
+            "unit": units[idx] if idx < len(units) else "ədəd",
+            "unit_cost": costs[idx] if idx < len(costs) else 0
+        })
+    purchased_at = datetime.fromisoformat(request.form.get("purchased_at")) if request.form.get("purchased_at") else datetime.now()
+    ok2, result2 = inventory_service.create_purchase_receipt(
+        db,
+        purchased_at=purchased_at,
+        store_name=request.form.get("store_name", "").strip(),
+        note=request.form.get("note", "").strip(),
+        created_by=session.get("user", {}).get("id"),
+        lines=lines,
+    )
+    flash("✅ Çek yeniləndi." if ok2 else f"❌ {result2}", "success" if ok2 else "danger")
     return redirect(url_for("inventory.index"))
 
 

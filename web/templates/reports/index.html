@@ -8,178 +8,288 @@
         <h1 class="page-title">📈 Hesabatlar</h1>
         <p class="page-sub">{{ today.strftime("%d %B %Y") }}</p>
     </div>
-    <button class="btn btn-secondary" onclick="location.reload()">
-        <i class="fas fa-sync-alt"></i> Yenilə
-    </button>
+    <div style="display:flex;gap:8px;">
+        <!-- Dövr seçimi tabları -->
+        <div style="display:flex;gap:4px;background:var(--bg3);padding:4px;border-radius:10px;">
+            <button class="period-tab active" onclick="switchPeriod('daily',this)">Günlük</button>
+            <button class="period-tab" onclick="switchPeriod('weekly',this)">Həftəlik</button>
+            <button class="period-tab" onclick="switchPeriod('monthly',this)">Aylıq</button>
+        </div>
+        <button class="btn btn-secondary" onclick="location.reload()">
+            <i class="fas fa-sync-alt"></i> Yenilə
+        </button>
+    </div>
 </div>
 
-<!-- ── Sifariş Statistikası (sifarişlər bölməsindən köçürüldü) ── -->
+<!-- ── Əsas KPI Kartları ── -->
 <div class="stats-grid" style="grid-template-columns:repeat(4,1fr); margin-bottom:16px;">
+    <div class="stat-card stat-amber">
+        <div class="stat-icon">💰</div>
+        <div class="stat-body">
+            <div class="stat-value" id="kpiRevenue">{{ "%.2f"|format(daily.revenue) }} ₼</div>
+            <div class="stat-label" id="kpiRevenueLabel">Bu Günkü Gəlir</div>
+        </div>
+    </div>
     <div class="stat-card stat-blue">
         <div class="stat-icon">📋</div>
         <div class="stat-body">
-            <div class="stat-value">{{ summary.total_orders }}</div>
-            <div class="stat-label">Bu gün sifarişlər</div>
-        </div>
-    </div>
-    <div class="stat-card" style="border-left-color:#E74C3C;">
-        <div class="stat-icon">🔥</div>
-        <div class="stat-body">
-            <div class="stat-value" style="color:#E74C3C;">{{ summary.active_orders }}</div>
-            <div class="stat-label">Aktiv</div>
+            <div class="stat-value" id="kpiOrders">{{ summary.total_orders }}</div>
+            <div class="stat-label" id="kpiOrdersLabel">Sifarişlər</div>
         </div>
     </div>
     <div class="stat-card stat-green">
         <div class="stat-icon">✅</div>
         <div class="stat-body">
-            <div class="stat-value">{{ summary.paid_orders }}</div>
+            <div class="stat-value" id="kpiPaid">{{ summary.paid_orders }}</div>
             <div class="stat-label">Ödənildi</div>
         </div>
     </div>
-    <div class="stat-card stat-amber">
-        <div class="stat-icon">💰</div>
-        <div class="stat-body">
-            <div class="stat-value">{{ "%.2f"|format(summary.total_revenue) }} ₼</div>
-            <div class="stat-label">Gün gəliri</div>
-        </div>
-    </div>
-</div>
-
-<!-- ── Maliyyə Statistikası ───────────────────────────────── -->
-<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);">
-    <div class="stat-card stat-amber">
-        <div class="stat-icon">💵</div>
-        <div class="stat-body">
-            <div class="stat-value">{{ "%.2f"|format(daily.revenue) }} ₼</div>
-            <div class="stat-label">Bu Günkü Gəlir</div>
-        </div>
-    </div>
-    <div class="stat-card stat-green">
+    <div class="stat-card" style="border-left-color:#9B59B6;">
         <div class="stat-icon">🧾</div>
-        <div class="stat-body">
-            <div class="stat-value">{{ daily.orders_paid }}</div>
-            <div class="stat-label">Ödənilmiş Sifariş</div>
-        </div>
-    </div>
-    <div class="stat-card stat-blue">
-        <div class="stat-icon">📊</div>
         <div class="stat-body">
             <div class="stat-value">{{ "%.2f"|format(daily.avg_check) }} ₼</div>
             <div class="stat-label">Orta Çek</div>
         </div>
     </div>
-    <div class="stat-card stat-purple">
-        <div class="stat-icon">🏷️</div>
+</div>
+
+<div class="stats-grid" style="grid-template-columns:repeat(4,1fr);margin-bottom:20px;">
+    <div class="stat-card">
+        <div class="stat-icon">💵</div>
         <div class="stat-body">
-            <div class="stat-value">{{ "%.2f"|format(daily.discounts) }} ₼</div>
-            <div class="stat-label">Endirimlər</div>
+            <div class="stat-value">{{ "%.2f"|format(daily.by_method.get('cash',0)) }} ₼</div>
+            <div class="stat-label">Nağd</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">💳</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ "%.2f"|format(daily.by_method.get('card',0)) }} ₼</div>
+            <div class="stat-label">Kart</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">📱</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ "%.2f"|format(daily.by_method.get('online',0)) }} ₼</div>
+            <div class="stat-label">Online</div>
+        </div>
+    </div>
+    <div class="stat-card" style="border-left-color:#E74C3C;">
+        <div class="stat-icon">🎁</div>
+        <div class="stat-body">
+            <div class="stat-value" style="color:#E74C3C;">-{{ "%.2f"|format(daily.discounts) }} ₼</div>
+            <div class="stat-label">Endirim</div>
         </div>
     </div>
 </div>
 
-<!-- ── Diaqramlar ─────────────────────────────────────────── -->
-<div class="charts-row">
-    <!-- Aylıq gəlir -->
-    <div class="chart-card chart-wide">
-        <div class="chart-title-row">
-            <div class="chart-title">📅 Aylıq Gəlir</div>
-            <div class="chart-controls">
-                <select id="monthSelect" class="select-sm">
-                    {% for m in range(1, 13) %}
-                    <option value="{{ m }}" {% if m == today.month %}selected{% endif %}>
-                        {{ ["","Yanvar","Fevral","Mart","Aprel","May","İyun",
-                             "İyul","Avqust","Sentyabr","Oktyabr","Noyabr","Dekabr"][m] }}
-                    </option>
+<!-- ── Qrafiklər sırası ── -->
+<div class="charts-row" style="margin-bottom:20px;">
+    <div class="chart-card chart-wide" id="barChartCard">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;">
+            <div class="chart-title" id="barChartTitle">📊 Bu Günkü Saatlıq Gəlir</div>
+            <!-- aylıq seçici (gizli default) -->
+            <div id="monthlyControls" style="display:none;gap:6px;align-items:center;display:none;">
+                <select id="yearSelect" class="form-input" style="width:90px;padding:4px 8px;" onchange="loadMonthly()">
+                    {% for y in range(2024, today.year+2) %}
+                    <option value="{{ y }}" {% if y == today.year %}selected{% endif %}>{{ y }}</option>
                     {% endfor %}
                 </select>
-                <select id="yearSelect" class="select-sm">
-                    {% for y in range(today.year - 2, today.year + 2) %}
-                    <option value="{{ y }}" {% if y == today.year %}selected{% endif %}>{{ y }}</option>
+                <select id="monthSelect" class="form-input" style="width:110px;padding:4px 8px;" onchange="loadMonthly()">
+                    {% for m in range(1,13) %}
+                    <option value="{{ m }}" {% if m == today.month %}selected{% endif %}>
+                        {{ ['','Yanvar','Fevral','Mart','Aprel','May','İyun','İyul','Avqust','Sentyabr','Oktyabr','Noyabr','Dekabr'][m] }}
+                    </option>
                     {% endfor %}
                 </select>
             </div>
         </div>
-        <canvas id="monthlyChart" height="180"></canvas>
+        <canvas id="mainBarChart" height="200"></canvas>
     </div>
-
-    <!-- Top məhsullar -->
     <div class="chart-card">
-        <div class="chart-title">🏆 Top 5 Məhsul</div>
-        <div id="topItemsList" class="top-list">
+        <div class="chart-title">🏆 Ən çox satılanlar</div>
+        <div class="top-list" id="topList">
             {% for item in top %}
             <div class="top-item">
                 <span class="top-rank">#{{ loop.index }}</span>
                 <span class="top-name">{{ item.name[:22] }}</span>
                 <span class="top-value">{{ item.qty }} ədəd</span>
+                <span style="font-size:11px;color:var(--accent);font-weight:600;">{{ "%.1f"|format(item.revenue) }}₼</span>
             </div>
             {% endfor %}
         </div>
     </div>
 </div>
 
-<!-- Ödəniş üsulları + Saatlıq -->
-<div class="charts-row">
+<!-- ── Ödəniş üsulları + Saatlıq ── -->
+<div class="charts-row" style="margin-bottom:20px;">
     <div class="chart-card">
         <div class="chart-title">💳 Ödəniş Üsulları (Bu Gün)</div>
         <canvas id="payMethodChart" height="220"></canvas>
     </div>
     <div class="chart-card chart-wide">
-        <div class="chart-title">⏰ Saatlıq Sifariş (Bu Gün)</div>
+        <div class="chart-title">⏰ Saatlıq Sifariş Yoğunluğu</div>
         <canvas id="hourlyChart2" height="260"></canvas>
     </div>
 </div>
 
-<!-- Tamamlanmış satışlar -->
+<!-- ══════════════════════════════════════════
+     TAMAMLANMIŞ SATIŞLAR — müasir görünüş
+══════════════════════════════════════════ -->
 <div class="card" style="margin-top:20px;">
     <div class="section-header">
         <h2>🧾 Tamamlanmış Satışlar</h2>
         <span class="badge badge-green">{{ completed_sales|length }}</span>
     </div>
-    <div class="table-wrap">
-        <table class="table">
-            <thead>
-            <tr>
-                <th>#</th><th>Masa</th><th>Məhsul sayı</th><th>Üsul</th><th>Məbləğ</th><th>Vaxt</th>
-            </tr>
-            </thead>
-            <tbody>
-            {% for s in completed_sales %}
-                <tr>
-                    <td>#{{ s.order_id }}</td>
-                    <td>{{ s.table if s.table else "—" }}</td>
-                    <td>{{ s["items"] }}</td>
-                    <td>{{ {"cash":"Nağd","card":"Kart","online":"Online"}.get(s.method, s.method) }}</td>
-                    <td><strong class="text-green">{{ "%.2f"|format(s.amount) }} ₼</strong></td>
-                    <td>{{ s.paid_at.strftime("%H:%M") if s.paid_at else "—" }}</td>
-                </tr>
-            {% else %}
-                <tr><td colspan="6" style="text-align:center; color:var(--muted); padding:24px;">Bu gün tamamlanan satış yoxdur.</td></tr>
-            {% endfor %}
-            </tbody>
-        </table>
+    {% if completed_sales %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px;padding:4px 0;">
+        {% for s in completed_sales %}
+        <div class="receipt-card" onclick="openSaleDetail({{ s.order_id }}, '{{ s.table or "—" }}', '{{ s.method }}', {{ s.amount }}, '{{ s.paid_at.strftime("%H:%M") if s.paid_at else "—" }}', {{ s["items"] }})">
+            <div class="receipt-header">
+                <div style="display:flex;align-items:center;gap:8px;">
+                    <span style="font-size:20px;">🧾</span>
+                    <div>
+                        <div style="font-weight:700;font-size:14px;">Sifariş #{{ s.order_id }}</div>
+                        <div style="font-size:11px;color:var(--muted);">{{ s.paid_at.strftime("%H:%M") if s.paid_at else "—" }}</div>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:18px;font-weight:800;color:#27AE60;">{{ "%.2f"|format(s.amount) }} ₼</div>
+                    <div class="receipt-method-badge {{ 'badge-blue' if s.method == 'card' else ('badge-amber' if s.method == 'cash' else 'badge-green') }}">
+                        {{ {"cash":"💵 Nağd","card":"💳 Kart","online":"📱 Online"}.get(s.method, s.method) }}
+                    </div>
+                </div>
+            </div>
+            <div class="receipt-body">
+                <div style="display:flex;justify-content:space-between;font-size:12px;color:var(--muted);">
+                    <span>🪑 Masa: <strong>{{ s.table if s.table else "—" }}</strong></span>
+                    <span>📦 {{ s["items"] }} məhsul</span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
     </div>
+    {% else %}
+    <div style="text-align:center;padding:40px;color:var(--muted);">
+        <div style="font-size:48px;margin-bottom:12px;">📭</div>
+        <div>Bu gün tamamlanan satış yoxdur.</div>
+    </div>
+    {% endif %}
 </div>
 
+<!-- ══════════════════════════════════════════
+     ALIŞ ÇEKLƏRİ — Market çeki görünüşü
+══════════════════════════════════════════ -->
 <div class="card" style="margin-top:20px;">
     <div class="section-header">
         <h2>📦 Alış Çekləri (xronoloji)</h2>
         <span class="badge badge-amber">{{ purchase_receipts|length }}</span>
     </div>
-    <div class="table-wrap">
-      <table class="table">
-        <thead><tr><th>#</th><th>Tarix</th><th>Mağaza</th><th>Məhsullar</th><th>Cəm</th></tr></thead>
-        <tbody>
-          {% for r in purchase_receipts %}
-          <tr><td>#{{ r.id }}</td><td>{{ r.purchased_at.strftime('%d.%m.%Y %H:%M') if r.purchased_at else '-' }}</td><td>{{ r.store_name or '-' }}</td><td>{% for li in r.items %}{{ li.item_name }}({{ li.quantity }} {{ li.unit }}){% if not loop.last %}, {% endif %}{% endfor %}</td><td>{{ '%.2f'|format(r.total_amount or 0) }} ₼</td></tr>
-          {% else %}<tr><td colspan="5">Alış çeki yoxdur</td></tr>{% endfor %}
-        </tbody>
-      </table>
+    {% if purchase_receipts %}
+    <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px;">
+        {% for r in purchase_receipts %}
+        <div class="purchase-receipt-card" onclick="openReceiptDetail({{ r.id }}, '{{ r.store_name or "Naməlum" }}', '{{ r.purchased_at.strftime("%d.%m.%Y %H:%M") if r.purchased_at else "-" }}', {{ r.total_amount or 0 }}, [{% for li in r.items %}{'name':'{{ li.item_name }}','qty':{{ li.quantity }},'unit':'{{ li.unit }}','cost':{{ li.unit_cost }},'total':{{ li.line_total }}}{% if not loop.last %},{% endif %}{% endfor %}])">
+            <!-- Çek başlığı -->
+            <div class="prec-header">
+                <div style="display:flex;align-items:center;gap:6px;">
+                    <span style="font-size:18px;">🏪</span>
+                    <div>
+                        <div style="font-weight:700;font-size:13px;">{{ r.store_name or 'Naməlum mağaza' }}</div>
+                        <div style="font-size:11px;color:var(--muted);">{{ r.purchased_at.strftime("%d.%m.%Y %H:%M") if r.purchased_at else '-' }}</div>
+                    </div>
+                </div>
+                <div style="text-align:right;">
+                    <div style="font-size:16px;font-weight:800;color:var(--accent);">{{ "%.2f"|format(r.total_amount or 0) }} ₼</div>
+                    <div style="font-size:11px;color:var(--muted);">#{{ r.id }}</div>
+                </div>
+            </div>
+            <!-- Məhsullar -->
+            <div class="prec-items">
+                {% for li in r.items[:3] %}
+                <div class="prec-line">
+                    <span>{{ li.item_name }}</span>
+                    <span style="color:var(--muted);">{{ li.quantity }} {{ li.unit }}</span>
+                </div>
+                {% endfor %}
+                {% if r.items|length > 3 %}
+                <div style="font-size:11px;color:var(--muted);text-align:center;padding:4px;">
+                    + {{ r.items|length - 3 }} məhsul daha...
+                </div>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div style="text-align:center;padding:32px;color:var(--muted);">Alış çeki yoxdur</div>
+    {% endif %}
+</div>
+
+<!-- ── Satış Detay Modal ── -->
+<div id="saleDetailModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box" style="max-width:380px;width:95%;">
+        <div style="background:var(--bg3);border-radius:12px 12px 0 0;padding:16px 20px;border-bottom:1px dashed var(--border);">
+            <div style="display:flex;justify-content:space-between;align-items:center;">
+                <div style="font-size:13px;color:var(--muted);">SIFARIŞ ÇEKİ</div>
+                <button onclick="document.getElementById('saleDetailModal').style.display='none'"
+                        style="background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button>
+            </div>
+            <div style="font-weight:800;font-size:24px;margin-top:4px;" id="sdAmount"></div>
+            <div id="sdMethod" style="font-size:13px;margin-top:4px;"></div>
+        </div>
+        <div style="padding:16px 20px;display:flex;flex-direction:column;gap:8px;">
+            <div style="display:flex;justify-content:space-between;font-size:13px;">
+                <span style="color:var(--muted);">Sifariş</span>
+                <span id="sdId" style="font-weight:600;"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;">
+                <span style="color:var(--muted);">Masa</span>
+                <span id="sdTable" style="font-weight:600;"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;">
+                <span style="color:var(--muted);">Məhsul sayı</span>
+                <span id="sdItems" style="font-weight:600;"></span>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:13px;">
+                <span style="color:var(--muted);">Vaxt</span>
+                <span id="sdTime" style="font-weight:600;"></span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ── Alış Çeki Detay Modal ── -->
+<div id="receiptDetailModal" class="modal-overlay" style="display:none;">
+    <div class="modal-box" style="max-width:360px;width:95%;">
+        <!-- Termal çek görünüşü -->
+        <div style="background:#1a1a2e;border-radius:12px;padding:0;overflow:hidden;font-family:'Courier New',monospace;">
+            <div style="background:#252540;padding:16px 20px;border-bottom:2px dashed #333366;text-align:center;">
+                <div style="font-size:20px;margin-bottom:4px;">🏪</div>
+                <div id="rdStore" style="font-weight:800;font-size:16px;color:var(--accent);"></div>
+                <div id="rdDate" style="font-size:11px;color:var(--muted);margin-top:4px;"></div>
+                <button onclick="document.getElementById('receiptDetailModal').style.display='none'"
+                        style="position:absolute;top:12px;right:16px;background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;">✕</button>
+            </div>
+            <div id="rdLines" style="padding:12px 20px;display:flex;flex-direction:column;gap:4px;"></div>
+            <div style="margin:0 20px;border-top:2px dashed #333366;padding:12px 0;">
+                <div style="display:flex;justify-content:space-between;font-size:16px;font-weight:800;">
+                    <span>CƏM</span>
+                    <span id="rdTotal" style="color:var(--accent);"></span>
+                </div>
+            </div>
+            <div style="padding:8px 20px 16px;text-align:center;">
+                <div id="rdId" style="font-size:11px;color:var(--muted);"></div>
+                <div style="font-size:10px;color:#555577;margin-top:2px;">Ramo POS System</div>
+            </div>
+        </div>
     </div>
 </div>
 
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/3.9.1/chart.min.js"></script>
 <script>
 const CHART_DEFAULTS = {
     color: "#F0EAD6",
@@ -187,25 +297,54 @@ const CHART_DEFAULTS = {
     tickColor: "#8080A0",
 };
 
-// ── Aylıq Gəlir ──────────────────────────────────────────────
-const monthlyCtx = document.getElementById("monthlyChart").getContext("2d");
-let monthlyChart = null;
+let mainChart = null;
+let currentPeriod = 'daily';
 
-async function loadMonthly() {
-    const month = document.getElementById("monthSelect").value;
-    const year  = document.getElementById("yearSelect").value;
-    const resp  = await fetch(`/reports/api/monthly?year=${year}&month=${month}`);
-    const data  = await resp.json();
-    if (monthlyChart) monthlyChart.destroy();
-    monthlyChart = new Chart(monthlyCtx, {
-        type: "bar",
+// ── Saatlıq data ──
+async function loadHourly() {
+    const resp = await fetch('/reports/api/hourly');
+    const data = await resp.json();
+    if (mainChart) mainChart.destroy();
+    mainChart = new Chart(document.getElementById('mainBarChart').getContext('2d'), {
+        type: 'bar',
         data: {
-            labels: data.days.map(d => d + ""),
+            labels: data.hours.map(h => h + ':00'),
             datasets: [{
-                label: "Gəlir (₼)",
+                label: 'Sifariş',
+                data: data.counts,
+                backgroundColor: '#E8A04550',
+                borderColor: '#E8A045',
+                borderWidth: 2,
+                borderRadius: 4,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks:{color:CHART_DEFAULTS.tickColor}, grid:{color:CHART_DEFAULTS.gridColor} },
+                y: { ticks:{color:CHART_DEFAULTS.tickColor}, grid:{color:CHART_DEFAULTS.gridColor}, beginAtZero:true }
+            }
+        }
+    });
+}
+
+// ── Aylıq data ──
+async function loadMonthly() {
+    const month = document.getElementById('monthSelect').value;
+    const year = document.getElementById('yearSelect').value;
+    const resp = await fetch(`/reports/api/monthly?year=${year}&month=${month}`);
+    const data = await resp.json();
+    if (mainChart) mainChart.destroy();
+    mainChart = new Chart(document.getElementById('mainBarChart').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: data.days.map(d => d + ''),
+            datasets: [{
+                label: 'Gəlir (₼)',
                 data: data.values,
-                backgroundColor: "#E8A04560",
-                borderColor: "#E8A045",
+                backgroundColor: '#E8A04560',
+                borderColor: '#E8A045',
                 borderWidth: 2,
                 borderRadius: 4,
             }]
@@ -218,66 +357,262 @@ async function loadMonthly() {
             },
             scales: {
                 x: { ticks:{color:CHART_DEFAULTS.tickColor}, grid:{color:CHART_DEFAULTS.gridColor} },
-                y: { ticks:{color:CHART_DEFAULTS.tickColor, callback: v => v + " ₼"}, grid:{color:CHART_DEFAULTS.gridColor} }
+                y: { ticks:{color:CHART_DEFAULTS.tickColor, callback: v => v + '₼'}, grid:{color:CHART_DEFAULTS.gridColor}, beginAtZero:true }
             }
         }
     });
+    document.getElementById('barChartTitle').textContent = `📊 Aylıq Gəlir — ${data.total.toFixed(2)} ₼`;
 }
 
-document.getElementById("monthSelect").addEventListener("change", loadMonthly);
-document.getElementById("yearSelect").addEventListener("change", loadMonthly);
-loadMonthly();
-
-// ── Ödəniş üsulları ──────────────────────────────────────────
-const byMethod = {{ daily.by_method | tojson }};
-const methodMap = {"cash":"Nağd","card":"Kart","online":"Online"};
-const pmLabels = Object.keys(byMethod).map(k => methodMap[k] || k);
-const pmValues = Object.values(byMethod);
-
-new Chart(document.getElementById("payMethodChart").getContext("2d"), {
-    type: "doughnut",
-    data: {
-        labels: pmLabels,
-        datasets: [{
-            data: pmValues,
-            backgroundColor: ["#2ECC71","#3498DB","#9B59B6"],
-            borderColor: "#1C1C2E",
-            borderWidth: 3,
-        }]
-    },
-    options: {
-        responsive: true,
-        plugins: { legend: { labels: { color: CHART_DEFAULTS.color } } }
-    }
-});
-
-// ── Saatlıq ──────────────────────────────────────────────────
-fetch("/reports/api/hourly")
-    .then(r => r.json())
-    .then(data => {
-        new Chart(document.getElementById("hourlyChart2").getContext("2d"), {
-            type: "line",
-            data: {
-                labels: data.hours.map(h => h + ":00"),
-                datasets: [{
-                    label: "Sifariş",
-                    data: data.counts,
-                    borderColor: "#E8A045",
-                    backgroundColor: "#E8A04520",
-                    fill: true,
-                    tension: 0.4,
-                    pointBackgroundColor: "#E8A045",
-                }]
+// ── Həftəlik data (son 7 gün) ──
+async function loadWeekly() {
+    const resp = await fetch('/reports/api/weekly');
+    const data = await resp.json();
+    if (mainChart) mainChart.destroy();
+    mainChart = new Chart(document.getElementById('mainBarChart').getContext('2d'), {
+        type: 'line',
+        data: {
+            labels: data.labels,
+            datasets: [{
+                label: 'Gəlir (₼)',
+                data: data.values,
+                backgroundColor: '#E8A04520',
+                borderColor: '#E8A045',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointBackgroundColor: '#E8A045',
+                pointRadius: 5,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { display: false },
+                tooltip: { callbacks: { label: ctx => `${ctx.parsed.y.toFixed(2)} ₼` } }
             },
-            options: {
-                responsive: true,
-                plugins: { legend: { display: false } },
-                scales: {
-                    x: { ticks:{color:CHART_DEFAULTS.tickColor}, grid:{color:CHART_DEFAULTS.gridColor} },
-                    y: { ticks:{color:CHART_DEFAULTS.tickColor, stepSize:1}, grid:{color:CHART_DEFAULTS.gridColor} }
-                }
+            scales: {
+                x: { ticks:{color:CHART_DEFAULTS.tickColor}, grid:{color:CHART_DEFAULTS.gridColor} },
+                y: { ticks:{color:CHART_DEFAULTS.tickColor, callback: v => v + '₼'}, grid:{color:CHART_DEFAULTS.gridColor}, beginAtZero:true }
             }
-        });
-    }).catch(()=>{});
+        }
+    });
+    document.getElementById('barChartTitle').textContent = `📊 Həftəlik Gəlir — ${data.total.toFixed(2)} ₼`;
+}
+
+function switchPeriod(period, btn) {
+    currentPeriod = period;
+    document.querySelectorAll('.period-tab').forEach(t => t.classList.remove('active'));
+    btn.classList.add('active');
+    const mc = document.getElementById('monthlyControls');
+    if (period === 'monthly') {
+        mc.style.display = 'flex';
+        loadMonthly();
+        document.getElementById('barChartTitle').textContent = '📊 Aylıq Gəlir';
+    } else {
+        mc.style.display = 'none';
+        if (period === 'daily') {
+            loadHourly();
+            document.getElementById('barChartTitle').textContent = '📊 Bu Günkü Saatlıq Sifariş';
+        } else {
+            loadWeekly();
+            document.getElementById('barChartTitle').textContent = '📊 Həftəlik Gəlir';
+        }
+    }
+}
+
+// ── Ödəniş üsulları pie ──
+(async () => {
+    const cashVal = {{ daily.by_method.get('cash', 0) }};
+    const cardVal = {{ daily.by_method.get('card', 0) }};
+    const onlineVal = {{ daily.by_method.get('online', 0) }};
+    new Chart(document.getElementById('payMethodChart').getContext('2d'), {
+        type: 'doughnut',
+        data: {
+            labels: ['💵 Nağd', '💳 Kart', '📱 Online'],
+            datasets: [{ data: [cashVal, cardVal, onlineVal], backgroundColor: ['#F39C12','#3498DB','#2ECC71'], borderWidth: 0 }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: { position: 'bottom', labels: { color: CHART_DEFAULTS.tickColor, padding: 12 } },
+                tooltip: { callbacks: { label: ctx => `${ctx.label}: ${ctx.raw.toFixed(2)} ₼` } }
+            }
+        }
+    });
+})();
+
+// ── Saatlıq qrafik ──
+(async () => {
+    const resp = await fetch('/reports/api/hourly');
+    const data = await resp.json();
+    new Chart(document.getElementById('hourlyChart2').getContext('2d'), {
+        type: 'bar',
+        data: {
+            labels: data.hours.map(h => h + ':00'),
+            datasets: [{
+                label: 'Sifariş',
+                data: data.counts,
+                backgroundColor: data.counts.map(v => v === Math.max(...data.counts) ? '#E8A045' : '#E8A04530'),
+                borderColor: '#E8A045',
+                borderWidth: 1,
+                borderRadius: 3,
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: { legend: { display: false } },
+            scales: {
+                x: { ticks: { color: CHART_DEFAULTS.tickColor, font: { size: 10 } }, grid: { display: false } },
+                y: { ticks: { color: CHART_DEFAULTS.tickColor }, grid: { color: CHART_DEFAULTS.gridColor }, beginAtZero: true }
+            }
+        }
+    });
+})();
+
+// Başlanğıcda günlük yüklə
+loadHourly();
+
+// ── Modal funksiyaları ──
+function openSaleDetail(id, table, method, amount, time, items) {
+    document.getElementById('sdId').textContent = '#' + id;
+    document.getElementById('sdTable').textContent = table;
+    document.getElementById('sdItems').textContent = items + ' məhsul';
+    document.getElementById('sdTime').textContent = time;
+    document.getElementById('sdAmount').textContent = amount.toFixed(2) + ' ₼';
+    const methods = {cash:'💵 Nağd', card:'💳 Kart', online:'📱 Online'};
+    document.getElementById('sdMethod').textContent = methods[method] || method;
+    document.getElementById('saleDetailModal').style.display = 'flex';
+}
+
+function openReceiptDetail(id, store, date, total, lines) {
+    document.getElementById('rdStore').textContent = store;
+    document.getElementById('rdDate').textContent = date;
+    document.getElementById('rdTotal').textContent = total.toFixed(2) + ' ₼';
+    document.getElementById('rdId').textContent = 'Çek #' + id;
+    const container = document.getElementById('rdLines');
+    container.innerHTML = '';
+    lines.forEach(l => {
+        const div = document.createElement('div');
+        div.style = 'display:flex;justify-content:space-between;font-size:12px;padding:3px 0;border-bottom:1px dashed #333366;';
+        div.innerHTML = `<span style="flex:1;">${l.name}</span><span style="color:#8080A0;">${l.qty}${l.unit} × ${l.cost.toFixed(2)}₼</span><span style="font-weight:600;margin-left:10px;color:#E8A045;">${l.total.toFixed(2)}₼</span>`;
+        container.appendChild(div);
+    });
+    document.getElementById('receiptDetailModal').style.display = 'flex';
+}
+
+// Modal xaricə klik
+['saleDetailModal','receiptDetailModal'].forEach(id => {
+    document.getElementById(id).addEventListener('click', function(e) {
+        if (e.target === this) this.style.display = 'none';
+    });
+});
 </script>
+
+<style>
+.period-tab {
+    padding: 6px 14px;
+    border-radius: 7px;
+    border: none;
+    background: transparent;
+    color: var(--muted);
+    font-size: 12px;
+    cursor: pointer;
+    font-weight: 500;
+    transition: var(--transition);
+}
+.period-tab.active {
+    background: var(--bg2);
+    color: var(--accent);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+/* Alış çeki kartı */
+.purchase-receipt-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.purchase-receipt-card:hover {
+    border-color: var(--accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(232,160,69,0.15);
+}
+.prec-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px dashed var(--border);
+}
+.prec-items {
+    padding: 10px 14px;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+}
+.prec-line {
+    display: flex;
+    justify-content: space-between;
+    font-size: 12px;
+    color: var(--text);
+}
+
+/* Tamamlanmış satış kartı */
+.receipt-card {
+    background: var(--bg3);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.receipt-card:hover {
+    border-color: #27AE60;
+    transform: translateY(-2px);
+    box-shadow: 0 4px 20px rgba(39,174,96,0.15);
+}
+.receipt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--border);
+}
+.receipt-body {
+    padding: 10px 14px;
+}
+.receipt-method-badge {
+    font-size: 11px;
+    padding: 2px 8px;
+    border-radius: 20px;
+    margin-top: 4px;
+    display: inline-block;
+}
+.badge-blue  { background: rgba(52,152,219,0.15); color: #3498DB; }
+.badge-amber { background: rgba(232,160,69,0.15);  color: #E8A045; }
+
+.modal-overlay {
+    position: fixed; inset: 0;
+    background: rgba(0,0,0,0.75);
+    display: flex; align-items: center; justify-content: center;
+    z-index: 9000;
+    backdrop-filter: blur(4px);
+}
+.modal-box {
+    background: var(--bg2);
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+    animation: modalIn 0.2s ease;
+    position: relative;
+}
+@keyframes modalIn {
+    from { opacity:0; transform:scale(0.95); }
+    to   { opacity:1; transform:scale(1); }
+}
+</style>
 {% endblock %}

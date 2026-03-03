@@ -13,12 +13,10 @@ class OrderService:
 
     def create_order(self, db: Session, table_id: int, waiter_id: int,
                      customer_id: int = None, notes: str = None):
-        # Masanı yoxla
         table = db.query(Table).filter(Table.id == table_id).first()
         if not table:
             return False, "Masa tapılmadı."
 
-        # Aktiv sifariş varmı?
         existing = db.query(Order).filter(
             Order.table_id == table_id,
             Order.status.notin_([OrderStatus.paid, OrderStatus.cancelled])
@@ -34,8 +32,6 @@ class OrderService:
             status      = OrderStatus.new,
         )
         db.add(order)
-
-        # Masanı dolu et
         table.status = TableStatus.occupied
         db.commit()
         db.refresh(order)
@@ -79,7 +75,6 @@ class OrderService:
         if not menu_item:
             return False, "Menyu məhsulu tapılmadı."
 
-        # Əvvəlcədən əlavə edilmişmi?
         existing = db.query(OrderItem).filter(
             OrderItem.order_id     == order_id,
             OrderItem.menu_item_id == menu_item_id,
@@ -99,9 +94,13 @@ class OrderService:
                 notes        = notes,
             )
             db.add(oi)
+            # ── FIX: yeni item DB-ə flush et ki _recalculate onu görsün ──
+            db.flush()
 
         self._recalculate(db, order)
         db.commit()
+        # ── FIX: commit sonra order Python obyektini yenilə ──
+        db.refresh(order)
         return True, order
 
     def remove_item(self, db: Session, order_item_id: int):
@@ -112,6 +111,7 @@ class OrderService:
         db.delete(oi)
         self._recalculate(db, order)
         db.commit()
+        db.refresh(order)
         return True, order
 
     def update_item_qty(self, db: Session, order_item_id: int, quantity: int):
@@ -124,6 +124,7 @@ class OrderService:
         oi.subtotal = oi.unit_price * quantity
         self._recalculate(db, oi.order)
         db.commit()
+        db.refresh(oi.order)
         return True, oi.order
 
     # ── STATUS ────────────────────────────────────────────────────────────────
@@ -135,7 +136,6 @@ class OrderService:
         order.status = OrderStatus[status]
         if status == "paid":
             order.paid_at = datetime.now()
-            # Masanı boşalt
             if order.table:
                 order.table.status = TableStatus.available
         db.commit()

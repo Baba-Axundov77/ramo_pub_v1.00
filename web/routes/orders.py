@@ -9,6 +9,7 @@ from modules.orders.workflow_service import order_workflow_service
 from modules.tables.table_service import TableService
 from modules.menu.menu_service import MenuService
 from web.auth import permission_required, permission_required_api
+from database.models import OrderStatus
 
 bp        = Blueprint("orders", __name__, url_prefix="/orders")
 svc       = OrderService()
@@ -54,7 +55,6 @@ def index():
     elif selected_table and active:
         selected_order = active[0]
 
-    # Menyu kateqoriya + məhsullar
     categories = menu_svc.get_categories(g.db)
     menu_items = menu_svc.get_items(g.db, active_only=True, available_only=True)
 
@@ -87,9 +87,9 @@ def api_create():
 
     ok, result = svc.create_order(
         g.db,
-        table_id   = int(table_id),
-        waiter_id  = _user_id(),
-        notes      = notes,
+        table_id  = int(table_id),
+        waiter_id = _user_id(),
+        notes     = notes,
     )
     if not ok:
         return jsonify({"ok": False, "msg": str(result)}), 400
@@ -114,6 +114,9 @@ def api_get(order_id: int):
 
     items = []
     for oi in order.items:
+        # ── FIX: cancelled items-ı nə göstər, nə say ──
+        if oi.status == OrderStatus.cancelled:
+            continue
         items.append({
             "id":         oi.id,
             "name":       oi.menu_item.name if oi.menu_item else "?",
@@ -170,25 +173,6 @@ def api_add_item(order_id: int):
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# API — MƏHSUL SİL
-# ─────────────────────────────────────────────────────────────────────────────
-
-@bp.route("/api/item/<int:item_id>/remove", methods=["POST"])
-@permission_required_api("take_orders")
-def api_remove_item(item_id: int):
-    ok, result = svc.remove_item(g.db, item_id)
-    if not ok:
-        return jsonify({"ok": False, "msg": str(result)}), 400
-
-    return jsonify({
-        "ok":       True,
-        "subtotal": float(result.subtotal or 0),
-        "total":    float(result.total or 0),
-        "msg":      "Məhsul silindi",
-    })
-
-
-# ─────────────────────────────────────────────────────────────────────────────
 # API — MİQDAR YENİLƏ
 # ─────────────────────────────────────────────────────────────────────────────
 
@@ -206,6 +190,25 @@ def api_update_qty(item_id: int):
         "ok":       True,
         "subtotal": float(result.subtotal or 0),
         "total":    float(result.total or 0),
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API — MƏHSUL SİL
+# ─────────────────────────────────────────────────────────────────────────────
+
+@bp.route("/api/item/<int:item_id>/remove", methods=["POST"])
+@permission_required_api("take_orders")
+def api_remove_item(item_id: int):
+    ok, result = svc.remove_item(g.db, item_id)
+    if not ok:
+        return jsonify({"ok": False, "msg": str(result)}), 400
+
+    return jsonify({
+        "ok":       True,
+        "subtotal": float(result.subtotal or 0),
+        "total":    float(result.total or 0),
+        "msg":      "Məhsul silindi",
     })
 
 
@@ -250,16 +253,36 @@ def api_cancel(order_id: int):
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/<int:order_id>/pay", methods=["POST"])
-@permission_required_api("process_payment")
+@permission_required_api("process_payment")   # ← FIX: "s" yox, "process_payment"
 def api_pay(order_id: int):
     data          = request.get_json(silent=True) or {}
     method        = data.get("method", "cash")
     discount_code = data.get("discount_code", "")
 
-    # Sifarişi əvvəlcə yüklə (çek üçün lazım olan məlumatlar)
+    # Sifarişi əvvəlcə yüklə (çek məlumatları üçün)
     order = svc.get_order(g.db, order_id)
     if not order:
         return jsonify({"ok": False, "msg": "Sifariş tapılmadı"}), 404
+
+    # Status yoxla
+    if order.status.value == "paid":
+        return jsonify({"ok": False, "msg": "Bu sifariş artıq ödənilib."}), 400
+    if order.status.value == "cancelled":
+        return jsonify({"ok": False, "msg": "Ləğv edilmiş sifarişi ödəmək olmaz."}), 400
+
+    # Subtotal yoxla və lazım gələrsə yenidən hesabla
+    if not order.subtotal or order.subtotal <= 0:
+        from modules.orders.order_service import OrderService
+        OrderService()._recalculate(g.db, order)
+        g.db.commit()
+        g.db.refresh(order)
+        if not order.subtotal or order.subtotal <= 0:
+            return jsonify({"ok": False, "msg": "Sifarişdə məhsul yoxdur."}), 400
+
+    # method yoxla
+    allowed_methods = {"cash", "card", "online"}
+    if method not in allowed_methods:
+        method = "cash"
 
     try:
         from modules.pos.pos_service import pos_service
@@ -273,9 +296,11 @@ def api_pay(order_id: int):
         if not ok:
             return jsonify({"ok": False, "msg": str(result)}), 400
 
-        # Çek üçün məhsul siyahısı
+        # Çek üçün məhsul siyahısı — cancelled olanlar xaric
         items_data = []
         for oi in order.items:
+            if oi.status == OrderStatus.cancelled:
+                continue
             items_data.append({
                 "name":       oi.menu_item.name if oi.menu_item else "?",
                 "quantity":   oi.quantity,
@@ -288,23 +313,24 @@ def api_pay(order_id: int):
             table_name = order.table.name or f"Masa {order.table.number}"
 
         return jsonify({
-            "ok":             True,
-            "order_id":       order_id,
-            "table_name":     table_name,
-            "waiter":         order.waiter.full_name if order.waiter else "—",
-            "amount":         float(result.amount),
-            "discount_amount":float(result.discount_amount),
-            "final_amount":   float(result.final_amount),
-            "method":         result.method.value,
-            "items":          items_data,
-            "msg":            f"Ödəniş tamamlandı — {result.final_amount:.2f} ₼",
+            "ok":              True,
+            "order_id":        order_id,
+            "table_name":      table_name,
+            "waiter":          order.waiter.full_name if order.waiter else "—",
+            "amount":          float(result.amount),
+            "discount_amount": float(result.discount_amount),
+            "final_amount":    float(result.final_amount),
+            "method":          result.method.value,
+            "items":           items_data,
+            "msg":             f"Ödəniş tamamlandı — {result.final_amount:.2f} ₼",
         })
 
     except Exception as e:
         return jsonify({"ok": False, "msg": f"Ödəniş xətası: {str(e)}"}), 500
 
+
 # ─────────────────────────────────────────────────────────────────────────────
-# API — AKTİV SİFARİŞLƏR (dashboard refresh)
+# API — AKTİV SİFARİŞLƏR
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/active")
@@ -318,13 +344,70 @@ def api_active():
         "table_number": o.table.number if o.table else None,
         "status":       o.status.value,
         "total":        float(o.total or 0),
-        "item_count":   len(o.items),
+        "item_count":   len([i for i in o.items
+                             if i.status != OrderStatus.cancelled]),
         "created_at":   o.created_at.strftime("%H:%M") if o.created_at else "",
     } for o in orders])
 
 
 # ─────────────────────────────────────────────────────────────────────────────
-# API — MENYU (sifariş zamanı)
+# API — MASA ÜZRƏ AKTİV SİFARİŞ
+# ─────────────────────────────────────────────────────────────────────────────
+
+@bp.route("/api/table/<int:table_id>/active")
+@permission_required_api("take_orders")
+def api_table_active(table_id: int):
+    active = svc.get_active_orders(g.db)
+    for o in active:
+        if o.table_id == table_id:
+            return jsonify({"ok": True, "order_id": o.id})
+    return jsonify({"ok": False, "order_id": None})
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API — MASA ÜZRƏ SİFARİŞ YARAT / VAR OLANI QAYTAR
+# ─────────────────────────────────────────────────────────────────────────────
+
+@bp.route("/api/tables/<int:table_id>/create-order", methods=["POST"])
+@permission_required_api("take_orders")
+def api_create_order_for_table(table_id: int):
+    active = svc.get_active_orders(g.db)
+    for o in active:
+        if o.table_id == table_id:
+            return jsonify({"ok": True, "order_id": o.id, "existing": True}), 200
+
+    ok, result = svc.create_order(
+        g.db,
+        table_id  = table_id,
+        waiter_id = _user_id(),
+    )
+    if not ok:
+        return jsonify({"ok": False, "msg": str(result)}), 409
+    return jsonify({"ok": True, "order_id": result.id, "existing": False}), 201
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API — ENDİRİM TƏTBİQ ET
+# ─────────────────────────────────────────────────────────────────────────────
+
+@bp.route("/api/<int:order_id>/discount", methods=["POST"])
+@permission_required_api("process_payment")
+def api_apply_discount(order_id: int):
+    data   = request.get_json(silent=True) or {}
+    amount = float(data.get("amount", 0) or 0)
+    ok, result = svc.apply_discount(g.db, order_id, amount)
+    if not ok:
+        return jsonify({"ok": False, "msg": str(result)}), 400
+    return jsonify({
+        "ok":       True,
+        "subtotal": float(result.subtotal or 0),
+        "discount": float(result.discount_amount or 0),
+        "total":    float(result.total or 0),
+    })
+
+
+# ─────────────────────────────────────────────────────────────────────────────
+# API — MENYU
 # ─────────────────────────────────────────────────────────────────────────────
 
 @bp.route("/api/menu")

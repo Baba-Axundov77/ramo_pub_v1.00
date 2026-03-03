@@ -1,6 +1,6 @@
 # web/routes/reports.py
 from __future__ import annotations
-from datetime import date
+from datetime import date, timedelta
 from flask import Blueprint, render_template, session, redirect, url_for, g, jsonify, request
 from modules.reports.report_service import ReportService
 from modules.orders.order_service import OrderService
@@ -24,7 +24,6 @@ def index():
     daily           = svc.daily_summary(g.db, today)
     top             = svc.top_items(g.db, limit=5)
     completed_sales = svc.completed_sales(g.db, today, limit=100)
-    # Sifarişlər bölməsindən köçürülmüş statistika
     summary         = ord_svc.get_today_summary(g.db)
     purchase_receipts = inventory_service.list_purchase_receipts(g.db, limit=30)
     return render_template(
@@ -47,6 +46,25 @@ def api_monthly():
         "days":   data["days"],
         "values": data["values"],
         "total":  data["revenue"],
+    })
+
+@bp.route("/api/weekly")
+@permission_required_api("view_reports")
+def api_weekly():
+    """Son 7 günün gəliri"""
+    today = date.today()
+    labels = []
+    values = []
+    day_names = ['B.e.', 'Çər.e', 'Çər.', 'Cüm.e', 'Cüm.', 'Şən.', 'Baz.']
+    for i in range(6, -1, -1):
+        d = today - timedelta(days=i)
+        data = svc.daily_summary(g.db, d)
+        labels.append(day_names[d.weekday()] + '\n' + d.strftime('%d/%m'))
+        values.append(round(data["revenue"], 2))
+    return jsonify({
+        "labels": labels,
+        "values": values,
+        "total":  sum(values),
     })
 
 @bp.route("/api/hourly")
