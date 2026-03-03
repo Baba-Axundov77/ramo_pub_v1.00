@@ -111,6 +111,7 @@ class MenuItem(Base):
     prep_time_min = Column(Integer, default=0)
     image_path  = Column(String(255))
     inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=True)
+    sort_order  = Column(Integer, default=0)
     is_available = Column(Boolean, default=True)
     is_active   = Column(Boolean, default=True)
     created_at  = Column(DateTime, server_default=func.now())
