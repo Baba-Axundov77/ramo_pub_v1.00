@@ -987,7 +987,8 @@ async function submitPay() {
         toast('✅ Ödəniş tamamlandı','ok');
         showReceipt(res);
     } else {
-        toast(res?.msg||'Ödəniş uğursuz','err');
+        const failMsg = (res && res.msg) ? res.msg : 'Ödəniş uğursuz oldu.';
+        toast(failMsg,'err');
     }
 }
 
@@ -1053,11 +1054,16 @@ function showReceipt(payRes) {
     openModal('rcptModal');
 
     // Səbəti təmizlə
+    const selectedTableId = document.getElementById('tableSelect').value;
     activeOrderId = null; _orderData = null;
     clearBasket();
-    document.getElementById('tableSelect').value = '';
-    updateBadge();
-    filterProds();
+    if (selectedTableId) {
+        switchTable(selectedTableId);
+    } else {
+        document.getElementById('tableSelect').value = '';
+        updateBadge();
+        filterProds();
+    }
 }
 
 function rcptPrint(type) {
@@ -1081,7 +1087,6 @@ function rcptPrint(type) {
 
 function closeRcpt() {
     closeModal('rcptModal');
-    location.reload();
 }
 
 /* ── Helpers ──────────────────────────────────────────── */
@@ -1104,11 +1109,14 @@ async function api(url, opts={}) {
             headers:{'Content-Type':'application/json',...(opts.headers||{})},
             ...opts
         });
-        if (!r.ok) throw new Error('HTTP '+r.status);
-        return await r.json();
+        const data = await r.json().catch(() => null);
+        if (!r.ok) {
+            return data || {ok:false, msg:`HTTP ${r.status}`};
+        }
+        return data;
     } catch(e) {
         console.error('[API]',url,e);
-        return null;
+        return {ok:false, msg:'Şəbəkə xətası baş verdi.'};
     }
 }
 </script>
