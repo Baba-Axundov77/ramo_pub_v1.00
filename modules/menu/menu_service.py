@@ -1,4 +1,5 @@
 from datetime import date
+from typing import Optional, List, Dict, Any
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database.models import MenuCategory, MenuItem, InventoryItem, MenuItemRecipe
@@ -126,6 +127,23 @@ class MenuService:
         db.flush()
         return item
 
+    def create_item(
+        self,
+        db: Session,
+        category_id: int,
+        name: str,
+        price: float,
+        description: Optional[str] = None,
+        cost_price: float = 0.0,
+        image_path: Optional[str] = None,
+        inventory_item_id: Optional[int] = None,
+        stock_name: Optional[str] = None,
+        stock_unit: Optional[str] = None,
+        stock_usage_qty: float = 0.0,
+        sort_order: int = 0,
+        recipe_lines: Optional[List[Dict[str, Any]]] = None,
+    ):
+
     def create_item(self, db: Session, category_id: int, name: str, price: float,
                     description: str = None, cost_price: float = 0.0, image_path: str = None,
                     inventory_item_id: int | None = None, stock_name: str | None = None,
@@ -194,6 +212,7 @@ class MenuService:
             .all()
         )
 
+    def replace_recipes(self, db: Session, menu_item_id: int, recipe_lines: List[Dict[str, Any]]):
     def replace_recipes(self, db: Session, menu_item_id: int, recipe_lines: list[dict]):
         today = date.today()
         active_rows = db.query(MenuItemRecipe).filter(
