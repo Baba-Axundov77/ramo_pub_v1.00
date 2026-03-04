@@ -137,16 +137,18 @@
         </div>
         <table class="table" style="margin-bottom:10px;">
             <thead>
-                <tr><th>Məhsul adı</th><th>Miqdar</th><th>Vahid</th><th>Alış qiyməti</th></tr>
-            </thead>
-            <tbody id="receiptLines">
                 <tr>
-                    <td><input class="form-input" name="line_name[]" required></td>
-                    <td><input class="form-input" name="line_qty[]" type="number" step="0.01" min="0"></td>
-                    <td><input class="form-input" name="line_unit[]" value="ədəd"></td>
-                    <td><input class="form-input" name="line_cost[]" type="number" step="0.01" min="0"></td>
+                    <th>Məhsul adı</th>
+                    <th>Say (ədəd)</th>
+                    <th>Hər ədədin miqdarı</th>
+                    <th>Ölçü vahidi</th>
+                    <th>1 ədəd qiyməti (₼)</th>
+                    <th>Toplam miqdar</th>
+                    <th>Sətir cəmi</th>
+                    <th></th>
                 </tr>
-            </tbody>
+            </thead>
+            <tbody id="receiptLines"></tbody>
         </table>
         <div style="display:flex;gap:10px;">
             <button class="btn btn-secondary" type="button" onclick="addReceiptLine()">+ Sətir əlavə et</button>
@@ -196,13 +198,13 @@
             </div>
             <div class="irc-actions">
                 <button class="btn btn-secondary" style="flex:1;font-size:12px;"
-                        onclick="openEditReceipt(
+                        onclick='openEditReceipt(
                             {{ r.id }},
-                            {{ r.store_name|tojson if r.store_name else '""' }},
-                            '{{ r.purchased_at.strftime('%Y-%m-%dT%H:%M') if r.purchased_at else '' }}',
-                            {{ r.note|tojson if r.note else '""' }},
-                            [{% for li in r.items %}{'name':{{ li.item_name|tojson }},'qty':{{ li.quantity }},'unit':{{ li.unit|tojson }},'cost':{{ li.unit_cost }}}{% if not loop.last %},{% endif %}{% endfor %}]
-                        )">✏️ Düzənlə</button>
+                            {{ (r.store_name or "")|tojson }},
+                            {{ (r.purchased_at.strftime("%Y-%m-%dT%H:%M") if r.purchased_at else "")|tojson }},
+                            {{ (r.note or "")|tojson }},
+                            [{% for li in r.items %}{"name":{{ li.item_name|tojson }},"qty":{{ li.quantity }},"unit":{{ li.unit|tojson }},"cost":{{ li.unit_cost }}}{% if not loop.last %},{% endif %}{% endfor %}]
+                        )'>✏️ Düzənlə</button>
                 <form method="post" action="{{ url_for('inventory.delete_receipt', receipt_id=r.id) }}"
                       onsubmit="return confirm('Çek silinsin? Stok geri alınacaq.');" style="flex:1;">
                     <button class="btn btn-danger" type="submit" style="width:100%;font-size:12px;">🗑 Sil</button>
@@ -318,7 +320,16 @@
             </div>
             <table class="table">
                 <thead>
-                    <tr><th>Məhsul adı</th><th>Miqdar</th><th>Vahid</th><th>Qiymət</th></tr>
+                    <tr>
+                        <th>Məhsul adı</th>
+                        <th>Say (ədəd)</th>
+                        <th>Hər ədədin miqdarı</th>
+                        <th>Ölçü vahidi</th>
+                        <th>1 ədəd qiyməti (₼)</th>
+                        <th>Toplam miqdar</th>
+                        <th>Sətir cəmi</th>
+                        <th></th>
+                    </tr>
                 </thead>
                 <tbody id="erLines"></tbody>
             </table>
@@ -347,22 +358,69 @@ function openAdjust(itemId, itemName, unit, mode) {
     document.getElementById('adjustModal').style.display = 'flex';
 }
 
-function addReceiptLine() {
-    const tr = document.createElement('tr');
-    tr.innerHTML = `<td><input class="form-input" name="line_name[]" required></td>
-        <td><input class="form-input" name="line_qty[]" type="number" step="0.01" min="0"></td>
-        <td><input class="form-input" name="line_unit[]" value="ədəd"></td>
-        <td><input class="form-input" name="line_cost[]" type="number" step="0.01" min="0"></td>`;
-    document.getElementById('receiptLines').appendChild(tr);
+function recalcReceiptRow(tr) {
+    const count = parseFloat(tr.querySelector('[name="line_count[]"]').value || '0');
+    const measureQty = parseFloat(tr.querySelector('[name="line_measure_qty[]"]').value || '0');
+    const unitPrice = parseFloat(tr.querySelector('[name="line_unit_price[]"]').value || '0');
+    const unit = tr.querySelector('[name="line_measure_unit[]"]').value || 'ədəd';
+
+    const totalQty = count * measureQty;
+    const lineTotal = count * unitPrice;
+    const normalizedUnitCost = totalQty > 0 ? (lineTotal / totalQty) : 0;
+
+    tr.querySelector('.line-total-qty').textContent = `${totalQty.toFixed(2)} ${unit}`;
+    tr.querySelector('.line-total-price').textContent = `${lineTotal.toFixed(2)} ₼`;
+
+    tr.querySelector('[name="line_qty[]"]').value = totalQty.toFixed(4);
+    tr.querySelector('[name="line_unit[]"]').value = unit;
+    tr.querySelector('[name="line_cost[]"]').value = normalizedUnitCost.toFixed(6);
 }
 
-function addEditLine(name='', qty='', unit='ədəd', cost='') {
+function buildReceiptRow(name='', count='1', measureQty='', unit='qram', unitPrice='') {
     const tr = document.createElement('tr');
-    tr.innerHTML = `<td><input class="form-input" name="line_name[]" value="${name}" required></td>
-        <td><input class="form-input" name="line_qty[]" type="number" step="0.01" min="0" value="${qty}"></td>
-        <td><input class="form-input" name="line_unit[]" value="${unit}"></td>
-        <td><input class="form-input" name="line_cost[]" type="number" step="0.01" min="0" value="${cost}"></td>`;
-    document.getElementById('erLines').appendChild(tr);
+    tr.innerHTML = `
+        <td>
+            <input class="form-input" name="line_name[]" value="${name}" required>
+            <input type="hidden" name="line_qty[]">
+            <input type="hidden" name="line_unit[]">
+            <input type="hidden" name="line_cost[]">
+        </td>
+        <td><input class="form-input" name="line_count[]" type="number" step="0.01" min="0" value="${count}"></td>
+        <td><input class="form-input" name="line_measure_qty[]" type="number" step="0.01" min="0" value="${measureQty}"></td>
+        <td>
+            <select class="form-input" name="line_measure_unit[]">
+                <option value="qram">qram</option>
+                <option value="kq">kq</option>
+                <option value="ml">ml</option>
+                <option value="litr">litr</option>
+                <option value="ədəd">ədəd</option>
+                <option value="qutu">qutu</option>
+                <option value="paket">paket</option>
+            </select>
+        </td>
+        <td><input class="form-input" name="line_unit_price[]" type="number" step="0.01" min="0" value="${unitPrice}"></td>
+        <td class="line-total-qty" style="white-space:nowrap;">0.00 ${unit}</td>
+        <td class="line-total-price" style="white-space:nowrap;">0.00 ₼</td>
+        <td><button type="button" class="btn btn-danger btn-sm" onclick="this.closest('tr').remove()">✕</button></td>
+    `;
+    tr.querySelector('[name="line_measure_unit[]"]').value = unit || 'qram';
+    tr.querySelectorAll('input,select').forEach((el) => {
+        el.addEventListener('input', () => recalcReceiptRow(tr));
+        el.addEventListener('change', () => recalcReceiptRow(tr));
+    });
+    recalcReceiptRow(tr);
+    return tr;
+}
+
+function addReceiptLine() {
+    document.getElementById('receiptLines').appendChild(buildReceiptRow());
+}
+
+function addEditLine(name='', qty='', unit='qram', cost='') {
+    const totalQty = parseFloat(qty || '0');
+    const unitCost = parseFloat(cost || '0');
+    const lineTotal = totalQty * unitCost;
+    document.getElementById('erLines').appendChild(buildReceiptRow(name, '1', totalQty || '', unit || 'qram', lineTotal || ''));
 }
 
 function openEditReceipt(id, store, date, note, lines) {
@@ -371,9 +429,12 @@ function openEditReceipt(id, store, date, note, lines) {
     document.getElementById('erNote').value = note;
     document.getElementById('editReceiptForm').action = '/inventory/receipt/' + id + '/edit';
     document.getElementById('erLines').innerHTML = '';
-    lines.forEach(l => addEditLine(l.name, l.qty, l.unit, l.cost));
+    (lines || []).forEach(l => addEditLine(l.name, l.qty, l.unit, l.cost));
+    if (!lines || lines.length === 0) addEditLine();
     document.getElementById('editReceiptModal').style.display = 'flex';
 }
+
+addReceiptLine();
 
 ['adjustModal','addModal','editReceiptModal'].forEach(id => {
     document.getElementById(id).addEventListener('click', function(e) {
