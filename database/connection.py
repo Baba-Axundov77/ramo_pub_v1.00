@@ -31,6 +31,14 @@ _MIGRATIONS = [
     ("menu_items",   "stock_usage_qty",   "FLOAT DEFAULT 0.0"),
     ("menu_items",   "sort_order",        "INTEGER DEFAULT 0"),
 
+
+    # menu_item_recipes
+    ("menu_item_recipes", "quantity_unit",   "VARCHAR(30)"),
+    ("menu_item_recipes", "valid_from",      "DATE"),
+    ("menu_item_recipes", "valid_until",     "DATE"),
+    ("menu_item_recipes", "is_active",       "BOOLEAN DEFAULT 1"),
+    ("menu_item_recipes", "created_at",      "TIMESTAMP"),
+
     # orders
     ("orders",       "customer_id",       "INTEGER"),
     ("orders",       "subtotal",          "FLOAT DEFAULT 0.0"),

@@ -1,6 +1,7 @@
+from datetime import date
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from database.models import MenuCategory, MenuItem, InventoryItem
+from database.models import MenuCategory, MenuItem, InventoryItem, MenuItemRecipe
 
 
 class MenuService:
@@ -128,6 +129,7 @@ class MenuService:
     def create_item(self, db: Session, category_id: int, name: str, price: float,
                     description: str = None, cost_price: float = 0.0, image_path: str = None,
                     inventory_item_id: int | None = None, stock_name: str | None = None,
+                    stock_unit: str | None = None, stock_usage_qty: float = 0.0, sort_order: int = 0, recipe_lines: list[dict] | None = None):
                     stock_unit: str | None = None, stock_usage_qty: float = 0.0, sort_order: int = 0):
         inv_id = inventory_item_id
         if stock_name and stock_name.strip():
@@ -145,7 +147,14 @@ class MenuService:
             sort_order=sort_order or 0,
             stock_usage_qty=max(0.0, float(stock_usage_qty or 0.0)),
         )
-        db.add(item); db.commit(); db.refresh(item)
+        db.add(item)
+        db.flush()
+
+        if recipe_lines is not None:
+            self.replace_recipes(db, item.id, recipe_lines)
+        else:
+            db.commit()
+        db.refresh(item)
         return True, item
 
     def update_item(self, db: Session, item_id: int, **kwargs):
@@ -155,6 +164,7 @@ class MenuService:
 
         stock_name = kwargs.pop("stock_name", None)
         stock_unit = kwargs.pop("stock_unit", None)
+        recipe_lines = kwargs.pop("recipe_lines", None)
         if stock_name and stock_name.strip():
             inv = self._find_or_create_inventory_item(db, stock_name, stock_unit or "ədəd", kwargs.get("cost_price", item.cost_price or 0))
             kwargs["inventory_item_id"] = inv.id
@@ -165,8 +175,52 @@ class MenuService:
         for k, v in kwargs.items():
             if hasattr(item, k):
                 setattr(item, k, v)
-        db.commit(); db.refresh(item)
+
+        if recipe_lines is not None:
+            self.replace_recipes(db, item.id, recipe_lines)
+        else:
+            db.commit()
+        db.refresh(item)
         return True, item
+
+
+    def get_item_recipes(self, db: Session, menu_item_id: int):
+        today = date.today()
+        return (
+            db.query(MenuItemRecipe)
+            .filter(MenuItemRecipe.menu_item_id == menu_item_id, MenuItemRecipe.is_active == True)
+            .filter((MenuItemRecipe.valid_from == None) | (MenuItemRecipe.valid_from <= today))
+            .filter((MenuItemRecipe.valid_until == None) | (MenuItemRecipe.valid_until >= today))
+            .all()
+        )
+
+    def replace_recipes(self, db: Session, menu_item_id: int, recipe_lines: list[dict]):
+        today = date.today()
+        active_rows = db.query(MenuItemRecipe).filter(
+            MenuItemRecipe.menu_item_id == menu_item_id,
+            MenuItemRecipe.is_active == True
+        ).all()
+        for row in active_rows:
+            row.is_active = False
+            row.valid_until = today
+
+        for line in recipe_lines or []:
+            inv_id = int(line.get("inventory_item_id") or 0)
+            qty = float(line.get("quantity_per_unit") or 0)
+            qty_unit = (line.get("quantity_unit") or "").strip() or None
+            if inv_id <= 0 or qty <= 0:
+                continue
+            db.add(
+                MenuItemRecipe(
+                    menu_item_id=menu_item_id,
+                    inventory_item_id=inv_id,
+                    quantity_per_unit=qty,
+                    quantity_unit=qty_unit,
+                    valid_from=today,
+                    is_active=True,
+                )
+            )
+        db.commit()
 
     def toggle_available(self, db: Session, item_id: int):
         item = self.get_item(db, item_id)
