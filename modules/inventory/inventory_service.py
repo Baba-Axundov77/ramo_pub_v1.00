@@ -29,7 +29,6 @@ class InventoryService:
             db.add(
                 InventoryItem(
                     name=name,
-                    unit=normalize_unit(unit),
                     unit=unit,
                     quantity=quantity,
                     min_quantity=min_quantity,

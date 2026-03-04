@@ -1,17 +1,24 @@
 # modules/pos/pos_service.py — Kassa & Ödəniş İş Məntiqi
-from sqlalchemy.orm import Session
 from datetime import datetime, date
+
+from sqlalchemy.orm import Session
+
 from config import ALLOW_NEGATIVE_STOCK
-from modules.inventory.unit_conversion import convert_quantity
 from database.models import (
-    Payment, Order, OrderStatus, PaymentMethod,
-    Customer, Discount, InventoryItem, MenuItemRecipe, InventoryAdjustment
-    Customer, Discount, InventoryItem
+    Payment,
+    Order,
+    OrderStatus,
+    PaymentMethod,
+    Customer,
+    Discount,
+    InventoryItem,
+    MenuItemRecipe,
+    InventoryAdjustment,
 )
+from modules.inventory.unit_conversion import convert_quantity
 
 
 class POSService:
-
     def process_payment(self, db: Session, order_id: int,
                         method: str, cashier_id: int,
                         discount_code: str = None,
@@ -30,7 +37,6 @@ class POSService:
 
         discount_amount = order.discount_amount or 0.0
 
-        # ── Endirim kodu ──────────────────────────────────────────────────────
         if discount_code:
             ok, disc_result = self._apply_discount_code(db, order, discount_code)
             if ok:
@@ -38,7 +44,6 @@ class POSService:
             else:
                 return False, disc_result
 
-        # ── Loyallıq xalları ──────────────────────────────────────────────────
         if loyalty_points_used > 0 and order.customer_id:
             ok, points_value = self._use_loyalty_points(
                 db, order.customer_id, loyalty_points_used
@@ -50,30 +55,26 @@ class POSService:
         order.discount_amount = discount_amount
         order.total = final_amount
 
-        # ── Anbardan istifadə olunan xammalı çıx ───────────────────────────
         ok, stock_result = self._consume_inventory_for_order(db, order)
         if not ok:
             return False, stock_result
 
-        # ── Ödəniş yaz ────────────────────────────────────────────────────────
         payment = Payment(
-            order_id        = order_id,
-            amount          = order.subtotal,
-            discount_amount = discount_amount,
-            final_amount    = final_amount,
-            method          = PaymentMethod[method],
-            cashier_id      = cashier_id,
+            order_id=order_id,
+            amount=order.subtotal,
+            discount_amount=discount_amount,
+            final_amount=final_amount,
+            method=PaymentMethod[method],
+            cashier_id=cashier_id,
         )
         db.add(payment)
 
-        # ── Sifariş statusu ───────────────────────────────────────────────────
-        order.status  = OrderStatus.paid
+        order.status = OrderStatus.paid
         order.paid_at = datetime.now()
         if order.table:
             from database.models import TableStatus
             order.table.status = TableStatus.available
 
-        # ── Loyallıq xalı qazandır ────────────────────────────────────────────
         if order.customer_id:
             self._earn_loyalty_points(db, order.customer_id, final_amount)
 
@@ -93,15 +94,24 @@ class POSService:
             today = date.today()
             recipe_lines = db.query(MenuItemRecipe).filter(
                 MenuItemRecipe.menu_item_id == menu_item.id,
-                MenuItemRecipe.is_active == True
-            ).filter((MenuItemRecipe.valid_from == None) | (MenuItemRecipe.valid_from <= today)).filter((MenuItemRecipe.valid_until == None) | (MenuItemRecipe.valid_until >= today)).all()
+                MenuItemRecipe.is_active == True,
+            ).filter(
+                (MenuItemRecipe.valid_from == None) | (MenuItemRecipe.valid_from <= today)
+            ).filter(
+                (MenuItemRecipe.valid_until == None) | (MenuItemRecipe.valid_until >= today)
+            ).all()
+
             if recipe_lines:
                 for line in recipe_lines:
                     inv = db.query(InventoryItem).filter(InventoryItem.id == line.inventory_item_id).first()
                     if not inv:
                         continue
                     required_raw = float(line.quantity_per_unit or 0.0) * float(oi.quantity or 0)
-                    ok_conv, required, msg = convert_quantity(required_raw, line.quantity_unit or inv.unit, inv.unit)
+                    ok_conv, required, msg = convert_quantity(
+                        required_raw,
+                        line.quantity_unit or inv.unit,
+                        inv.unit,
+                    )
                     if not ok_conv:
                         shortages.append(f"{menu_item.name} -> {inv.name}: {msg}")
                         continue
@@ -116,30 +126,20 @@ class POSService:
                     consumptions.append((inv, required, menu_item.name))
                 continue
 
-            # geriyə uyğunluq: köhnə tək-stok modeli
             if not menu_item.inventory_item_id:
-
-        for oi in order.items:
-            menu_item = oi.menu_item
-            if not menu_item or not menu_item.inventory_item_id:
                 continue
+
             usage_per_item = float(menu_item.stock_usage_qty or 0.0)
             if usage_per_item <= 0:
                 continue
+
             inv = db.query(InventoryItem).filter(InventoryItem.id == menu_item.inventory_item_id).first()
             if not inv:
                 continue
+
             required = usage_per_item * float(oi.quantity or 0)
             current_qty = float(inv.quantity or 0.0)
             if (not ALLOW_NEGATIVE_STOCK) and current_qty < required:
-
-            inv = db.query(InventoryItem).filter(InventoryItem.id == menu_item.inventory_item_id).first()
-            if not inv:
-                continue
-
-            required = usage_per_item * float(oi.quantity or 0)
-            current_qty = float(inv.quantity or 0.0)
-            if current_qty < required:
                 unit = inv.unit or "vahid"
                 shortages.append(
                     f"{menu_item.name}: tələb {required:.2f} {unit}, mövcud {current_qty:.2f} {unit}"
@@ -161,28 +161,13 @@ class POSService:
                     reference=f"order:{order.id}",
                 )
             )
-        for oi in order.items:
-            menu_item = oi.menu_item
-            if not menu_item or not menu_item.inventory_item_id:
-                continue
-            usage_per_item = float(menu_item.stock_usage_qty or 0.0)
-            if usage_per_item <= 0:
-                continue
-
-            inv = db.query(InventoryItem).filter(InventoryItem.id == menu_item.inventory_item_id).first()
-            if not inv:
-                continue
-
-            inv.quantity = float(inv.quantity or 0.0) - (usage_per_item * float(oi.quantity or 0))
 
         return True, None
-
-    # ── ENDİRİM KODU ──────────────────────────────────────────────────────────
 
     def _apply_discount_code(self, db: Session, order: Order, code: str):
         today = date.today()
         disc = db.query(Discount).filter(
-            Discount.code      == code.upper(),
+            Discount.code == code.upper(),
             Discount.is_active == True,
         ).first()
         if not disc:
@@ -207,14 +192,12 @@ class POSService:
             amount = disc.value
         return True, amount
 
-    # ── LOYALLIK XALLAR ───────────────────────────────────────────────────────
-
     def _earn_loyalty_points(self, db: Session, customer_id: int, amount: float):
         """Hər 1 ₼ = 1 xal."""
         customer = db.query(Customer).filter(Customer.id == customer_id).first()
         if customer:
             points = int(amount)
-            customer.points      += points
+            customer.points += points
             customer.total_spent += amount
 
     def _use_loyalty_points(self, db: Session, customer_id: int, points: int):
@@ -228,30 +211,28 @@ class POSService:
         value = points / 100.0
         return True, value
 
-    # ── HESABAT ──────────────────────────────────────────────────────────────
-
     def get_daily_summary(self, db: Session, target_date: date = None):
         if not target_date:
             target_date = date.today()
         start = datetime.combine(target_date, datetime.min.time())
-        end   = datetime.combine(target_date, datetime.max.time())
+        end = datetime.combine(target_date, datetime.max.time())
 
         payments = db.query(Payment).filter(
             Payment.created_at >= start,
             Payment.created_at <= end,
         ).all()
 
-        total      = sum(p.final_amount for p in payments)
-        by_method  = {}
+        total = sum(p.final_amount for p in payments)
+        by_method = {}
         for pm in PaymentMethod:
             method_payments = [p for p in payments if p.method == pm]
             by_method[pm.value] = sum(p.final_amount for p in method_payments)
 
         return {
-            "date":        target_date,
-            "count":       len(payments),
-            "total":       total,
-            "by_method":   by_method,
+            "date": target_date,
+            "count": len(payments),
+            "total": total,
+            "by_method": by_method,
             "discount_total": sum(p.discount_amount for p in payments),
         }
 
@@ -259,7 +240,7 @@ class POSService:
         """Endirim kodunu yoxla (preview üçün)."""
         today = date.today()
         disc = db.query(Discount).filter(
-            Discount.code      == code.upper(),
+            Discount.code == code.upper(),
             Discount.is_active == True,
         ).first()
         if not disc:
@@ -276,10 +257,10 @@ class POSService:
             return False, f"Min. məbləğ: {disc.min_order:.2f} ₼"
         if disc.type == "percent":
             amount = order_subtotal * (disc.value / 100)
-            label  = f"%{disc.value:.0f} endirim"
+            label = f"%{disc.value:.0f} endirim"
         else:
             amount = disc.value
-            label  = f"{disc.value:.2f} ₼ endirim"
+            label = f"{disc.value:.2f} ₼ endirim"
         return True, {"amount": amount, "label": label, "discount": disc}
 
 
