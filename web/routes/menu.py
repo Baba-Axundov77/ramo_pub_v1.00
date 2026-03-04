@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import os
 import uuid
+from datetime import date
 from flask import Blueprint, render_template, redirect, url_for, g, request, flash, current_app
 from modules.menu.menu_service import MenuService
 from modules.inventory.inventory_service import inventory_service
@@ -33,6 +34,24 @@ def _save_uploaded_image(file) -> str | None:
     return f"menu/{filename}"
 
 
+
+
+def _extract_recipe_lines(form) -> list[dict]:
+    inv_ids = form.getlist("recipe_inventory_id[]")
+    qty_vals = form.getlist("recipe_qty[]")
+    unit_vals = form.getlist("recipe_unit[]")
+    lines: list[dict] = []
+    for idx, (inv_id, qty) in enumerate(zip(inv_ids, qty_vals)):
+        try:
+            inv_num = int(inv_id or 0)
+            qty_num = float(qty or 0)
+        except ValueError:
+            continue
+        if inv_num > 0 and qty_num > 0:
+            unit = (unit_vals[idx] if idx < len(unit_vals) else "").strip()
+            lines.append({"inventory_item_id": inv_num, "quantity_per_unit": qty_num, "quantity_unit": unit or None})
+    return lines
+
 @bp.route("/")
 @permission_required("manage_menu")
 def index():
@@ -40,12 +59,27 @@ def index():
     categories = svc.get_categories(g.db)
     items = svc.get_items(g.db, category_id=category_id)
     inventory_items = inventory_service.get_all(g.db)
+    today = date.today()
+    recipe_map = {}
+    for item in items:
+        lines = []
+        for r in item.recipes:
+            if not r.is_active:
+                continue
+            if r.valid_from and r.valid_from > today:
+                continue
+            if r.valid_until and r.valid_until < today:
+                continue
+            lines.append(r)
+        recipe_map[item.id] = lines
+
     return render_template(
         "menu/index.html",
         categories=categories,
         items=items,
         inventory_items=inventory_items,
         selected_category=category_id,
+        recipe_map=recipe_map,
     )
 
 
@@ -112,6 +146,8 @@ def create_item():
             inventory_item_id=(int(request.form.get("inventory_item_id")) if request.form.get("inventory_item_id") else None),
             stock_name=request.form.get("stock_name", "").strip() or None,
             stock_unit=request.form.get("stock_unit", "").strip() or None,
+            stock_usage_qty=float(request.form.get("stock_usage_qty", "0") or 0),
+            recipe_lines=_extract_recipe_lines(request.form),
             sort_order=int(request.form.get("sort_order", 0) or 0),
         )
         flash("Məhsul yaradıldı." if ok else str(result), "success" if ok else "danger")
@@ -142,6 +178,8 @@ def edit_item(item_id: int):
         inventory_item_id=(int(request.form.get("inventory_item_id")) if request.form.get("inventory_item_id") else None),
         stock_name=request.form.get("stock_name", "").strip() or None,
         stock_unit=request.form.get("stock_unit", "").strip() or None,
+        stock_usage_qty=float(request.form.get("stock_usage_qty", "0") or 0),
+        recipe_lines=_extract_recipe_lines(request.form),
         is_available=(request.form.get("is_available") == "1"),
         sort_order=int(request.form.get("sort_order", 0) or 0),
     )

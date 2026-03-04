@@ -7,6 +7,7 @@ from flask import Blueprint, render_template, request, redirect, url_for, flash,
 from web.auth import login_required, permission_required
 from modules.inventory.inventory_service import inventory_service
 from database.connection import get_db
+from config import ALLOW_NEGATIVE_STOCK
 
 inventory_bp = Blueprint("inventory", __name__, url_prefix="/inventory")
 
@@ -128,7 +129,14 @@ def adjust(item_id: int):
     db = g.db
     mode = request.form.get("mode", "add")
     amount = float(request.form.get("amount", 0))
-    ok, result = inventory_service.add_stock(db, item_id, amount) if mode == "add" else inventory_service.remove_stock(db, item_id, amount)
+    reason = request.form.get("reason", "").strip()
+    actor = session.get("user", {}).get("id")
+    if mode == "add":
+        ok, result = inventory_service.add_stock(db, item_id, amount, reason=reason or "Manual artırma", created_by=actor)
+    elif mode == "waste":
+        ok, result = inventory_service.remove_stock(db, item_id, amount, reason=reason or "İtki/Spoilage", created_by=actor, allow_negative=ALLOW_NEGATIVE_STOCK)
+    else:
+        ok, result = inventory_service.remove_stock(db, item_id, amount, reason=reason or "Manual azaltma", created_by=actor, allow_negative=ALLOW_NEGATIVE_STOCK)
     flash(f"{'✅  Stok yeniləndi.' if ok else '❌  ' + str(result)}", "success" if ok else "danger")
     return redirect(url_for("inventory.index"))
 

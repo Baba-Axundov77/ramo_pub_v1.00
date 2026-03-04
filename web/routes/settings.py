@@ -20,6 +20,7 @@ def index():
             "DB_HOST": os.getenv("DB_HOST", "localhost"),
             "DB_PORT": os.getenv("DB_PORT", "5432"),
             "DB_NAME": os.getenv("DB_NAME", "ramo_pub"),
+            "ALLOW_NEGATIVE_STOCK": os.getenv("ALLOW_NEGATIVE_STOCK", "0"),
         },
     )
 

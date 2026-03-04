@@ -1,9 +1,11 @@
 # modules/pos/pos_service.py — Kassa & Ödəniş İş Məntiqi
 from sqlalchemy.orm import Session
 from datetime import datetime, date
+from config import ALLOW_NEGATIVE_STOCK
+from modules.inventory.unit_conversion import convert_quantity
 from database.models import (
     Payment, Order, OrderStatus, PaymentMethod,
-    Customer, Discount
+    Customer, Discount, InventoryItem, MenuItemRecipe, InventoryAdjustment
 )
 
 
@@ -47,6 +49,11 @@ class POSService:
         order.discount_amount = discount_amount
         order.total = final_amount
 
+        # ── Anbardan istifadə olunan xammalı çıx ───────────────────────────
+        ok, stock_result = self._consume_inventory_for_order(db, order)
+        if not ok:
+            return False, stock_result
+
         # ── Ödəniş yaz ────────────────────────────────────────────────────────
         payment = Payment(
             order_id        = order_id,
@@ -72,6 +79,77 @@ class POSService:
         db.commit()
         db.refresh(payment)
         return True, payment
+
+    def _consume_inventory_for_order(self, db: Session, order: Order):
+        shortages: list[str] = []
+        consumptions: list[tuple[InventoryItem, float, str]] = []
+
+        for oi in order.items:
+            menu_item = oi.menu_item
+            if not menu_item:
+                continue
+
+            today = date.today()
+            recipe_lines = db.query(MenuItemRecipe).filter(
+                MenuItemRecipe.menu_item_id == menu_item.id,
+                MenuItemRecipe.is_active == True
+            ).filter((MenuItemRecipe.valid_from == None) | (MenuItemRecipe.valid_from <= today)).filter((MenuItemRecipe.valid_until == None) | (MenuItemRecipe.valid_until >= today)).all()
+            if recipe_lines:
+                for line in recipe_lines:
+                    inv = db.query(InventoryItem).filter(InventoryItem.id == line.inventory_item_id).first()
+                    if not inv:
+                        continue
+                    required_raw = float(line.quantity_per_unit or 0.0) * float(oi.quantity or 0)
+                    ok_conv, required, msg = convert_quantity(required_raw, line.quantity_unit or inv.unit, inv.unit)
+                    if not ok_conv:
+                        shortages.append(f"{menu_item.name} -> {inv.name}: {msg}")
+                        continue
+                    if required <= 0:
+                        continue
+                    current_qty = float(inv.quantity or 0.0)
+                    if (not ALLOW_NEGATIVE_STOCK) and current_qty < required:
+                        unit = inv.unit or "vahid"
+                        shortages.append(
+                            f"{menu_item.name} -> {inv.name}: tələb {required:.2f} {unit}, mövcud {current_qty:.2f} {unit}"
+                        )
+                    consumptions.append((inv, required, menu_item.name))
+                continue
+
+            # geriyə uyğunluq: köhnə tək-stok modeli
+            if not menu_item.inventory_item_id:
+                continue
+            usage_per_item = float(menu_item.stock_usage_qty or 0.0)
+            if usage_per_item <= 0:
+                continue
+            inv = db.query(InventoryItem).filter(InventoryItem.id == menu_item.inventory_item_id).first()
+            if not inv:
+                continue
+            required = usage_per_item * float(oi.quantity or 0)
+            current_qty = float(inv.quantity or 0.0)
+            if (not ALLOW_NEGATIVE_STOCK) and current_qty < required:
+                unit = inv.unit or "vahid"
+                shortages.append(
+                    f"{menu_item.name}: tələb {required:.2f} {unit}, mövcud {current_qty:.2f} {unit}"
+                )
+            consumptions.append((inv, required, menu_item.name))
+
+        if shortages:
+            return False, "Stok kifayət deyil: " + " | ".join(shortages)
+
+        for inv, required, menu_name in consumptions:
+            inv.quantity = float(inv.quantity or 0.0) - required
+            db.add(
+                InventoryAdjustment(
+                    inventory_item_id=inv.id,
+                    delta_quantity=-required,
+                    unit=inv.unit,
+                    adjustment_type="sale",
+                    reason=f"Satış: {menu_name}",
+                    reference=f"order:{order.id}",
+                )
+            )
+
+        return True, None
 
     # ── ENDİRİM KODU ──────────────────────────────────────────────────────────
 
