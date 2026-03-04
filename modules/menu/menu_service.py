@@ -1,7 +1,9 @@
 from datetime import date
 from typing import Optional, List, Dict, Any
-from sqlalchemy.orm import Session
+
 from sqlalchemy import func
+from sqlalchemy.orm import Session
+
 from database.models import MenuCategory, MenuItem, InventoryItem, MenuItemRecipe
 
 
@@ -77,7 +79,9 @@ class MenuService:
     def create_category(self, db: Session, name: str, description: str = None,
                         icon: str = "🍽️", sort_order: int = 0):
         cat = MenuCategory(name=name, description=description, icon=icon, sort_order=sort_order)
-        db.add(cat); db.commit(); db.refresh(cat)
+        db.add(cat)
+        db.commit()
+        db.refresh(cat)
         return True, cat
 
     def update_category(self, db: Session, cat_id: int, **kwargs):
@@ -87,7 +91,8 @@ class MenuService:
         for k, v in kwargs.items():
             if hasattr(cat, k):
                 setattr(cat, k, v)
-        db.commit(); db.refresh(cat)
+        db.commit()
+        db.refresh(cat)
         return True, cat
 
     def delete_category(self, db: Session, cat_id: int):
@@ -97,7 +102,8 @@ class MenuService:
         items = db.query(MenuItem).filter(MenuItem.category_id == cat_id, MenuItem.is_active == True).count()
         if items > 0:
             return False, f"Bu kateqoriyada {items} aktiv məhsul var."
-        cat.is_active = False; db.commit()
+        cat.is_active = False
+        db.commit()
         return True, "Kateqoriya silindi."
 
     def get_items(self, db: Session, category_id: int = None, active_only: bool = True, available_only: bool = False):
@@ -127,28 +133,11 @@ class MenuService:
         db.flush()
         return item
 
-    def create_item(
-        self,
-        db: Session,
-        category_id: int,
-        name: str,
-        price: float,
-        description: Optional[str] = None,
-        cost_price: float = 0.0,
-        image_path: Optional[str] = None,
-        inventory_item_id: Optional[int] = None,
-        stock_name: Optional[str] = None,
-        stock_unit: Optional[str] = None,
-        stock_usage_qty: float = 0.0,
-        sort_order: int = 0,
-        recipe_lines: Optional[List[Dict[str, Any]]] = None,
-    ):
-
     def create_item(self, db: Session, category_id: int, name: str, price: float,
                     description: str = None, cost_price: float = 0.0, image_path: str = None,
                     inventory_item_id: int | None = None, stock_name: str | None = None,
-                    stock_unit: str | None = None, stock_usage_qty: float = 0.0, sort_order: int = 0, recipe_lines: list[dict] | None = None):
-                    stock_unit: str | None = None, stock_usage_qty: float = 0.0, sort_order: int = 0):
+                    stock_unit: str | None = None, stock_usage_qty: float = 0.0,
+                    sort_order: int = 0, recipe_lines: list[dict] | None = None):
         inv_id = inventory_item_id
         if stock_name and stock_name.strip():
             inv = self._find_or_create_inventory_item(db, stock_name, stock_unit or "ədəd", cost_price)
@@ -184,7 +173,12 @@ class MenuService:
         stock_unit = kwargs.pop("stock_unit", None)
         recipe_lines = kwargs.pop("recipe_lines", None)
         if stock_name and stock_name.strip():
-            inv = self._find_or_create_inventory_item(db, stock_name, stock_unit or "ədəd", kwargs.get("cost_price", item.cost_price or 0))
+            inv = self._find_or_create_inventory_item(
+                db,
+                stock_name,
+                stock_unit or "ədəd",
+                kwargs.get("cost_price", item.cost_price or 0),
+            )
             kwargs["inventory_item_id"] = inv.id
 
         if "stock_usage_qty" in kwargs:
@@ -201,7 +195,6 @@ class MenuService:
         db.refresh(item)
         return True, item
 
-
     def get_item_recipes(self, db: Session, menu_item_id: int):
         today = date.today()
         return (
@@ -212,12 +205,11 @@ class MenuService:
             .all()
         )
 
-    def replace_recipes(self, db: Session, menu_item_id: int, recipe_lines: List[Dict[str, Any]]):
     def replace_recipes(self, db: Session, menu_item_id: int, recipe_lines: list[dict]):
         today = date.today()
         active_rows = db.query(MenuItemRecipe).filter(
             MenuItemRecipe.menu_item_id == menu_item_id,
-            MenuItemRecipe.is_active == True
+            MenuItemRecipe.is_active == True,
         ).all()
         for row in active_rows:
             row.is_active = False
@@ -246,13 +238,15 @@ class MenuService:
         if not item:
             return False, "Tapılmadı."
         item.is_available = not item.is_available
-        db.commit(); return True, item
+        db.commit()
+        return True, item
 
     def delete_item(self, db: Session, item_id: int):
         item = self.get_item(db, item_id)
         if not item:
             return False, "Tapılmadı."
-        item.is_active = False; db.commit()
+        item.is_active = False
+        db.commit()
         return True, "Məhsul silindi."
 
 
