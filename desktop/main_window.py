@@ -420,6 +420,7 @@ class MainWindow(QMainWindow):
             ov.current_order = None; ov.current_table = None
             ov.table_lbl.setText("Masa seçilməyib")
             ov._refresh_order(); ov._load_active_orders()
+        self._navigate("tables")
         self._refresh_dashboard()
 
     @staticmethod
