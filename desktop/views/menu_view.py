@@ -166,6 +166,14 @@ class ItemDialog(QDialog):
         self.cost_spin.setFixedHeight(38)
         cl.addWidget(self.cost_spin)
         price_row.addLayout(cl)
+        ul = QVBoxLayout()
+        ul.addWidget(lbl("ANBAR DÜŞÜMÜ (vahid)"))
+        self.stock_usage_spin = QDoubleSpinBox()
+        self.stock_usage_spin.setRange(0, 9999)
+        self.stock_usage_spin.setDecimals(2)
+        self.stock_usage_spin.setFixedHeight(38)
+        ul.addWidget(self.stock_usage_spin)
+        price_row.addLayout(ul)
         form_v.addLayout(price_row)
 
         self.avail_chk = QCheckBox("✅  Aktiv / Mövcud")
@@ -223,6 +231,7 @@ class ItemDialog(QDialog):
         self.desc_input.setPlainText(item.description or "")
         self.price_spin.setValue(item.price)
         self.cost_spin.setValue(item.cost_price or 0)
+        self.stock_usage_spin.setValue(item.stock_usage_qty or 0)
         self.avail_chk.setChecked(item.is_available)
         if item.image_path:
             self.img_picker.set_image_path(item.image_path)
@@ -234,6 +243,7 @@ class ItemDialog(QDialog):
             "description":  self.desc_input.toPlainText().strip() or None,
             "price":        self.price_spin.value(),
             "cost_price":   self.cost_spin.value(),
+            "stock_usage_qty": self.stock_usage_spin.value(),
             "is_available": self.avail_chk.isChecked(),
             "image_path":   self.img_picker.get_image_path(),
         }

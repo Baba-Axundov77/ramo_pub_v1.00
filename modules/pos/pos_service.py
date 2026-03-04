@@ -3,7 +3,7 @@ from sqlalchemy.orm import Session
 from datetime import datetime, date
 from database.models import (
     Payment, Order, OrderStatus, PaymentMethod,
-    Customer, Discount
+    Customer, Discount, InventoryItem
 )
 
 
@@ -47,6 +47,11 @@ class POSService:
         order.discount_amount = discount_amount
         order.total = final_amount
 
+        # ── Anbardan istifadə olunan xammalı çıx ───────────────────────────
+        ok, stock_result = self._consume_inventory_for_order(db, order)
+        if not ok:
+            return False, stock_result
+
         # ── Ödəniş yaz ────────────────────────────────────────────────────────
         payment = Payment(
             order_id        = order_id,
@@ -72,6 +77,48 @@ class POSService:
         db.commit()
         db.refresh(payment)
         return True, payment
+
+    def _consume_inventory_for_order(self, db: Session, order: Order):
+        shortages: list[str] = []
+
+        for oi in order.items:
+            menu_item = oi.menu_item
+            if not menu_item or not menu_item.inventory_item_id:
+                continue
+            usage_per_item = float(menu_item.stock_usage_qty or 0.0)
+            if usage_per_item <= 0:
+                continue
+
+            inv = db.query(InventoryItem).filter(InventoryItem.id == menu_item.inventory_item_id).first()
+            if not inv:
+                continue
+
+            required = usage_per_item * float(oi.quantity or 0)
+            current_qty = float(inv.quantity or 0.0)
+            if current_qty < required:
+                unit = inv.unit or "vahid"
+                shortages.append(
+                    f"{menu_item.name}: tələb {required:.2f} {unit}, mövcud {current_qty:.2f} {unit}"
+                )
+
+        if shortages:
+            return False, "Stok kifayət deyil: " + " | ".join(shortages)
+
+        for oi in order.items:
+            menu_item = oi.menu_item
+            if not menu_item or not menu_item.inventory_item_id:
+                continue
+            usage_per_item = float(menu_item.stock_usage_qty or 0.0)
+            if usage_per_item <= 0:
+                continue
+
+            inv = db.query(InventoryItem).filter(InventoryItem.id == menu_item.inventory_item_id).first()
+            if not inv:
+                continue
+
+            inv.quantity = float(inv.quantity or 0.0) - (usage_per_item * float(oi.quantity or 0))
+
+        return True, None
 
     # ── ENDİRİM KODU ──────────────────────────────────────────────────────────
 

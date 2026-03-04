@@ -128,7 +128,7 @@ class MenuService:
     def create_item(self, db: Session, category_id: int, name: str, price: float,
                     description: str = None, cost_price: float = 0.0, image_path: str = None,
                     inventory_item_id: int | None = None, stock_name: str | None = None,
-                    stock_unit: str | None = None, sort_order: int = 0):
+                    stock_unit: str | None = None, stock_usage_qty: float = 0.0, sort_order: int = 0):
         inv_id = inventory_item_id
         if stock_name and stock_name.strip():
             inv = self._find_or_create_inventory_item(db, stock_name, stock_unit or "ədəd", cost_price)
@@ -143,6 +143,7 @@ class MenuService:
             image_path=(image_path or None),
             inventory_item_id=inv_id,
             sort_order=sort_order or 0,
+            stock_usage_qty=max(0.0, float(stock_usage_qty or 0.0)),
         )
         db.add(item); db.commit(); db.refresh(item)
         return True, item
@@ -157,6 +158,9 @@ class MenuService:
         if stock_name and stock_name.strip():
             inv = self._find_or_create_inventory_item(db, stock_name, stock_unit or "ədəd", kwargs.get("cost_price", item.cost_price or 0))
             kwargs["inventory_item_id"] = inv.id
+
+        if "stock_usage_qty" in kwargs:
+            kwargs["stock_usage_qty"] = max(0.0, float(kwargs.get("stock_usage_qty") or 0.0))
 
         for k, v in kwargs.items():
             if hasattr(item, k):

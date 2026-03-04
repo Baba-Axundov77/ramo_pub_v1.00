@@ -18,6 +18,16 @@
         --anim:     0.2s cubic-bezier(.4,0,.2,1);
     }
 
+    body[data-theme="light"] {
+        --bg: #F6F7FB;
+        --bg2: #FFFFFF;
+        --bg3: #EEF1F8;
+        --text: #1C2330;
+        --muted: #5D6B84;
+        --border: #CDD5E3;
+        --accent: #C87414;
+    }
+
     *, *::before, *::after { box-sizing: border-box; }
     html, body { height: 100%; margin: 0; padding: 0; }
     body {
@@ -181,6 +191,7 @@
         cursor: pointer;
     }
     .sb-lout:hover { background: rgba(231,76,60,.1); color: var(--red, #E74C3C); }
+    .theme-toggle:hover { background: rgba(52,152,219,.10); color: var(--blue, #3498DB); }
     .sb-lout-ico {
         min-width: var(--sb-icons); width: var(--sb-icons);
         display: flex; align-items: center; justify-content: center;
@@ -198,8 +209,9 @@
     .page-body {
         display: flex;
         padding-top: var(--tb-h);
-        min-height: 100vh;
+        height: 100vh;
         width: 100%;
+        overflow: hidden;
     }
 
     /* Spacer — pushes main content right */
@@ -216,6 +228,7 @@
         min-width: 0;
         padding: 24px 28px;
         overflow-x: hidden;
+        overflow-y: auto;
     }
 
     /* Auth */
@@ -267,7 +280,7 @@
         <a href="{{ url_for('dashboard.index') }}"
            class="nav-item {% if request.endpoint=='dashboard.index' %}active{% endif %}">
             <span class="ni-icon"><i class="fas fa-chart-pie"></i></span>
-            <span class="ni-label">Dashboard</span>
+            <span class="ni-label">İdarə Paneli</span>
         </a>
         <a href="{{ url_for('tables.index') }}"
            class="nav-item {% if request.blueprint=='tables' %}active{% endif %}">
@@ -335,13 +348,10 @@
     </nav>
 
     <div class="sb-foot">
-        <div class="sb-user">
-            <div class="sb-u-ico"><div class="sb-avatar">{{ current_user.full_name[0] }}</div></div>
-            <div class="sb-u-info">
-                <div class="sb-uname">{{ current_user.full_name }}</div>
-                <div class="sb-urole">{{ current_user.role | capitalize }}</div>
-            </div>
-        </div>
+        <button class="sb-lout theme-toggle" type="button" onclick="toggleTheme()" title="Tema dəyiş">
+            <span class="sb-lout-ico"><i id="themeIcon" class="fas fa-moon"></i></span>
+            <span class="sb-lout-lbl" id="themeLabel">Qaranlıq tema</span>
+        </button>
         <a href="{{ url_for('auth.logout') }}" class="sb-lout">
             <span class="sb-lout-ico"><i class="fas fa-sign-out-alt"></i></span>
             <span class="sb-lout-lbl">Çıxış</span>
@@ -380,6 +390,25 @@
         const was = sb.classList.contains('sb-open');
         apply(!was);
         localStorage.setItem(KEY, was ? '0' : '1');
+    };
+
+    const themeKey = 'rp_theme';
+    function syncThemeUi() {
+        const isLight = document.body.dataset.theme === 'light';
+        const icon = document.getElementById('themeIcon');
+        const label = document.getElementById('themeLabel');
+        if (icon) icon.className = isLight ? 'fas fa-sun' : 'fas fa-moon';
+        if (label) label.textContent = isLight ? 'Aydınlıq tema' : 'Qaranlıq tema';
+    }
+
+    const savedTheme = localStorage.getItem(themeKey) || 'dark';
+    document.body.dataset.theme = savedTheme;
+    syncThemeUi();
+
+    window.toggleTheme = function () {
+        document.body.dataset.theme = document.body.dataset.theme === 'light' ? 'dark' : 'light';
+        localStorage.setItem(themeKey, document.body.dataset.theme);
+        syncThemeUi();
     };
 })();
 </script>
