@@ -1053,17 +1053,12 @@ function showReceipt(payRes) {
 
     openModal('rcptModal');
 
-    // Səbəti təmizlə
-    const selectedTableId = document.getElementById('tableSelect').value;
+    // Səbəti təmizlə (yeni sifariş modalını açmadan)
     activeOrderId = null; _orderData = null;
     clearBasket();
-    if (selectedTableId) {
-        switchTable(selectedTableId);
-    } else {
-        document.getElementById('tableSelect').value = '';
-        updateBadge();
-        filterProds();
-    }
+    document.getElementById('tableSelect').value = '';
+    updateBadge();
+    filterProds();
 }
 
 function rcptPrint(type) {
@@ -1087,6 +1082,7 @@ function rcptPrint(type) {
 
 function closeRcpt() {
     closeModal('rcptModal');
+    window.location.href = "{{ url_for('tables.index') }}";
 }
 
 /* ── Helpers ──────────────────────────────────────────── */
