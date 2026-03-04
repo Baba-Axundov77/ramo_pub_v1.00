@@ -33,6 +33,22 @@ def _save_uploaded_image(file) -> str | None:
     return f"menu/{filename}"
 
 
+
+
+def _extract_recipe_lines(form) -> list[dict]:
+    inv_ids = form.getlist("recipe_inventory_id[]")
+    qty_vals = form.getlist("recipe_qty[]")
+    lines: list[dict] = []
+    for inv_id, qty in zip(inv_ids, qty_vals):
+        try:
+            inv_num = int(inv_id or 0)
+            qty_num = float(qty or 0)
+        except ValueError:
+            continue
+        if inv_num > 0 and qty_num > 0:
+            lines.append({"inventory_item_id": inv_num, "quantity_per_unit": qty_num})
+    return lines
+
 @bp.route("/")
 @permission_required("manage_menu")
 def index():
@@ -112,6 +128,8 @@ def create_item():
             inventory_item_id=(int(request.form.get("inventory_item_id")) if request.form.get("inventory_item_id") else None),
             stock_name=request.form.get("stock_name", "").strip() or None,
             stock_unit=request.form.get("stock_unit", "").strip() or None,
+            stock_usage_qty=float(request.form.get("stock_usage_qty", "0") or 0),
+            recipe_lines=_extract_recipe_lines(request.form),
             sort_order=int(request.form.get("sort_order", 0) or 0),
         )
         flash("Məhsul yaradıldı." if ok else str(result), "success" if ok else "danger")
@@ -142,6 +160,8 @@ def edit_item(item_id: int):
         inventory_item_id=(int(request.form.get("inventory_item_id")) if request.form.get("inventory_item_id") else None),
         stock_name=request.form.get("stock_name", "").strip() or None,
         stock_unit=request.form.get("stock_unit", "").strip() or None,
+        stock_usage_qty=float(request.form.get("stock_usage_qty", "0") or 0),
+        recipe_lines=_extract_recipe_lines(request.form),
         is_available=(request.form.get("is_available") == "1"),
         sort_order=int(request.form.get("sort_order", 0) or 0),
     )

@@ -54,11 +54,12 @@
                 {% if item.is_available %}<span class="badge badge-green">Mövcud</span>{% else %}<span class="badge badge-red">Mövcud deyil</span>{% endif %}
             </div>
             <div style="font-size:12px;color:var(--muted);margin-top:4px;">Stok: {{ item.inventory_item.name if item.inventory_item else 'bağlanmayıb' }}</div>
+            <div style="font-size:12px;color:var(--muted);margin-top:2px;">Satışda düşüm: <b>{{ item.stock_usage_qty or 0 }}</b> {{ item.inventory_item.unit if item.inventory_item else "vahid" }}</div>
             <div style="font-size:12px;color:var(--muted);margin-top:2px;">Kateqoriya sırası: <b>{{ item.sort_order or 0 }}</b></div>
 
             <div style="display:flex;gap:6px;margin-top:10px;">
                 <button class="btn btn-primary" style="flex:1;font-size:12px;"
-                        onclick='openEditItemModal({{ item.id }}, {{ item.category_id }}, {{ item.name|tojson }}, {{ item.price }}, {{ (item.cost_price or 0) }}, {{ (item.description or "")|tojson }}, {{ (item.image_path or "")|tojson }}, {{ (item.inventory_item_id or 0) }}, {{ item.is_available|tojson }}, {{ item.sort_order or 0 }})'>
+                        onclick='openEditItemModal({{ item.id }}, {{ item.category_id }}, {{ item.name|tojson }}, {{ item.price }}, {{ (item.cost_price or 0) }}, {{ (item.description or "")|tojson }}, {{ (item.image_path or "")|tojson }}, {{ (item.inventory_item_id or 0) }}, {{ (item.stock_usage_qty or 0) }}, {{ item.recipes | map(attribute="inventory_item_id") | list | tojson }}, {{ item.recipes | map(attribute="quantity_per_unit") | list | tojson }}, {{ item.is_available|tojson }}, {{ item.sort_order or 0 }})'>
                     ✏️ Düzənlə
                 </button>
                 <form method="post" action="{{ url_for('menu.toggle_item', item_id=item.id) }}">
@@ -144,6 +145,14 @@
       </select>
       <input name="stock_name" placeholder="və ya yeni stok adı">
       <input name="stock_unit" placeholder="stok vahidi (ədəd/kq)">
+      <input name="stock_usage_qty" type="number" step="0.01" min="0" value="0" placeholder="(Köhnə model) 1 satışda stok düşümü">
+      <div style="grid-column:1/-1;border:1px solid var(--border);border-radius:10px;padding:10px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+          <b>Resept (çox inqrediyent)</b>
+          <button type="button" class="btn btn-secondary" onclick="addRecipeRow('newRecipeRows')">+ Sətir</button>
+        </div>
+        <div id="newRecipeRows"></div>
+      </div>
       <div style="grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;">
         <button type="button" class="btn btn-secondary" onclick="closeModalById('newItemModal')">Ləğv et</button>
         <button class="btn btn-primary">Əlavə et</button>
@@ -181,6 +190,14 @@
                     <div class="form-group" style="grid-column:1/-1;"><label>Anbar məhsulu</label><select id="editItemInventory" name="inventory_item_id" class="form-input"><option value="">Anbar bağlı deyil</option>{% for i in inventory_items %}<option value="{{ i.id }}">{{ i.name }} ({{ i.unit or '-' }})</option>{% endfor %}</select></div>
                     <div class="form-group"><label>Yeni stok adı (opsional)</label><input type="text" name="stock_name" class="form-input" placeholder="Yeni stok yarat"></div>
                     <div class="form-group"><label>Stok vahidi</label><input type="text" name="stock_unit" class="form-input" placeholder="ədəd / kq / lt"></div>
+                    <div class="form-group"><label>1 satışda düşüm</label><input type="number" id="editItemStockUsage" name="stock_usage_qty" class="form-input" step="0.01" min="0" value="0"></div>
+                    <div class="form-group" style="grid-column:1/-1;border:1px solid var(--border);border-radius:10px;padding:10px;">
+                      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                        <b>Resept (çox inqrediyent)</b>
+                        <button type="button" class="btn btn-secondary" onclick="addRecipeRow('editRecipeRows')">+ Sətir</button>
+                      </div>
+                      <div id="editRecipeRows"></div>
+                    </div>
                 </div>
 
                 <div style="display:flex;gap:10px;margin-top:20px;"><button type="submit" class="btn btn-primary" style="flex:1;">💾 Yadda saxla</button><button type="button" class="btn btn-secondary" onclick="closeEditItemModal()">Ləğv et</button></div>
@@ -199,10 +216,33 @@ document.getElementById("menuSearch").addEventListener("input", function() {
     });
 });
 
+
+function recipeRowHtml(invId, qty) {
+  const options = [`<option value="">Inqrediyent seç</option>`]
+  {% for i in inventory_items %}
+  options.push(`<option value="{{ i.id }}">{{ i.name }} ({{ i.unit or '-' }})</option>`)
+  {% endfor %}
+  const val = invId ? String(invId) : '';
+  return `<div style="display:grid;grid-template-columns:1fr 160px 40px;gap:8px;margin-bottom:8px;">
+    <select name="recipe_inventory_id[]" class="form-input">${options.join('')}</select>
+    <input name="recipe_qty[]" type="number" step="0.01" min="0" class="form-input" placeholder="Miqdar" value="${qty || ''}">
+    <button type="button" class="btn btn-danger" onclick="this.parentElement.remove()">×</button>
+  </div>`;
+}
+
+function addRecipeRow(containerId, invId=null, qty=null) {
+  const box = document.getElementById(containerId);
+  box.insertAdjacentHTML('beforeend', recipeRowHtml(invId, qty));
+  if (invId) {
+    const last = box.lastElementChild.querySelector('select[name="recipe_inventory_id[]"]');
+    last.value = String(invId);
+  }
+}
+
 function openModalById(id) { document.getElementById(id).style.display = 'flex'; }
 function closeModalById(id) { document.getElementById(id).style.display = 'none'; }
 
-function openEditItemModal(id, catId, name, price, cost, desc, imgPath, invId, isAvail, sortOrder) {
+function openEditItemModal(id, catId, name, price, cost, desc, imgPath, invId, stockUsageQty, recipeInvIds, recipeQtys, isAvail, sortOrder) {
     const modal = document.getElementById('editItemModal');
     document.getElementById('editItemModalTitle').textContent = '✏️ Düzənlə: ' + name;
     document.getElementById('editItemForm').action = '/menu/items/' + id + '/edit';
@@ -210,6 +250,7 @@ function openEditItemModal(id, catId, name, price, cost, desc, imgPath, invId, i
     document.getElementById('editItemPrice').value = price;
     document.getElementById('editItemCost').value = cost;
     document.getElementById('editItemSort').value = sortOrder || 0;
+    document.getElementById('editItemStockUsage').value = stockUsageQty || 0;
     document.getElementById('editItemDesc').value = desc || '';
     document.getElementById('editImagePath').value = imgPath || '';
     document.getElementById('editItemAvailable').value = isAvail ? '1' : '0';
@@ -219,6 +260,16 @@ function openEditItemModal(id, catId, name, price, cost, desc, imgPath, invId, i
 
     const invSel = document.getElementById('editItemInventory');
     for (let opt of invSel.options) opt.selected = (parseInt(opt.value) === invId);
+
+    const editRows = document.getElementById('editRecipeRows');
+    editRows.innerHTML = '';
+    if (Array.isArray(recipeInvIds) && Array.isArray(recipeQtys) && recipeInvIds.length) {
+      for (let i = 0; i < recipeInvIds.length; i++) {
+        addRecipeRow('editRecipeRows', recipeInvIds[i], recipeQtys[i]);
+      }
+    } else {
+      addRecipeRow('editRecipeRows');
+    }
 
     const preview = document.getElementById('imgPreview');
     const placeholder = document.getElementById('imgPlaceholder');
@@ -254,6 +305,8 @@ function previewImage(input) {
         reader.readAsDataURL(input.files[0]);
     }
 }
+
+addRecipeRow('newRecipeRows');
 
 document.querySelectorAll('.modal-overlay').forEach((m) => {
     m.addEventListener('click', function(e) {
