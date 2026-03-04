@@ -130,6 +130,7 @@ class MenuService:
                     description: str = None, cost_price: float = 0.0, image_path: str = None,
                     inventory_item_id: int | None = None, stock_name: str | None = None,
                     stock_unit: str | None = None, stock_usage_qty: float = 0.0, sort_order: int = 0, recipe_lines: list[dict] | None = None):
+                    stock_unit: str | None = None, stock_usage_qty: float = 0.0, sort_order: int = 0):
         inv_id = inventory_item_id
         if stock_name and stock_name.strip():
             inv = self._find_or_create_inventory_item(db, stock_name, stock_unit or "ədəd", cost_price)
