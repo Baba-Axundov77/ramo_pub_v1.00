@@ -112,6 +112,7 @@ def create_item():
             inventory_item_id=(int(request.form.get("inventory_item_id")) if request.form.get("inventory_item_id") else None),
             stock_name=request.form.get("stock_name", "").strip() or None,
             stock_unit=request.form.get("stock_unit", "").strip() or None,
+            stock_usage_qty=float(request.form.get("stock_usage_qty", "0") or 0),
             sort_order=int(request.form.get("sort_order", 0) or 0),
         )
         flash("Məhsul yaradıldı." if ok else str(result), "success" if ok else "danger")
@@ -142,6 +143,7 @@ def edit_item(item_id: int):
         inventory_item_id=(int(request.form.get("inventory_item_id")) if request.form.get("inventory_item_id") else None),
         stock_name=request.form.get("stock_name", "").strip() or None,
         stock_unit=request.form.get("stock_unit", "").strip() or None,
+        stock_usage_qty=float(request.form.get("stock_usage_qty", "0") or 0),
         is_available=(request.form.get("is_available") == "1"),
         sort_order=int(request.form.get("sort_order", 0) or 0),
     )
