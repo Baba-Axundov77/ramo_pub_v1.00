@@ -81,3 +81,7 @@ PRINTER_PORT = os.getenv("PRINTER_PORT", "COM1")
 WEB_HOST = "0.0.0.0"
 WEB_PORT = 5000
 SECRET_KEY = os.getenv("SECRET_KEY")
+
+
+# Inventory policy
+ALLOW_NEGATIVE_STOCK = os.getenv("ALLOW_NEGATIVE_STOCK", "0") == "1"

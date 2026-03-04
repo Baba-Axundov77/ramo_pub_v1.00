@@ -17,6 +17,7 @@ from database.models import (
     TableStatus,
     User,
     UserRole,
+    InventoryAdjustment,
 )
 from modules.auth.auth_service import AuthService
 from modules.pos.pos_service import POSService
@@ -152,3 +153,31 @@ def test_payment_consumes_multiple_recipe_ingredients(tmp_path):
         herb_after = db.get(InventoryItem, herb.id)
         assert tea_after.quantity == 430.0
         assert herb_after.quantity == 46.0
+
+
+def test_recipe_unit_conversion_and_adjustment_log(tmp_path):
+    SessionLocal = _make_db(tmp_path, "consumption_convert.sqlite3")
+    with SessionLocal() as db:
+        cashier = User(username="cashier3", full_name="Cashier3", password=AuthService.hash_password("pass123"), role=UserRole.cashier, is_active=True)
+        waiter = User(username="waiter3", full_name="Waiter3", password=AuthService.hash_password("pass123"), role=UserRole.waiter, is_active=True)
+        table = Table(number=3, name="M3", status=TableStatus.occupied)
+        cat = MenuCategory(name="İçki", icon="🥤")
+        cola_bulk = InventoryItem(name="Cola bulk", unit="litr", quantity=5.0, min_quantity=1)
+        db.add_all([cashier, waiter, table, cat, cola_bulk]); db.flush()
+
+        menu_item = MenuItem(category_id=cat.id, name="Cola 1L", price=4.0)
+        db.add(menu_item); db.flush()
+        db.add(MenuItemRecipe(menu_item_id=menu_item.id, inventory_item_id=cola_bulk.id, quantity_per_unit=1000.0, quantity_unit="ml"))
+
+        order = Order(table_id=table.id, waiter_id=waiter.id, status=OrderStatus.new, subtotal=8.0, total=8.0)
+        db.add(order); db.flush()
+        db.add(OrderItem(order_id=order.id, menu_item_id=menu_item.id, quantity=2, unit_price=4.0, subtotal=8.0, status=OrderStatus.new))
+        db.commit()
+
+        ok, _ = POSService().process_payment(db, order_id=order.id, method=PaymentMethod.cash.value, cashier_id=cashier.id)
+        assert ok is True
+
+        after = db.get(InventoryItem, cola_bulk.id)
+        assert after.quantity == 3.0
+        logs = db.query(InventoryAdjustment).filter(InventoryAdjustment.reference == f"order:{order.id}").all()
+        assert len(logs) >= 1

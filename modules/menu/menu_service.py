@@ -1,3 +1,4 @@
+from datetime import date
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from database.models import MenuCategory, MenuItem, InventoryItem, MenuItemRecipe
@@ -183,17 +184,29 @@ class MenuService:
 
 
     def get_item_recipes(self, db: Session, menu_item_id: int):
+        today = date.today()
         return (
             db.query(MenuItemRecipe)
-            .filter(MenuItemRecipe.menu_item_id == menu_item_id)
+            .filter(MenuItemRecipe.menu_item_id == menu_item_id, MenuItemRecipe.is_active == True)
+            .filter((MenuItemRecipe.valid_from == None) | (MenuItemRecipe.valid_from <= today))
+            .filter((MenuItemRecipe.valid_until == None) | (MenuItemRecipe.valid_until >= today))
             .all()
         )
 
     def replace_recipes(self, db: Session, menu_item_id: int, recipe_lines: list[dict]):
-        db.query(MenuItemRecipe).filter(MenuItemRecipe.menu_item_id == menu_item_id).delete()
+        today = date.today()
+        active_rows = db.query(MenuItemRecipe).filter(
+            MenuItemRecipe.menu_item_id == menu_item_id,
+            MenuItemRecipe.is_active == True
+        ).all()
+        for row in active_rows:
+            row.is_active = False
+            row.valid_until = today
+
         for line in recipe_lines or []:
             inv_id = int(line.get("inventory_item_id") or 0)
             qty = float(line.get("quantity_per_unit") or 0)
+            qty_unit = (line.get("quantity_unit") or "").strip() or None
             if inv_id <= 0 or qty <= 0:
                 continue
             db.add(
@@ -201,6 +214,9 @@ class MenuService:
                     menu_item_id=menu_item_id,
                     inventory_item_id=inv_id,
                     quantity_per_unit=qty,
+                    quantity_unit=qty_unit,
+                    valid_from=today,
+                    is_active=True,
                 )
             )
         db.commit()

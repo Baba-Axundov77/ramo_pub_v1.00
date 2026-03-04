@@ -214,9 +214,30 @@ class MenuItemRecipe(Base):
     menu_item_id = Column(Integer, ForeignKey("menu_items.id"), nullable=False)
     inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=False)
     quantity_per_unit = Column(Float, nullable=False, default=0.0)
+    quantity_unit = Column(String(30), nullable=True)
+    valid_from = Column(Date, nullable=True)
+    valid_until = Column(Date, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
 
     menu_item = relationship("MenuItem", back_populates="recipes")
     inventory_item = relationship("InventoryItem", back_populates="recipe_usages")
+
+
+class InventoryAdjustment(Base):
+    __tablename__ = "inventory_adjustments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=False)
+    delta_quantity = Column(Float, nullable=False)
+    unit = Column(String(30), nullable=True)
+    adjustment_type = Column(String(30), nullable=False)  # purchase|sale|manual|waste|rollback
+    reason = Column(String(255), nullable=True)
+    reference = Column(String(120), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    inventory_item = relationship("InventoryItem")
 
 
 class PurchaseReceipt(Base):

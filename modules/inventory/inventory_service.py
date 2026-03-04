@@ -3,12 +3,18 @@ from typing import List, Optional, Tuple
 from datetime import datetime
 from sqlalchemy.orm import Session
 from sqlalchemy import func
-from database.models import InventoryItem, PurchaseReceipt, PurchaseReceiptItem
+
+from database.models import (
+    InventoryItem,
+    PurchaseReceipt,
+    PurchaseReceiptItem,
+    InventoryAdjustment,
+)
+from modules.inventory.unit_conversion import convert_quantity, normalize_unit
 
 
 class InventoryService:
     def seed_defaults(self, db: Session) -> None:
-        """Boş anbar üçün ilkin stok məhsulları əlavə et."""
         if db.query(InventoryItem).first() is not None:
             return
 
@@ -22,7 +28,7 @@ class InventoryService:
             db.add(
                 InventoryItem(
                     name=name,
-                    unit=unit,
+                    unit=normalize_unit(unit),
                     quantity=quantity,
                     min_quantity=min_quantity,
                     cost_per_unit=cost_per_unit,
@@ -30,6 +36,21 @@ class InventoryService:
                 )
             )
         db.commit()
+
+    def _log_adjustment(self, db: Session, *, item_id: int, delta: float, unit: str | None,
+                        adjustment_type: str, reason: str = "", reference: str = "",
+                        created_by: int | None = None):
+        db.add(
+            InventoryAdjustment(
+                inventory_item_id=item_id,
+                delta_quantity=delta,
+                unit=normalize_unit(unit),
+                adjustment_type=adjustment_type,
+                reason=reason or None,
+                reference=reference or None,
+                created_by=created_by,
+            )
+        )
 
     def get_all(self, db: Session, low_stock_only: bool = False) -> List[InventoryItem]:
         q = db.query(InventoryItem)
@@ -46,38 +67,52 @@ class InventoryService:
     def create(self, db: Session, name: str, unit: str, quantity: float,
                min_quantity: float = 5.0, cost_per_unit: float = 0.0,
                supplier: str = "") -> Tuple[bool, object]:
-        item = InventoryItem(name=name, unit=unit, quantity=quantity, min_quantity=min_quantity,
+        item = InventoryItem(name=name, unit=normalize_unit(unit), quantity=quantity, min_quantity=min_quantity,
                              cost_per_unit=cost_per_unit, supplier=supplier)
-        db.add(item); db.commit(); db.refresh(item)
+        db.add(item)
+        db.flush()
+        if quantity > 0:
+            self._log_adjustment(db, item_id=item.id, delta=quantity, unit=item.unit,
+                                 adjustment_type="manual", reason="İlkin stok")
+        db.commit(); db.refresh(item)
         return True, item
 
     def update(self, db: Session, item_id: int, **kwargs) -> Tuple[bool, object]:
         item = self.get_by_id(db, item_id)
         if not item:
             return False, "Stok mehsulu tapilmadi."
+        if "unit" in kwargs and kwargs["unit"]:
+            kwargs["unit"] = normalize_unit(kwargs["unit"])
         for k, v in kwargs.items():
             if hasattr(item, k):
                 setattr(item, k, v)
         db.commit(); return True, item
 
-    def add_stock(self, db: Session, item_id: int, amount: float) -> Tuple[bool, object]:
+    def add_stock(self, db: Session, item_id: int, amount: float, reason: str = "Manual artırma",
+                  created_by: int | None = None) -> Tuple[bool, object]:
         item = self.get_by_id(db, item_id)
         if not item:
             return False, "Tapilmadi."
         if amount <= 0:
             return False, "Miqdar musbet olmalidir."
         item.quantity += amount
+        self._log_adjustment(db, item_id=item.id, delta=amount, unit=item.unit,
+                             adjustment_type="manual", reason=reason, created_by=created_by)
         db.commit(); return True, item
 
-    def remove_stock(self, db: Session, item_id: int, amount: float) -> Tuple[bool, object]:
+    def remove_stock(self, db: Session, item_id: int, amount: float, reason: str = "Manual azaltma",
+                     created_by: int | None = None, allow_negative: bool = False) -> Tuple[bool, object]:
         item = self.get_by_id(db, item_id)
         if not item:
             return False, "Tapilmadi."
         if amount <= 0:
             return False, "Miqdar musbet olmalidir."
-        if item.quantity < amount:
+        if not allow_negative and item.quantity < amount:
             return False, f"Kifayet qeder stok yoxdur. Movcud: {item.quantity} {item.unit}"
         item.quantity -= amount
+        adj_type = "waste" if "itki" in reason.lower() else "manual"
+        self._log_adjustment(db, item_id=item.id, delta=-amount, unit=item.unit,
+                             adjustment_type=adj_type, reason=reason, created_by=created_by)
         db.commit(); return True, item
 
     def delete(self, db: Session, item_id: int) -> Tuple[bool, str]:
@@ -87,10 +122,12 @@ class InventoryService:
         db.delete(item); db.commit()
         return True, "Stok mehsulu silindi."
 
-    def create_purchase_receipt(self, db: Session, *, purchased_at: datetime, store_name: str, note: str, created_by: int | None, lines: list[dict]):
+    def create_purchase_receipt(self, db: Session, *, purchased_at: datetime, store_name: str, note: str,
+                                created_by: int | None, lines: list[dict]):
         if not lines:
             return False, "Çek üçün ən azı 1 məhsul olmalıdır."
-        receipt = PurchaseReceipt(purchased_at=purchased_at, store_name=store_name or None, note=note or None, total_amount=0.0, created_by=created_by)
+        receipt = PurchaseReceipt(purchased_at=purchased_at, store_name=store_name or None,
+                                  note=note or None, total_amount=0.0, created_by=created_by)
         db.add(receipt)
         total = 0.0
         for line in lines:
@@ -99,7 +136,7 @@ class InventoryService:
                 continue
             qty = float(line.get("quantity") or 0)
             unit_cost = float(line.get("unit_cost") or 0)
-            unit = (line.get("unit") or "ədəd").strip()
+            unit = normalize_unit(line.get("unit") or "ədəd")
             if qty <= 0:
                 continue
             inv = self.get_by_name(db, name)
@@ -107,13 +144,22 @@ class InventoryService:
                 inv = InventoryItem(name=name, unit=unit, quantity=0.0, cost_per_unit=unit_cost)
                 db.add(inv)
                 db.flush()
-            inv.quantity += qty
+
+            ok, qty_in_inv_unit, msg = convert_quantity(qty, unit, inv.unit)
+            if not ok:
+                return False, f"{name}: {msg}"
+
+            inv.quantity += qty_in_inv_unit
             inv.cost_per_unit = unit_cost
             if not inv.unit:
                 inv.unit = unit
             line_total = qty * unit_cost
             total += line_total
-            db.add(PurchaseReceiptItem(receipt=receipt, inventory_item_id=inv.id, item_name=name, unit=unit, quantity=qty, unit_cost=unit_cost, line_total=line_total))
+            db.add(PurchaseReceiptItem(receipt=receipt, inventory_item_id=inv.id, item_name=name,
+                                       unit=unit, quantity=qty, unit_cost=unit_cost, line_total=line_total))
+            self._log_adjustment(db, item_id=inv.id, delta=qty_in_inv_unit, unit=inv.unit,
+                                 adjustment_type="purchase", reason="Alış çeki",
+                                 reference=f"receipt:{receipt.id}", created_by=created_by)
         receipt.total_amount = total
         db.commit(); db.refresh(receipt)
         return True, receipt
@@ -131,7 +177,13 @@ class InventoryService:
         for it in receipt.items:
             inv = it.inventory_item
             if inv:
-                inv.quantity = max(0.0, (inv.quantity or 0.0) - float(it.quantity or 0.0))
+                ok, qty_in_inv_unit, msg = convert_quantity(float(it.quantity or 0.0), it.unit, inv.unit)
+                if not ok:
+                    return False, f"{it.item_name}: {msg}"
+                inv.quantity = max(0.0, (inv.quantity or 0.0) - qty_in_inv_unit)
+                self._log_adjustment(db, item_id=inv.id, delta=-qty_in_inv_unit, unit=inv.unit,
+                                     adjustment_type="rollback", reason="Çek silinməsi",
+                                     reference=f"receipt:{receipt.id}")
         db.delete(receipt)
         db.commit()
         return True, "Çek silindi və stok geri alındı"
