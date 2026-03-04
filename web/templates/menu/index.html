@@ -60,6 +60,7 @@
             <div style="display:flex;gap:6px;margin-top:10px;">
                 <button class="btn btn-primary" style="flex:1;font-size:12px;"
                         onclick='openEditItemModal({{ item.id }}, {{ item.category_id }}, {{ item.name|tojson }}, {{ item.price }}, {{ (item.cost_price or 0) }}, {{ (item.description or "")|tojson }}, {{ (item.image_path or "")|tojson }}, {{ (item.inventory_item_id or 0) }}, {{ (item.stock_usage_qty or 0) }}, {{ recipe_map[item.id] | map(attribute="inventory_item_id") | list | tojson }}, {{ recipe_map[item.id] | map(attribute="quantity_per_unit") | list | tojson }}, {{ recipe_map[item.id] | map(attribute="quantity_unit") | list | tojson }}, {{ item.is_available|tojson }}, {{ item.sort_order or 0 }})'>
+                        onclick='openEditItemModal({{ item.id }}, {{ item.category_id }}, {{ item.name|tojson }}, {{ item.price }}, {{ (item.cost_price or 0) }}, {{ (item.description or "")|tojson }}, {{ (item.image_path or "")|tojson }}, {{ (item.inventory_item_id or 0) }}, {{ (item.stock_usage_qty or 0) }}, {{ item.is_available|tojson }}, {{ item.sort_order or 0 }})'>
                     ✏️ Düzənlə
                 </button>
                 <form method="post" action="{{ url_for('menu.toggle_item', item_id=item.id) }}">
@@ -153,6 +154,7 @@
         </div>
         <div id="newRecipeRows"></div>
       </div>
+      <input name="stock_usage_qty" type="number" step="0.01" min="0" value="0" placeholder="1 satışda stok düşümü (məs: 10)">
       <div style="grid-column:1/-1;display:flex;justify-content:flex-end;gap:8px;">
         <button type="button" class="btn btn-secondary" onclick="closeModalById('newItemModal')">Ləğv et</button>
         <button class="btn btn-primary">Əlavə et</button>
@@ -244,6 +246,7 @@ function openModalById(id) { document.getElementById(id).style.display = 'flex';
 function closeModalById(id) { document.getElementById(id).style.display = 'none'; }
 
 function openEditItemModal(id, catId, name, price, cost, desc, imgPath, invId, stockUsageQty, recipeInvIds, recipeQtys, recipeUnits, isAvail, sortOrder) {
+function openEditItemModal(id, catId, name, price, cost, desc, imgPath, invId, stockUsageQty, isAvail, sortOrder) {
     const modal = document.getElementById('editItemModal');
     document.getElementById('editItemModalTitle').textContent = '✏️ Düzənlə: ' + name;
     document.getElementById('editItemForm').action = '/menu/items/' + id + '/edit';

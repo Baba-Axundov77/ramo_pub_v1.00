@@ -144,6 +144,11 @@ class MenuService:
         recipe_lines: Optional[List[Dict[str, Any]]] = None,
     ):
 
+    def create_item(self, db: Session, category_id: int, name: str, price: float,
+                    description: str = None, cost_price: float = 0.0, image_path: str = None,
+                    inventory_item_id: int | None = None, stock_name: str | None = None,
+                    stock_unit: str | None = None, stock_usage_qty: float = 0.0, sort_order: int = 0, recipe_lines: list[dict] | None = None):
+                    stock_unit: str | None = None, stock_usage_qty: float = 0.0, sort_order: int = 0):
         inv_id = inventory_item_id
         if stock_name and stock_name.strip():
             inv = self._find_or_create_inventory_item(db, stock_name, stock_unit or "ədəd", cost_price)
@@ -208,6 +213,7 @@ class MenuService:
         )
 
     def replace_recipes(self, db: Session, menu_item_id: int, recipe_lines: List[Dict[str, Any]]):
+    def replace_recipes(self, db: Session, menu_item_id: int, recipe_lines: list[dict]):
         today = date.today()
         active_rows = db.query(MenuItemRecipe).filter(
             MenuItemRecipe.menu_item_id == menu_item_id,

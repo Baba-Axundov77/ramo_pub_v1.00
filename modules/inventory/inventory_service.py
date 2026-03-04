@@ -15,6 +15,7 @@ from modules.inventory.unit_conversion import convert_quantity, normalize_unit
 
 class InventoryService:
     def seed_defaults(self, db: Session) -> None:
+        """Boş anbar üçün ilkin stok məhsulları əlavə et."""
         if db.query(InventoryItem).first() is not None:
             return
 
@@ -29,6 +30,7 @@ class InventoryService:
                 InventoryItem(
                     name=name,
                     unit=normalize_unit(unit),
+                    unit=unit,
                     quantity=quantity,
                     min_quantity=min_quantity,
                     cost_per_unit=cost_per_unit,
