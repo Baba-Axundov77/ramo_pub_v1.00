@@ -6,6 +6,7 @@ from modules.inventory.unit_conversion import convert_quantity
 from database.models import (
     Payment, Order, OrderStatus, PaymentMethod,
     Customer, Discount, InventoryItem, MenuItemRecipe, InventoryAdjustment
+    Customer, Discount, InventoryItem
 )
 
 
@@ -117,6 +118,10 @@ class POSService:
 
             # geriyə uyğunluq: köhnə tək-stok modeli
             if not menu_item.inventory_item_id:
+
+        for oi in order.items:
+            menu_item = oi.menu_item
+            if not menu_item or not menu_item.inventory_item_id:
                 continue
             usage_per_item = float(menu_item.stock_usage_qty or 0.0)
             if usage_per_item <= 0:
@@ -127,6 +132,14 @@ class POSService:
             required = usage_per_item * float(oi.quantity or 0)
             current_qty = float(inv.quantity or 0.0)
             if (not ALLOW_NEGATIVE_STOCK) and current_qty < required:
+
+            inv = db.query(InventoryItem).filter(InventoryItem.id == menu_item.inventory_item_id).first()
+            if not inv:
+                continue
+
+            required = usage_per_item * float(oi.quantity or 0)
+            current_qty = float(inv.quantity or 0.0)
+            if current_qty < required:
                 unit = inv.unit or "vahid"
                 shortages.append(
                     f"{menu_item.name}: tələb {required:.2f} {unit}, mövcud {current_qty:.2f} {unit}"
@@ -148,6 +161,19 @@ class POSService:
                     reference=f"order:{order.id}",
                 )
             )
+        for oi in order.items:
+            menu_item = oi.menu_item
+            if not menu_item or not menu_item.inventory_item_id:
+                continue
+            usage_per_item = float(menu_item.stock_usage_qty or 0.0)
+            if usage_per_item <= 0:
+                continue
+
+            inv = db.query(InventoryItem).filter(InventoryItem.id == menu_item.inventory_item_id).first()
+            if not inv:
+                continue
+
+            inv.quantity = float(inv.quantity or 0.0) - (usage_per_item * float(oi.quantity or 0))
 
         return True, None
 
