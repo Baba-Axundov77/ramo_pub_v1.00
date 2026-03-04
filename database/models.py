@@ -111,6 +111,7 @@ class MenuItem(Base):
     prep_time_min = Column(Integer, default=0)
     image_path  = Column(String(255))
     inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=True)
+    stock_usage_qty = Column(Float, default=0.0)  # 1 satışda anbardan düşəcək miqdar
     sort_order  = Column(Integer, default=0)
     is_available = Column(Boolean, default=True)
     is_active   = Column(Boolean, default=True)
@@ -119,6 +120,7 @@ class MenuItem(Base):
     category    = relationship("MenuCategory", back_populates="items")
     order_items = relationship("OrderItem", back_populates="menu_item")
     inventory_item = relationship("InventoryItem", back_populates="menu_items")
+    recipes = relationship("MenuItemRecipe", back_populates="menu_item", cascade="all, delete-orphan")
 
 
 # ─── SİFARİŞLƏR ───────────────────────────────────────────────────────────────
@@ -202,6 +204,40 @@ class InventoryItem(Base):
 
     menu_items = relationship("MenuItem", back_populates="inventory_item")
     purchase_items = relationship("PurchaseReceiptItem", back_populates="inventory_item")
+    recipe_usages = relationship("MenuItemRecipe", back_populates="inventory_item")
+
+
+class MenuItemRecipe(Base):
+    __tablename__ = "menu_item_recipes"
+
+    id = Column(Integer, primary_key=True, index=True)
+    menu_item_id = Column(Integer, ForeignKey("menu_items.id"), nullable=False)
+    inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=False)
+    quantity_per_unit = Column(Float, nullable=False, default=0.0)
+    quantity_unit = Column(String(30), nullable=True)
+    valid_from = Column(Date, nullable=True)
+    valid_until = Column(Date, nullable=True)
+    is_active = Column(Boolean, default=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    menu_item = relationship("MenuItem", back_populates="recipes")
+    inventory_item = relationship("InventoryItem", back_populates="recipe_usages")
+
+
+class InventoryAdjustment(Base):
+    __tablename__ = "inventory_adjustments"
+
+    id = Column(Integer, primary_key=True, index=True)
+    inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=False)
+    delta_quantity = Column(Float, nullable=False)
+    unit = Column(String(30), nullable=True)
+    adjustment_type = Column(String(30), nullable=False)  # purchase|sale|manual|waste|rollback
+    reason = Column(String(255), nullable=True)
+    reference = Column(String(120), nullable=True)
+    created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
+    created_at = Column(DateTime, server_default=func.now())
+
+    inventory_item = relationship("InventoryItem")
 
 
 class PurchaseReceipt(Base):

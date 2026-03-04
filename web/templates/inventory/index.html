@@ -95,6 +95,10 @@
                                 onclick="openAdjust({{ item.id }}, '{{ item.name }}', '{{ item.unit }}', 'remove')">
                             ➖
                         </button>
+                        <button type="button" class="btn btn-sm" style="background:#2A1C1C; color:#E74C3C;"
+                                onclick="openAdjust({{ item.id }}, '{{ item.name }}', '{{ item.unit }}', 'waste')">
+                            🗑 İtki
+                        </button>
                         <form method="post" action="{{ url_for('inventory.delete', item_id=item.id) }}"
                               onsubmit="return confirm('{{ item.name }} silinsin?');">
                             <button type="submit" class="btn btn-sm" style="background:#2A1C1C; color:#E74C3C;">🗑</button>
@@ -228,6 +232,10 @@
                 <input type="number" name="amount" class="form-input" step="0.01" min="0.01"
                        required placeholder="Miqdar daxil et">
             </div>
+            <div class="form-group">
+                <label>Səbəb</label>
+                <input name="reason" id="adjustReason" class="form-input" placeholder="manual / itki / düzəliş">
+            </div>
             <div style="display:flex;gap:10px;">
                 <button type="submit" id="adjustBtn" class="btn btn-primary" style="flex:1;">Təsdiq et</button>
                 <button type="button" class="btn btn-secondary"
@@ -330,11 +338,12 @@
 <script>
 function openAdjust(itemId, itemName, unit, mode) {
     document.getElementById('adjustTitle').textContent =
-        (mode === 'add' ? '➕ Stok artır' : '➖ Stok azalt') + ' — ' + itemName;
+        (mode === 'add' ? '➕ Stok artır' : (mode === 'waste' ? '🗑 İtki çıx' : '➖ Stok azalt')) + ' — ' + itemName;
     document.getElementById('adjustItemName').textContent = itemName + ' (' + unit + ')';
     document.getElementById('adjustMode').value = mode;
     document.getElementById('adjustForm').action = '/inventory/' + itemId + '/adjust';
-    document.getElementById('adjustBtn').textContent = mode === 'add' ? '➕ Artır' : '➖ Azalt';
+    document.getElementById('adjustBtn').textContent = mode === 'add' ? '➕ Artır' : (mode === 'waste' ? '🗑 İtkini yaz' : '➖ Azalt');
+    document.getElementById('adjustReason').value = mode === 'waste' ? 'İtki/Spoilage' : '';
     document.getElementById('adjustModal').style.display = 'flex';
 }
 
