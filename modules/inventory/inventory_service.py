@@ -7,6 +7,30 @@ from database.models import InventoryItem, PurchaseReceipt, PurchaseReceiptItem
 
 
 class InventoryService:
+    def seed_defaults(self, db: Session) -> None:
+        """Boş anbar üçün ilkin stok məhsulları əlavə et."""
+        if db.query(InventoryItem).first() is not None:
+            return
+
+        defaults = [
+            ("Çay", "qram", 3000.0, 500.0, 0.02, "Lokal Təchizat"),
+            ("Qəhvə", "qram", 2000.0, 400.0, 0.06, "Coffee Supplier"),
+            ("Şəkər", "kq", 20.0, 5.0, 1.2, "Market"),
+            ("Cola 330ml", "ədəd", 48.0, 12.0, 1.4, "Drink Distributor"),
+        ]
+        for name, unit, quantity, min_quantity, cost_per_unit, supplier in defaults:
+            db.add(
+                InventoryItem(
+                    name=name,
+                    unit=unit,
+                    quantity=quantity,
+                    min_quantity=min_quantity,
+                    cost_per_unit=cost_per_unit,
+                    supplier=supplier,
+                )
+            )
+        db.commit()
+
     def get_all(self, db: Session, low_stock_only: bool = False) -> List[InventoryItem]:
         q = db.query(InventoryItem)
         if low_stock_only:
