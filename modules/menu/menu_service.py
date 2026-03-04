@@ -4,6 +4,68 @@ from database.models import MenuCategory, MenuItem, InventoryItem
 
 
 class MenuService:
+    def seed_defaults(self, db: Session) -> None:
+        """Boş sistem üçün minimal default menyu məlumatları yarat."""
+        has_active_category = (
+            db.query(MenuCategory)
+            .filter(MenuCategory.is_active == True)
+            .first()
+            is not None
+        )
+        if has_active_category:
+            return
+
+        defaults = [
+            {
+                "name": "İsti İçkilər",
+                "icon": "☕",
+                "items": [
+                    ("Çay", 1.5, "Qara çay"),
+                    ("Amerikano", 4.0, "Klassik qəhvə"),
+                ],
+            },
+            {
+                "name": "Sərinləşdirici",
+                "icon": "🥤",
+                "items": [
+                    ("Cola", 3.0, "330ml"),
+                    ("Mineral Su", 1.0, "500ml"),
+                ],
+            },
+            {
+                "name": "Qəlyanaltı",
+                "icon": "🍟",
+                "items": [
+                    ("Kartof Fri", 5.0, "Xırt-xırt"),
+                    ("Nuggets", 6.5, "6 ədəd"),
+                ],
+            },
+        ]
+
+        for sort_order, category_data in enumerate(defaults, start=1):
+            category = MenuCategory(
+                name=category_data["name"],
+                icon=category_data["icon"],
+                sort_order=sort_order,
+                is_active=True,
+            )
+            db.add(category)
+            db.flush()
+
+            for item_order, (item_name, price, description) in enumerate(category_data["items"], start=1):
+                db.add(
+                    MenuItem(
+                        category_id=category.id,
+                        name=item_name,
+                        price=price,
+                        description=description,
+                        sort_order=item_order,
+                        is_available=True,
+                        is_active=True,
+                    )
+                )
+        db.commit()
+
     def get_categories(self, db: Session, active_only: bool = True):
         q = db.query(MenuCategory)
         if active_only:
