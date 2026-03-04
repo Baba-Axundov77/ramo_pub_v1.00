@@ -71,6 +71,7 @@ class MainWindow(QMainWindow):
         from modules.reports.report_service import ReportService
         from modules.loyalty.loyalty_service import LoyaltyService
         from modules.printer.printer_service import PrinterService
+        from modules.orders.kitchen_service import kitchen_service
 
         self._services["tables"] = TableService()
         self._services["menu"] = MenuService()
@@ -83,6 +84,7 @@ class MainWindow(QMainWindow):
         self._services["reports"] = ReportService()
         self._services["loyalty"] = LoyaltyService()
         self._services["printer"] = PrinterService()
+        self._services["kitchen"] = kitchen_service
 
     def _seed_defaults(self):
         self._services["tables"].seed_defaults(self.db)
@@ -196,6 +198,7 @@ class MainWindow(QMainWindow):
             ("loyalty",      "⭐", "Loyallıq"),
             ("staff",        "👥", "İşçilər"),
             ("reports",      "📈", "Hesabatlar"),
+            ("kitchen",      "🍳", "Mətbəx"),
             ("settings",     "⚙️",  "Tənzimləmələr"),
         ]
         role = self.current_user.role
@@ -204,6 +207,9 @@ class MainWindow(QMainWindow):
             return [i for i in all_items if i[0] in allowed]
         elif role == UserRole.cashier:
             allowed = {"dashboard", "pos", "reports"}
+            return [i for i in all_items if i[0] in allowed]
+        elif role == UserRole.kitchen:
+            allowed = {"dashboard", "kitchen"}
             return [i for i in all_items if i[0] in allowed]
         return all_items
 
@@ -273,6 +279,10 @@ class MainWindow(QMainWindow):
             self._services["pos"],
             self._open_payment,
         )
+
+        # ── Mətbəx ───────────────────────────────────────────────────────────
+        from desktop.views.kitchen_view import KitchenView
+        self._views["kitchen"] = KitchenView(self.db, self._services["kitchen"])
 
         # ── Tənzimləmələr ─────────────────────────────────────────────────────
         from desktop.views.settings_view import SettingsView
@@ -386,7 +396,7 @@ class MainWindow(QMainWindow):
             "pos": "Kassa & Ödəniş", "inventory": "Anbar & Stok",
             "reservations": "Rezervasiyalar", "loyalty": "Loyallıq",
             "staff": "İşçi İdarəsi", "reports": "Hesabatlar",
-            "settings": "Tənzimləmələr",
+            "kitchen": "Mətbəx", "settings": "Tənzimləmələr",
         }
         self.page_title.setText(titles.get(key, key))
         if key == "dashboard":
