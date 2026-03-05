@@ -265,3 +265,17 @@ def api_update_table(table_id: int):
     if not ok:
         return jsonify({"ok": False, "msg": str(result)}), 400
     return jsonify({"ok": True, "msg": "Masa yeniləndi"})
+
+
+@bp.route("/api/delete/<int:table_id>", methods=["POST"])
+@permission_required_api("manage_tables")
+def api_delete_table(table_id: int):
+    if "user" not in session:
+        return jsonify({"ok": False, "msg": "Giriş tələb olunur"}), 401
+    if session["user"].get("role") != "admin":
+        return jsonify({"ok": False, "msg": "İcazə yoxdur"}), 403
+
+    ok, result = svc.delete(g.db, table_id)
+    if not ok:
+        return jsonify({"ok": False, "msg": str(result)}), 400
+    return jsonify({"ok": True, "msg": "Masa silindi"})
