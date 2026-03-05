@@ -134,14 +134,27 @@ class ReportService:
         )
         data: List[Dict] = []
         for order, payment in rows:
+            items_detail: List[Dict] = []
+            for item in order.items:
+                items_detail.append({
+                    "name": item.menu_item.name if item.menu_item else "Məhsul",
+                    "quantity": int(item.quantity or 0),
+                    "unit_price": float(item.unit_price or 0),
+                    "subtotal": float(item.subtotal or 0),
+                })
+
             data.append({
                 "order_id": order.id,
                 "table": order.table.number if order.table else None,
                 "status": order.status.value,
                 "items": len(order.items),
+                "items_detail": items_detail,
+                "waiter": order.waiter.full_name if order.waiter else "—",
                 "method": payment.method.value,
+                "subtotal": float(payment.amount or order.subtotal or 0),
+                "discount": float(payment.discount_amount or order.discount_amount or 0),
                 "amount": float(payment.final_amount or 0),
-                "paid_at": payment.created_at,
+                "paid_at": payment.created_at.strftime("%d.%m.%Y %H:%M") if payment.created_at else "—",
             })
         return data
 

@@ -4,8 +4,13 @@
 {% block content %}
 <div class="page-header">
     <div>
-        <h1 class="page-title">🪑 Masa İdarəsi</h1>
         <p class="page-sub">Cəmi {{ tables|length }} masa</p>
+        <div class="mini-stats" style="margin-top:10px;">
+            <span class="mini-stat green">🟢 Boş: {{ stats.available }}</span>
+            <span class="mini-stat red">🔴 Dolu: {{ stats.occupied }}</span>
+            <span class="mini-stat amber">🟡 Rezerv: {{ stats.reserved }}</span>
+            <span class="mini-stat blue">🔵 Təmizlik: {{ stats.cleaning }}</span>
+        </div>
     </div>
     <div class="header-actions">
         <div class="filter-tabs" id="floorTabs">
@@ -19,14 +24,6 @@
         <button class="btn btn-primary btn-sm" onclick="openModal('addTableModal')" style="margin-left:12px;">➕ Yeni Masa</button>
         {% endif %}
     </div>
-</div>
-
-<!-- Statistika -->
-<div class="mini-stats" style="margin-bottom:20px;">
-    <span class="mini-stat green">🟢 Boş: {{ stats.available }}</span>
-    <span class="mini-stat red">🔴 Dolu: {{ stats.occupied }}</span>
-    <span class="mini-stat amber">🟡 Rezerv: {{ stats.reserved }}</span>
-    <span class="mini-stat blue">🔵 Təmizlik: {{ stats.cleaning }}</span>
 </div>
 
 <!-- Masalar grid -->
@@ -306,6 +303,10 @@ function buildButtons(status) {
         eb.style.borderColor = "var(--border)";
         eb.style.fontWeight  = "500";
         wrap.appendChild(eb);
+
+        const db = makeBtn("🗑️  Masanı sil", "#E74C3C", actDeleteTable);
+        db.style.fontSize = "12px";
+        wrap.appendChild(db);
     }
 }
 
@@ -400,6 +401,25 @@ function actEdit() {
     document.getElementById("editTableImagePath").value = t.imagePath || "";
     setTablePreview(t.imagePath || "");
     openModal("editTableModal");
+}
+
+async function actDeleteTable() {
+    const tableId = _card?.dataset.id;
+    const tableNo = _card?.dataset.number;
+    closeActionModal();
+    if (!tableId) {
+        toast("Masa tapılmadı", "warning");
+        return;
+    }
+    if (!confirm(`Masa #${tableNo || tableId} silinsin?`)) return;
+
+    const res = await apiFetch(`/tables/api/delete/${tableId}`, { method: "POST" });
+    if (res?.ok) {
+        toast("Masa silindi ✅");
+        setTimeout(() => location.reload(), 600);
+    } else {
+        toast(res?.msg || "Masa silinə bilmədi", "danger");
+    }
 }
 
 function setTablePreview(path) {
