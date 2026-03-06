@@ -1,12 +1,22 @@
 # modules/reservation/reservation_service.py - Python 3.10 uyumlu
 from __future__ import annotations
-from typing import List, Optional, Tuple, Set
+from typing import List, Optional, Tuple
 from datetime import date, time, datetime, timedelta
 from sqlalchemy.orm import Session
 from database.models import Reservation, Table
 
 
 class ReservationService:
+
+    @staticmethod
+    def _time_window(target_time: time, duration_hours: int) -> tuple[time, time]:
+        center = datetime.combine(date.today(), target_time)
+        delta = timedelta(hours=duration_hours)
+        start_dt = center - delta
+        end_dt = center + delta
+        start_time = max(start_dt.time(), time.min)
+        end_time = min(end_dt.time(), time.max)
+        return start_time, end_time
 
     def get_all(self, db: Session, target_date: Optional[date] = None,
                 upcoming_only: bool = False) -> List[Reservation]:
@@ -24,17 +34,17 @@ class ReservationService:
     def create(self, db: Session, table_id: int, customer_name: str,
                customer_phone: str, res_date: date, res_time: time,
                guest_count: int = 2, notes: str = "") -> Tuple[bool, object]:
+        window_start, window_end = self._time_window(res_time, duration_hours=2)
         conflict = db.query(Reservation).filter(
-            Reservation.table_id     == table_id,
-            Reservation.date         == res_date,
+            Reservation.table_id == table_id,
+            Reservation.date == res_date,
             Reservation.is_cancelled == False,
-        ).all()
-        for r in conflict:
-            r_dt   = datetime.combine(res_date, r.time)
-            new_dt = datetime.combine(res_date, res_time)
-            if abs((r_dt - new_dt).total_seconds()) < 7200:
-                return False, (f"Bu masa {res_date} tarixde saat "
-                               f"{r.time.strftime('%H:%M')}-da artiq rezerv edilib.")
+            Reservation.time >= window_start,
+            Reservation.time <= window_end,
+        ).order_by(Reservation.time.asc()).first()
+        if conflict:
+            return False, (f"Bu masa {res_date} tarixde saat "
+                           f"{conflict.time.strftime('%H:%M')}-da artiq rezerv edilib.")
         res = Reservation(
             table_id       = table_id,
             customer_name  = customer_name,
@@ -68,22 +78,33 @@ class ReservationService:
         return self.get_all(db, target_date=date.today())
 
     def get_upcoming_count(self, db: Session) -> int:
-        return len(self.get_all(db, upcoming_only=True))
+        return db.query(Reservation).filter(
+            Reservation.is_cancelled == False,
+            Reservation.date >= date.today(),
+        ).count()
 
     def get_available_tables(self, db: Session, res_date: date,
                               res_time: time, duration_hours: int = 2) -> List[Table]:
-        all_tables = db.query(Table).filter(Table.is_active == True).all()
-        reserved_ids: Set[int] = set()
-        reservations = db.query(Reservation).filter(
-            Reservation.date         == res_date,
-            Reservation.is_cancelled == False,
-        ).all()
-        new_dt = datetime.combine(res_date, res_time)
-        for r in reservations:
-            r_dt = datetime.combine(res_date, r.time)
-            if abs((r_dt - new_dt).total_seconds()) < duration_hours * 3600:
-                reserved_ids.add(r.table_id)
-        return [t for t in all_tables if t.id not in reserved_ids]
+        window_start, window_end = self._time_window(res_time, duration_hours=duration_hours)
+        reserved_table_ids = (
+            db.query(Reservation.table_id)
+            .filter(
+                Reservation.date == res_date,
+                Reservation.is_cancelled == False,
+                Reservation.time >= window_start,
+                Reservation.time <= window_end,
+            )
+            .subquery()
+        )
+        return (
+            db.query(Table)
+            .filter(
+                Table.is_active == True,
+                ~Table.id.in_(reserved_table_ids),
+            )
+            .order_by(Table.number.asc())
+            .all()
+        )
 
 
 reservation_service = ReservationService()

@@ -1,7 +1,7 @@
 # database/models.py — Bütün Cədvəl Modelləri
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, Text,
-    ForeignKey, Enum, Date, Time
+    ForeignKey, Enum, Date, Time, Index
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -127,6 +127,10 @@ class MenuItem(Base):
 
 class Order(Base):
     __tablename__ = "orders"
+    __table_args__ = (
+        Index("ix_orders_created_at_status", "created_at", "status"),
+        Index("ix_orders_table_id_status_created_at", "table_id", "status", "created_at"),
+    )
 
     id             = Column(Integer, primary_key=True, index=True)
     table_id       = Column(Integer, ForeignKey("tables.id"))
@@ -174,6 +178,9 @@ class OrderItem(Base):
 
 class Payment(Base):
     __tablename__ = "payments"
+    __table_args__ = (
+        Index("ix_payments_created_at_method", "created_at", "method"),
+    )
 
     id             = Column(Integer, primary_key=True, index=True)
     order_id       = Column(Integer, ForeignKey("orders.id"), unique=True)
@@ -200,6 +207,7 @@ class InventoryItem(Base):
     min_quantity  = Column(Float, default=5.0)  # minimum xəbərdarlıq
     cost_per_unit = Column(Float, default=0.0)
     supplier      = Column(String(100))
+    is_active     = Column(Boolean, default=True)
     last_updated  = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     menu_items = relationship("MenuItem", back_populates="inventory_item")
@@ -248,6 +256,7 @@ class PurchaseReceipt(Base):
     store_name = Column(String(120), nullable=True)
     note = Column(Text, nullable=True)
     total_amount = Column(Float, nullable=False, default=0.0)
+    is_cancelled = Column(Boolean, default=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
@@ -280,6 +289,7 @@ class Shift(Base):
     date       = Column(Date, nullable=False)
     start_time = Column(Time)
     end_time   = Column(Time)
+    is_active  = Column(Boolean, default=True)
     notes      = Column(Text)
 
     user = relationship("User", back_populates="shifts")
@@ -297,6 +307,7 @@ class Customer(Base):
     points       = Column(Integer, default=0)
     total_spent  = Column(Float, default=0.0)
     birthday     = Column(Date, nullable=True)
+    is_active    = Column(Boolean, default=True)
     created_at   = Column(DateTime, server_default=func.now())
 
     orders = relationship("Order", back_populates="customer")
@@ -306,6 +317,9 @@ class Customer(Base):
 
 class Reservation(Base):
     __tablename__ = "reservations"
+    __table_args__ = (
+        Index("ix_reservations_date_table_id_is_cancelled", "date", "table_id", "is_cancelled"),
+    )
 
     id            = Column(Integer, primary_key=True, index=True)
     table_id      = Column(Integer, ForeignKey("tables.id"))

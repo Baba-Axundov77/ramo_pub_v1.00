@@ -111,9 +111,11 @@ def init_database():
         from database.models import create_all_tables
         create_all_tables(engine)
 
-        # AUTO-MIGRATE həmişə işləyir — env flag silindi
-        with engine.connect() as conn:
-            _auto_migrate(conn)
+        # Alembic-first axını: runtime auto-migrate yalnız açıq şəkildə istənəndə işləsin.
+        run_auto_migrate = os.getenv("ENABLE_RUNTIME_AUTO_MIGRATE", "0") == "1"
+        if run_auto_migrate:
+            with engine.connect() as conn:
+                _auto_migrate(conn)
 
         return True, "Verilənlər bazasına ugurla qosuldu."
     except OperationalError as e:

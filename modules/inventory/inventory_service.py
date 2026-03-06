@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import List, Optional, Tuple
 from datetime import datetime
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func
 
 from database.models import (
@@ -16,7 +16,7 @@ from modules.inventory.unit_conversion import convert_quantity, normalize_unit
 class InventoryService:
     def seed_defaults(self, db: Session) -> None:
         """Boş anbar üçün ilkin stok məhsulları əlavə et."""
-        if db.query(InventoryItem).first() is not None:
+        if db.query(InventoryItem).filter(InventoryItem.is_active == True).first() is not None:
             return
 
         defaults = [
@@ -54,16 +54,22 @@ class InventoryService:
         )
 
     def get_all(self, db: Session, low_stock_only: bool = False) -> List[InventoryItem]:
-        q = db.query(InventoryItem)
+        q = db.query(InventoryItem).filter(InventoryItem.is_active == True)
         if low_stock_only:
             q = q.filter(InventoryItem.quantity <= InventoryItem.min_quantity)
         return q.order_by(InventoryItem.name).all()
 
     def get_by_id(self, db: Session, item_id: int) -> Optional[InventoryItem]:
-        return db.query(InventoryItem).filter(InventoryItem.id == item_id).first()
+        return db.query(InventoryItem).filter(
+            InventoryItem.id == item_id,
+            InventoryItem.is_active == True,
+        ).first()
 
     def get_by_name(self, db: Session, name: str) -> Optional[InventoryItem]:
-        return db.query(InventoryItem).filter(func.lower(InventoryItem.name) == name.strip().lower()).first()
+        return db.query(InventoryItem).filter(
+            func.lower(InventoryItem.name) == name.strip().lower(),
+            InventoryItem.is_active == True,
+        ).first()
 
     def create(self, db: Session, name: str, unit: str, quantity: float,
                min_quantity: float = 5.0, cost_per_unit: float = 0.0,
@@ -120,8 +126,9 @@ class InventoryService:
         item = self.get_by_id(db, item_id)
         if not item:
             return False, "Tapilmadi."
-        db.delete(item); db.commit()
-        return True, "Stok mehsulu silindi."
+        item.is_active = False
+        db.commit()
+        return True, "Stok mehsulu arxivləndi."
 
     def create_purchase_receipt(self, db: Session, *, purchased_at: datetime, store_name: str, note: str,
                                 created_by: int | None, lines: list[dict]):
@@ -166,10 +173,20 @@ class InventoryService:
         return True, receipt
 
     def list_purchase_receipts(self, db: Session, limit: int = 100):
-        return db.query(PurchaseReceipt).order_by(PurchaseReceipt.purchased_at.desc(), PurchaseReceipt.id.desc()).limit(limit).all()
+        return (
+            db.query(PurchaseReceipt)
+            .options(selectinload(PurchaseReceipt.items).selectinload(PurchaseReceiptItem.inventory_item))
+            .filter(PurchaseReceipt.is_cancelled == False)
+            .order_by(PurchaseReceipt.purchased_at.desc(), PurchaseReceipt.id.desc())
+            .limit(limit)
+            .all()
+        )
 
     def get_purchase_receipt(self, db: Session, receipt_id: int):
-        return db.query(PurchaseReceipt).filter(PurchaseReceipt.id == receipt_id).first()
+        return db.query(PurchaseReceipt).filter(
+            PurchaseReceipt.id == receipt_id,
+            PurchaseReceipt.is_cancelled == False,
+        ).first()
 
     def delete_purchase_receipt(self, db: Session, receipt_id: int):
         receipt = self.get_purchase_receipt(db, receipt_id)
@@ -185,7 +202,7 @@ class InventoryService:
                 self._log_adjustment(db, item_id=inv.id, delta=-qty_in_inv_unit, unit=inv.unit,
                                      adjustment_type="rollback", reason="Çek silinməsi",
                                      reference=f"receipt:{receipt.id}")
-        db.delete(receipt)
+        receipt.is_cancelled = True
         db.commit()
         return True, "Çek silindi və stok geri alındı"
 

@@ -2,7 +2,7 @@ from datetime import date
 from typing import Optional, List, Dict, Any
 
 from sqlalchemy import func
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from database.models import MenuCategory, MenuItem, InventoryItem, MenuItemRecipe
 
@@ -107,7 +107,11 @@ class MenuService:
         return True, "Kateqoriya silindi."
 
     def get_items(self, db: Session, category_id: int = None, active_only: bool = True, available_only: bool = False):
-        q = db.query(MenuItem)
+        q = db.query(MenuItem).options(
+            joinedload(MenuItem.category),
+            joinedload(MenuItem.inventory_item),
+            selectinload(MenuItem.recipes).joinedload(MenuItemRecipe.inventory_item),
+        )
         if active_only:
             q = q.filter(MenuItem.is_active == True)
         if available_only:
