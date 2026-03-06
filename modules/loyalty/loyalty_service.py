@@ -9,6 +9,7 @@ from datetime import date, datetime
 from typing import List, Optional, Tuple, Dict
 
 from sqlalchemy.orm import Session
+from sqlalchemy import func, case
 from database.models import Customer, Discount, Order, OrderStatus
 
 
@@ -238,14 +239,19 @@ class LoyaltyService:
         if not customer:
             return {}
         tier = get_tier(customer.points)
-        orders = db.query(Order).filter(
-            Order.customer_id == customer_id,
-            Order.status == OrderStatus.paid,
-        ).all()
+        orders_count = (
+            db.query(func.count(Order.id))
+            .filter(
+                Order.customer_id == customer_id,
+                Order.status == OrderStatus.paid,
+            )
+            .scalar()
+            or 0
+        )
         return {
             "customer":       customer,
             "tier":           tier,
-            "total_orders":   len(orders),
+            "total_orders":   int(orders_count),
             "total_spent":    customer.total_spent,
             "points":         customer.points,
             "redeem_value":   (customer.points / 100) * MANAT_PER_100_POINTS,
@@ -259,12 +265,20 @@ class LoyaltyService:
         return 0
 
     def get_summary(self, db: Session) -> Dict[str, object]:
-        customers = db.query(Customer).all()
+        total, total_points, total_spent, vip_count = (
+            db.query(
+                func.count(Customer.id),
+                func.coalesce(func.sum(Customer.points), 0),
+                func.coalesce(func.sum(Customer.total_spent), 0.0),
+                func.coalesce(func.sum(case((Customer.points >= 5000, 1), else_=0)), 0),
+            )
+            .one()
+        )
         return {
-            "total":        len(customers),
-            "total_points": sum(c.points for c in customers),
-            "total_spent":  sum(c.total_spent for c in customers),
-            "vip_count":    sum(1 for c in customers if c.points >= 5000),
+            "total":        int(total or 0),
+            "total_points": int(total_points or 0),
+            "total_spent":  float(total_spent or 0.0),
+            "vip_count":    int(vip_count or 0),
         }
 
     def seed_defaults(self, db: Session) -> None:

@@ -1,6 +1,6 @@
 # modules/orders/order_service.py — Sifariş İş Məntiqi
 from sqlalchemy.orm import Session, joinedload, selectinload
-from sqlalchemy import desc
+from sqlalchemy import desc, func, case
 from datetime import datetime, date
 from database.models import (
     Order, OrderItem, OrderStatus, Table, TableStatus, MenuItem
@@ -190,14 +190,22 @@ class OrderService:
     # ── STATİSTİKA ────────────────────────────────────────────────────────────
 
     def get_today_summary(self, db: Session):
-        orders = self.get_today_orders(db)
-        paid   = [o for o in orders if o.status == OrderStatus.paid]
+        today_start = datetime.combine(date.today(), datetime.min.time())
+        total_orders, paid_orders, total_revenue, active_orders = (
+            db.query(
+                func.count(Order.id),
+                func.sum(case((Order.status == OrderStatus.paid, 1), else_=0)),
+                func.coalesce(func.sum(case((Order.status == OrderStatus.paid, Order.total), else_=0.0)), 0.0),
+                func.sum(case((Order.status.notin_([OrderStatus.paid, OrderStatus.cancelled]), 1), else_=0)),
+            )
+            .filter(Order.created_at >= today_start)
+            .one()
+        )
         return {
-            "total_orders":  len(orders),
-            "paid_orders":   len(paid),
-            "total_revenue": sum(o.total for o in paid),
-            "active_orders": len([o for o in orders
-                                  if o.status not in [OrderStatus.paid, OrderStatus.cancelled]]),
+            "total_orders":  int(total_orders or 0),
+            "paid_orders":   int(paid_orders or 0),
+            "total_revenue": float(total_revenue or 0.0),
+            "active_orders": int(active_orders or 0),
         }
 
 
