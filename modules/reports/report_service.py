@@ -2,7 +2,7 @@
 from __future__ import annotations
 from typing import List, Dict, Optional
 from datetime import date, datetime, timedelta
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import func
 from database.models import (
     Payment, Order, OrderItem, MenuItem,
@@ -201,6 +201,11 @@ class ReportService:
         end = datetime.combine(target_date, datetime.max.time())
         rows = (
             db.query(Order, Payment)
+            .options(
+                joinedload(Order.table),
+                joinedload(Order.waiter),
+                selectinload(Order.items).joinedload(OrderItem.menu_item),
+            )
             .join(Payment, Payment.order_id == Order.id)
             .filter(Payment.created_at >= start, Payment.created_at <= end)
             .order_by(Payment.created_at.desc())

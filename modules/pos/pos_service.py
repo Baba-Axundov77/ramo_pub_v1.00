@@ -1,12 +1,13 @@
 # modules/pos/pos_service.py — Kassa & Ödəniş İş Məntiqi
 from datetime import datetime, date
 
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 
 from config import ALLOW_NEGATIVE_STOCK
 from database.models import (
     Payment,
     Order,
+    OrderItem,
     OrderStatus,
     PaymentMethod,
     Customer,
@@ -27,7 +28,15 @@ class POSService:
         Ödənişi icra et.
         Qaytarır: (True, payment_obj) | (False, xəta_mesajı)
         """
-        order = db.query(Order).filter(Order.id == order_id).first()
+        order = (
+            db.query(Order)
+            .options(
+                joinedload(Order.table),
+                selectinload(Order.items).joinedload(OrderItem.menu_item),
+            )
+            .filter(Order.id == order_id)
+            .first()
+        )
         if not order:
             return False, "Sifariş tapılmadı."
         if order.status == OrderStatus.paid:
@@ -84,26 +93,62 @@ class POSService:
 
     def _consume_inventory_for_order(self, db: Session, order: Order):
         shortages: list[str] = []
-        consumptions: list[tuple[InventoryItem, float, str]] = []
+        consumption_by_inventory: dict[int, float] = {}
+        menu_names_by_inventory: dict[int, set[str]] = {}
 
-        for oi in order.items:
+        active_items = [oi for oi in order.items if oi.status != OrderStatus.cancelled]
+        if not active_items:
+            return True, None
+
+        menu_item_ids = {oi.menu_item_id for oi in active_items if oi.menu_item_id}
+        today = date.today()
+        recipe_lines = (
+            db.query(MenuItemRecipe)
+            .filter(
+                MenuItemRecipe.menu_item_id.in_(menu_item_ids),
+                MenuItemRecipe.is_active == True,
+            )
+            .filter(
+                (MenuItemRecipe.valid_from == None) | (MenuItemRecipe.valid_from <= today)
+            )
+            .filter(
+                (MenuItemRecipe.valid_until == None) | (MenuItemRecipe.valid_until >= today)
+            )
+            .all()
+        ) if menu_item_ids else []
+
+        recipes_by_menu_item: dict[int, list[MenuItemRecipe]] = {}
+        for line in recipe_lines:
+            recipes_by_menu_item.setdefault(line.menu_item_id, []).append(line)
+
+        inventory_ids: set[int] = set()
+        for line in recipe_lines:
+            if line.inventory_item_id:
+                inventory_ids.add(line.inventory_item_id)
+        for oi in active_items:
+            menu_item = oi.menu_item
+            if not menu_item:
+                continue
+            if menu_item.inventory_item_id:
+                inventory_ids.add(menu_item.inventory_item_id)
+
+        inventory_rows = (
+            db.query(InventoryItem)
+            .filter(InventoryItem.id.in_(inventory_ids))
+            .all()
+        ) if inventory_ids else []
+        inventory_map = {inv.id: inv for inv in inventory_rows}
+
+        for oi in active_items:
             menu_item = oi.menu_item
             if not menu_item:
                 continue
 
-            today = date.today()
-            recipe_lines = db.query(MenuItemRecipe).filter(
-                MenuItemRecipe.menu_item_id == menu_item.id,
-                MenuItemRecipe.is_active == True,
-            ).filter(
-                (MenuItemRecipe.valid_from == None) | (MenuItemRecipe.valid_from <= today)
-            ).filter(
-                (MenuItemRecipe.valid_until == None) | (MenuItemRecipe.valid_until >= today)
-            ).all()
+            menu_recipes = recipes_by_menu_item.get(menu_item.id, [])
 
-            if recipe_lines:
-                for line in recipe_lines:
-                    inv = db.query(InventoryItem).filter(InventoryItem.id == line.inventory_item_id).first()
+            if menu_recipes:
+                for line in menu_recipes:
+                    inv = inventory_map.get(line.inventory_item_id)
                     if not inv:
                         continue
                     required_raw = float(line.quantity_per_unit or 0.0) * float(oi.quantity or 0)
@@ -118,12 +163,15 @@ class POSService:
                     if required <= 0:
                         continue
                     current_qty = float(inv.quantity or 0.0)
-                    if (not ALLOW_NEGATIVE_STOCK) and current_qty < required:
+                    already_planned = float(consumption_by_inventory.get(inv.id, 0.0))
+                    available_qty = current_qty - already_planned
+                    if (not ALLOW_NEGATIVE_STOCK) and available_qty < required:
                         unit = inv.unit or "vahid"
                         shortages.append(
-                            f"{menu_item.name} -> {inv.name}: tələb {required:.2f} {unit}, mövcud {current_qty:.2f} {unit}"
+                            f"{menu_item.name} -> {inv.name}: tələb {required:.2f} {unit}, mövcud {max(0.0, available_qty):.2f} {unit}"
                         )
-                    consumptions.append((inv, required, menu_item.name))
+                    consumption_by_inventory[inv.id] = already_planned + required
+                    menu_names_by_inventory.setdefault(inv.id, set()).add(menu_item.name)
                 continue
 
             if not menu_item.inventory_item_id:
@@ -133,31 +181,39 @@ class POSService:
             if usage_per_item <= 0:
                 continue
 
-            inv = db.query(InventoryItem).filter(InventoryItem.id == menu_item.inventory_item_id).first()
+            inv = inventory_map.get(menu_item.inventory_item_id)
             if not inv:
                 continue
 
             required = usage_per_item * float(oi.quantity or 0)
             current_qty = float(inv.quantity or 0.0)
-            if (not ALLOW_NEGATIVE_STOCK) and current_qty < required:
+            already_planned = float(consumption_by_inventory.get(inv.id, 0.0))
+            available_qty = current_qty - already_planned
+            if (not ALLOW_NEGATIVE_STOCK) and available_qty < required:
                 unit = inv.unit or "vahid"
                 shortages.append(
-                    f"{menu_item.name}: tələb {required:.2f} {unit}, mövcud {current_qty:.2f} {unit}"
+                    f"{menu_item.name}: tələb {required:.2f} {unit}, mövcud {max(0.0, available_qty):.2f} {unit}"
                 )
-            consumptions.append((inv, required, menu_item.name))
+            consumption_by_inventory[inv.id] = already_planned + required
+            menu_names_by_inventory.setdefault(inv.id, set()).add(menu_item.name)
 
         if shortages:
             return False, "Stok kifayət deyil: " + " | ".join(shortages)
 
-        for inv, required, menu_name in consumptions:
+        for inv_id, required in consumption_by_inventory.items():
+            inv = inventory_map.get(inv_id)
+            if not inv:
+                continue
             inv.quantity = float(inv.quantity or 0.0) - required
+            menu_names = sorted(menu_names_by_inventory.get(inv_id, set()))
+            reason = f"Satış: {', '.join(menu_names)}" if menu_names else "Satış"
             db.add(
                 InventoryAdjustment(
                     inventory_item_id=inv.id,
                     delta_quantity=-required,
                     unit=inv.unit,
                     adjustment_type="sale",
-                    reason=f"Satış: {menu_name}",
+                    reason=reason,
                     reference=f"order:{order.id}",
                 )
             )

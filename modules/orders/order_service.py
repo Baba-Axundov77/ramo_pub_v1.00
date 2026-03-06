@@ -1,5 +1,5 @@
 # modules/orders/order_service.py — Sifariş İş Məntiqi
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload, selectinload
 from sqlalchemy import desc
 from datetime import datetime, date
 from database.models import (
@@ -41,6 +41,18 @@ class OrderService:
 
     def get_order(self, db: Session, order_id: int):
         return db.query(Order).filter(Order.id == order_id).first()
+
+    def get_order_with_details(self, db: Session, order_id: int):
+        return (
+            db.query(Order)
+            .options(
+                joinedload(Order.table),
+                joinedload(Order.waiter),
+                selectinload(Order.items).joinedload(OrderItem.menu_item),
+            )
+            .filter(Order.id == order_id)
+            .first()
+        )
 
     def get_active_orders(self, db: Session):
         return db.query(Order).filter(
