@@ -1,21 +1,23 @@
 """purchase receipts and menu inventory link
 
 Revision ID: 0003_purchase_receipts_and_menu_inventory_link
-Revises: 0002_schema_alignment_rbac_roles
+Revises: 0002_schema_alignment
 Create Date: 2026-03-02
 """
 from alembic import op
 import sqlalchemy as sa
 
 revision = '0003_purchase_receipts_and_menu_inventory_link'
-down_revision = '0002_schema_alignment_rbac_roles'
+down_revision = '0002_schema_alignment'
 branch_labels = None
 depends_on = None
 
 
 def upgrade() -> None:
+    bind = op.get_bind()
     op.add_column('menu_items', sa.Column('inventory_item_id', sa.Integer(), nullable=True))
-    op.create_foreign_key('fk_menu_items_inventory_item_id', 'menu_items', 'inventory_items', ['inventory_item_id'], ['id'])
+    if bind.dialect.name != "sqlite":
+        op.create_foreign_key('fk_menu_items_inventory_item_id', 'menu_items', 'inventory_items', ['inventory_item_id'], ['id'])
 
     op.create_table(
         'purchase_receipts',
@@ -41,7 +43,9 @@ def upgrade() -> None:
 
 
 def downgrade() -> None:
+    bind = op.get_bind()
     op.drop_table('purchase_receipt_items')
     op.drop_table('purchase_receipts')
-    op.drop_constraint('fk_menu_items_inventory_item_id', 'menu_items', type_='foreignkey')
+    if bind.dialect.name != "sqlite":
+        op.drop_constraint('fk_menu_items_inventory_item_id', 'menu_items', type_='foreignkey')
     op.drop_column('menu_items', 'inventory_item_id')
