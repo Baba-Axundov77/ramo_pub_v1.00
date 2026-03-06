@@ -31,10 +31,10 @@ def _index_exists(table_name: str, index_name: str) -> bool:
 
 
 def upgrade() -> None:
-    _add_column_if_missing("inventory_items", sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("1")))
-    _add_column_if_missing("customers", sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("1")))
-    _add_column_if_missing("shifts", sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("1")))
-    _add_column_if_missing("purchase_receipts", sa.Column("is_cancelled", sa.Boolean(), nullable=False, server_default=sa.text("0")))
+    _add_column_if_missing("inventory_items", sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")))
+    _add_column_if_missing("customers", sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")))
+    _add_column_if_missing("shifts", sa.Column("is_active", sa.Boolean(), nullable=False, server_default=sa.text("true")))
+    _add_column_if_missing("purchase_receipts", sa.Column("is_cancelled", sa.Boolean(), nullable=False, server_default=sa.text("false")))
 
     if not _index_exists("inventory_items", "ix_inventory_items_is_active"):
         op.create_index("ix_inventory_items_is_active", "inventory_items", ["is_active"], unique=False)
