@@ -59,6 +59,8 @@ def downgrade() -> None:
         except Exception:
             pass
 
+
+def downgrade() -> None:
     for table, col in [
         ("purchase_receipts", "is_cancelled"),
         ("shifts", "is_active"),
