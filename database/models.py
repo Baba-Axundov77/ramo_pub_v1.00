@@ -1,7 +1,7 @@
 # database/models.py — Bütün Cədvəl Modelləri
 from sqlalchemy import (
     Column, Integer, String, Float, Boolean, DateTime, Text,
-    ForeignKey, Enum, Date, Time
+    ForeignKey, Enum, Date, Time, Index
 )
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
@@ -127,6 +127,10 @@ class MenuItem(Base):
 
 class Order(Base):
     __tablename__ = "orders"
+    __table_args__ = (
+        Index("ix_orders_created_at_status", "created_at", "status"),
+        Index("ix_orders_table_id_status_created_at", "table_id", "status", "created_at"),
+    )
 
     id             = Column(Integer, primary_key=True, index=True)
     table_id       = Column(Integer, ForeignKey("tables.id"))
@@ -174,6 +178,9 @@ class OrderItem(Base):
 
 class Payment(Base):
     __tablename__ = "payments"
+    __table_args__ = (
+        Index("ix_payments_created_at_method", "created_at", "method"),
+    )
 
     id             = Column(Integer, primary_key=True, index=True)
     order_id       = Column(Integer, ForeignKey("orders.id"), unique=True)
@@ -306,6 +313,9 @@ class Customer(Base):
 
 class Reservation(Base):
     __tablename__ = "reservations"
+    __table_args__ = (
+        Index("ix_reservations_date_table_id_is_cancelled", "date", "table_id", "is_cancelled"),
+    )
 
     id            = Column(Integer, primary_key=True, index=True)
     table_id      = Column(Integer, ForeignKey("tables.id"))
