@@ -1,7 +1,7 @@
 from __future__ import annotations
 from typing import List, Optional, Tuple
 from datetime import datetime
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, selectinload
 from sqlalchemy import func
 
 from database.models import (
@@ -175,6 +175,7 @@ class InventoryService:
     def list_purchase_receipts(self, db: Session, limit: int = 100):
         return (
             db.query(PurchaseReceipt)
+            .options(selectinload(PurchaseReceipt.items).selectinload(PurchaseReceiptItem.inventory_item))
             .filter(PurchaseReceipt.is_cancelled == False)
             .order_by(PurchaseReceipt.purchased_at.desc(), PurchaseReceipt.id.desc())
             .limit(limit)
