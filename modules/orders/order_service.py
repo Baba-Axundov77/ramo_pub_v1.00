@@ -120,7 +120,7 @@ class OrderService:
         if not oi:
             return False, "Tapılmadı."
         order = self.get_order(db, oi.order_id)
-        db.delete(oi)
+        oi.status = OrderStatus.cancelled
         self._recalculate(db, order)
         db.commit()
         db.refresh(order)

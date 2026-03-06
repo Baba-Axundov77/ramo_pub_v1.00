@@ -47,7 +47,7 @@ class StaffService:
 
     def get_shifts(self, db: Session, user_id: Optional[int] = None,
                    target_date: Optional[date] = None) -> List[Shift]:
-        q = db.query(Shift)
+        q = db.query(Shift).filter(Shift.is_active == True)
         if user_id:
             q = q.filter(Shift.user_id == user_id)
         if target_date:
@@ -74,11 +74,12 @@ class StaffService:
             return False, str(e)
 
     def delete_shift(self, db: Session, shift_id: int) -> Tuple[bool, str]:
-        shift = db.query(Shift).filter(Shift.id == shift_id).first()
+        shift = db.query(Shift).filter(Shift.id == shift_id, Shift.is_active == True).first()
         if not shift:
             return False, "Novbe tapilmadi."
-        db.delete(shift); db.commit()
-        return True, "Novbe silindi."
+        shift.is_active = False
+        db.commit()
+        return True, "Novbe arxivləndi."
 
     def get_today_shifts(self, db: Session) -> List[Shift]:
         return self.get_shifts(db, target_date=date.today())

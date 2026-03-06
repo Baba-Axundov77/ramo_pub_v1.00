@@ -42,7 +42,7 @@ class LoyaltyService:
     def get_all_customers(
         self, db: Session, search: str = ""
     ) -> List[Customer]:
-        q = db.query(Customer)
+        q = db.query(Customer).filter(Customer.is_active == True)
         if search:
             q = q.filter(
                 (Customer.full_name.ilike(f"%{search}%")) |
@@ -53,12 +53,18 @@ class LoyaltyService:
     def get_customer(
         self, db: Session, customer_id: int
     ) -> Optional[Customer]:
-        return db.query(Customer).filter(Customer.id == customer_id).first()
+        return db.query(Customer).filter(
+            Customer.id == customer_id,
+            Customer.is_active == True,
+        ).first()
 
     def get_by_phone(
         self, db: Session, phone: str
     ) -> Optional[Customer]:
-        return db.query(Customer).filter(Customer.phone == phone).first()
+        return db.query(Customer).filter(
+            Customer.phone == phone,
+            Customer.is_active == True,
+        ).first()
 
     def create_customer(
         self,
@@ -102,9 +108,9 @@ class LoyaltyService:
         customer = self.get_customer(db, customer_id)
         if not customer:
             return False, "Tapılmadı."
-        db.delete(customer)
+        customer.is_active = False
         db.commit()
-        return True, "Müştəri silindi."
+        return True, "Müştəri arxivləndi."
 
     # ── XALLAR ────────────────────────────────────────────────────────────────
 
@@ -226,9 +232,9 @@ class LoyaltyService:
         disc = db.query(Discount).filter(Discount.id == disc_id).first()
         if not disc:
             return False, "Tapılmadı."
-        db.delete(disc)
+        disc.is_active = False
         db.commit()
-        return True, "Endirim silindi."
+        return True, "Endirim deaktiv edildi."
 
     # ── STATİSTİKA ────────────────────────────────────────────────────────────
 

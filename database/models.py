@@ -207,6 +207,7 @@ class InventoryItem(Base):
     min_quantity  = Column(Float, default=5.0)  # minimum xəbərdarlıq
     cost_per_unit = Column(Float, default=0.0)
     supplier      = Column(String(100))
+    is_active     = Column(Boolean, default=True)
     last_updated  = Column(DateTime, server_default=func.now(), onupdate=func.now())
 
     menu_items = relationship("MenuItem", back_populates="inventory_item")
@@ -255,6 +256,7 @@ class PurchaseReceipt(Base):
     store_name = Column(String(120), nullable=True)
     note = Column(Text, nullable=True)
     total_amount = Column(Float, nullable=False, default=0.0)
+    is_cancelled = Column(Boolean, default=False)
     created_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     created_at = Column(DateTime, server_default=func.now())
 
@@ -287,6 +289,7 @@ class Shift(Base):
     date       = Column(Date, nullable=False)
     start_time = Column(Time)
     end_time   = Column(Time)
+    is_active  = Column(Boolean, default=True)
     notes      = Column(Text)
 
     user = relationship("User", back_populates="shifts")
@@ -304,6 +307,7 @@ class Customer(Base):
     points       = Column(Integer, default=0)
     total_spent  = Column(Float, default=0.0)
     birthday     = Column(Date, nullable=True)
+    is_active    = Column(Boolean, default=True)
     created_at   = Column(DateTime, server_default=func.now())
 
     orders = relationship("Order", back_populates="customer")
