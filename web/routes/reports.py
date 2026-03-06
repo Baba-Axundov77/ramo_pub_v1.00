@@ -1,6 +1,6 @@
 # web/routes/reports.py
 from __future__ import annotations
-from datetime import date, timedelta
+from datetime import date
 from flask import Blueprint, render_template, session, redirect, url_for, g, jsonify, request
 from modules.reports.report_service import ReportService
 from modules.orders.order_service import OrderService
@@ -52,20 +52,8 @@ def api_monthly():
 @permission_required_api("view_reports")
 def api_weekly():
     """Son 7 günün gəliri"""
-    today = date.today()
-    labels = []
-    values = []
-    day_names = ['B.e.', 'Çər.e', 'Çər.', 'Cüm.e', 'Cüm.', 'Şən.', 'Baz.']
-    for i in range(6, -1, -1):
-        d = today - timedelta(days=i)
-        data = svc.daily_summary(g.db, d)
-        labels.append(day_names[d.weekday()] + '\n' + d.strftime('%d/%m'))
-        values.append(round(data["revenue"], 2))
-    return jsonify({
-        "labels": labels,
-        "values": values,
-        "total":  sum(values),
-    })
+    data = svc.weekly_summary(g.db, date.today())
+    return jsonify(data)
 
 @bp.route("/api/hourly")
 @permission_required_api("view_reports")
