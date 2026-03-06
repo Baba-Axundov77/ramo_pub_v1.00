@@ -108,7 +108,7 @@ def api_create():
 @bp.route("/api/<int:order_id>")
 @permission_required_api("take_orders")
 def api_get(order_id: int):
-    order = svc.get_order(g.db, order_id)
+    order = svc.get_order_with_details(g.db, order_id)
     if not order:
         return jsonify({"ok": False, "msg": "Sifariş tapılmadı"}), 404
 
@@ -260,7 +260,7 @@ def api_pay(order_id: int):
     discount_code = data.get("discount_code", "")
 
     # Sifarişi əvvəlcə yüklə (çek məlumatları üçün)
-    order = svc.get_order(g.db, order_id)
+    order = svc.get_order_with_details(g.db, order_id)
     if not order:
         return jsonify({"ok": False, "msg": "Sifariş tapılmadı"}), 404
 
