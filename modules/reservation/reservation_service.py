@@ -34,45 +34,59 @@ class ReservationService:
     def create(self, db: Session, table_id: int, customer_name: str,
                customer_phone: str, res_date: date, res_time: time,
                guest_count: int = 2, notes: str = "") -> Tuple[bool, object]:
-        window_start, window_end = self._time_window(res_time, duration_hours=2)
-        conflict = db.query(Reservation).filter(
-            Reservation.table_id == table_id,
-            Reservation.date == res_date,
-            Reservation.is_cancelled == False,
-            Reservation.time >= window_start,
-            Reservation.time <= window_end,
-        ).order_by(Reservation.time.asc()).first()
-        if conflict:
-            return False, (f"Bu masa {res_date} tarixde saat "
-                           f"{conflict.time.strftime('%H:%M')}-da artiq rezerv edilib.")
-        res = Reservation(
-            table_id       = table_id,
-            customer_name  = customer_name,
-            customer_phone = customer_phone,
-            date           = res_date,
-            time           = res_time,
-            guest_count    = guest_count,
-            notes          = notes,
-            is_confirmed   = True,
-        )
-        db.add(res); db.commit(); db.refresh(res)
-        return True, res
+        try:
+            window_start, window_end = self._time_window(res_time, duration_hours=2)
+            conflict = db.query(Reservation).filter(
+                Reservation.table_id == table_id,
+                Reservation.date == res_date,
+                Reservation.is_cancelled == False,
+                Reservation.time >= window_start,
+                Reservation.time <= window_end,
+            ).order_by(Reservation.time.asc()).first()
+            if conflict:
+                return False, (f"Bu masa {res_date} tarixde saat "
+                               f"{conflict.time.strftime('%H:%M')}-da artiq rezerv edilib.")
+            res = Reservation(
+                table_id=table_id,
+                customer_name=customer_name,
+                customer_phone=customer_phone,
+                date=res_date,
+                time=res_time,
+                guest_count=guest_count,
+                notes=notes,
+                is_confirmed=True,
+            )
+            db.add(res)
+            db.commit()
+            db.refresh(res)
+            return True, res
+        except Exception as e:
+            db.rollback()
+            return False, f"Rezervasiya yaradılarkən xəta: {str(e)}"
 
     def confirm(self, db: Session, res_id: int) -> Tuple[bool, object]:
-        res = self.get_by_id(db, res_id)
-        if not res:
-            return False, "Rezervasiya tapilmadi."
-        res.is_confirmed = True
-        db.commit()
-        return True, res
+        try:
+            res = self.get_by_id(db, res_id)
+            if not res:
+                return False, "Rezervasiya tapilmadi."
+            res.is_confirmed = True
+            db.commit()
+            return True, res
+        except Exception as e:
+            db.rollback()
+            return False, f"Rezervasiya təsdiqlənərkən xəta: {str(e)}"
 
     def cancel(self, db: Session, res_id: int) -> Tuple[bool, str]:
-        res = self.get_by_id(db, res_id)
-        if not res:
-            return False, "Tapilmadi."
-        res.is_cancelled = True
-        db.commit()
-        return True, "Rezervasiya legv edildi."
+        try:
+            res = self.get_by_id(db, res_id)
+            if not res:
+                return False, "Tapilmadi."
+            res.is_cancelled = True
+            db.commit()
+            return True, "Rezervasiya legv edildi."
+        except Exception as e:
+            db.rollback()
+            return False, f"Rezervasiya legv edilərkən xəta: {str(e)}"
 
     def get_today(self, db: Session) -> List[Reservation]:
         return self.get_all(db, target_date=date.today())
@@ -84,7 +98,7 @@ class ReservationService:
         ).count()
 
     def get_available_tables(self, db: Session, res_date: date,
-                              res_time: time, duration_hours: int = 2) -> List[Table]:
+                             res_time: time, duration_hours: int = 2) -> List[Table]:
         window_start, window_end = self._time_window(res_time, duration_hours=duration_hours)
         reserved_table_ids = (
             db.query(Reservation.table_id)

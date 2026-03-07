@@ -53,10 +53,12 @@ class InventoryService:
             )
         )
 
-    def get_all(self, db: Session, low_stock_only: bool = False) -> List[InventoryItem]:
+    def get_all(self, db: Session, low_stock_only: bool = False, limit: int = None) -> List[InventoryItem]:
         q = db.query(InventoryItem).filter(InventoryItem.is_active == True)
         if low_stock_only:
             q = q.filter(InventoryItem.quantity <= InventoryItem.min_quantity)
+        if limit:
+            q = q.limit(limit)
         return q.order_by(InventoryItem.name).all()
 
     def get_by_id(self, db: Session, item_id: int) -> Optional[InventoryItem]:
@@ -134,43 +136,51 @@ class InventoryService:
                                 created_by: int | None, lines: list[dict]):
         if not lines:
             return False, "Çek üçün ən azı 1 məhsul olmalıdır."
-        receipt = PurchaseReceipt(purchased_at=purchased_at, store_name=store_name or None,
-                                  note=note or None, total_amount=0.0, created_by=created_by)
-        db.add(receipt)
-        total = 0.0
-        for line in lines:
-            name = (line.get("name") or "").strip()
-            if not name:
-                continue
-            qty = float(line.get("quantity") or 0)
-            unit_cost = float(line.get("unit_cost") or 0)
-            unit = normalize_unit(line.get("unit") or "ədəd")
-            if qty <= 0:
-                continue
-            inv = self.get_by_name(db, name)
-            if not inv:
-                inv = InventoryItem(name=name, unit=unit, quantity=0.0, cost_per_unit=unit_cost)
-                db.add(inv)
-                db.flush()
+        try:
+            receipt = PurchaseReceipt(purchased_at=purchased_at, store_name=store_name or None,
+                                      note=note or None, total_amount=0.0, created_by=created_by)
+            db.add(receipt)
+            db.flush()  # Get ID without committing
+            
+            total = 0.0
+            for line in lines:
+                name = (line.get("name") or "").strip()
+                if not name:
+                    continue
+                qty = float(line.get("quantity") or 0)
+                unit_cost = float(line.get("unit_cost") or 0)
+                unit = normalize_unit(line.get("unit") or "ədəd")
+                if qty <= 0:
+                    continue
+                inv = self.get_by_name(db, name)
+                if not inv:
+                    inv = InventoryItem(name=name, unit=unit, quantity=0.0, cost_per_unit=unit_cost)
+                    db.add(inv)
+                    db.flush()
 
-            ok, qty_in_inv_unit, msg = convert_quantity(qty, unit, inv.unit)
-            if not ok:
-                return False, f"{name}: {msg}"
+                ok, qty_in_inv_unit, msg = convert_quantity(qty, unit, inv.unit)
+                if not ok:
+                    db.rollback()
+                    return False, f"{name}: {msg}"
 
-            inv.quantity += qty_in_inv_unit
-            inv.cost_per_unit = unit_cost
-            if not inv.unit:
-                inv.unit = unit
-            line_total = qty * unit_cost
-            total += line_total
-            db.add(PurchaseReceiptItem(receipt=receipt, inventory_item_id=inv.id, item_name=name,
-                                       unit=unit, quantity=qty, unit_cost=unit_cost, line_total=line_total))
-            self._log_adjustment(db, item_id=inv.id, delta=qty_in_inv_unit, unit=inv.unit,
-                                 adjustment_type="purchase", reason="Alış çeki",
-                                 reference=f"receipt:{receipt.id}", created_by=created_by)
-        receipt.total_amount = total
-        db.commit(); db.refresh(receipt)
-        return True, receipt
+                inv.quantity += qty_in_inv_unit
+                inv.cost_per_unit = unit_cost
+                if not inv.unit:
+                    inv.unit = unit
+                line_total = qty * unit_cost
+                total += line_total
+                db.add(PurchaseReceiptItem(receipt=receipt, inventory_item_id=inv.id, item_name=name,
+                                           unit=unit, quantity=qty, unit_cost=unit_cost, line_total=line_total))
+                self._log_adjustment(db, item_id=inv.id, delta=qty_in_inv_unit, unit=inv.unit,
+                                     adjustment_type="purchase", reason="Alış çeki",
+                                     reference=f"receipt:{receipt.id}", created_by=created_by)
+            receipt.total_amount = total
+            db.commit()
+            db.refresh(receipt)
+            return True, receipt
+        except Exception as e:
+            db.rollback()
+            return False, f"Alış çeki yaradılarkən xəta: {str(e)}"
 
     def list_purchase_receipts(self, db: Session, limit: int = 100):
         return (
@@ -189,22 +199,27 @@ class InventoryService:
         ).first()
 
     def delete_purchase_receipt(self, db: Session, receipt_id: int):
-        receipt = self.get_purchase_receipt(db, receipt_id)
-        if not receipt:
-            return False, "Çek tapılmadı"
-        for it in receipt.items:
-            inv = it.inventory_item
-            if inv:
-                ok, qty_in_inv_unit, msg = convert_quantity(float(it.quantity or 0.0), it.unit, inv.unit)
-                if not ok:
-                    return False, f"{it.item_name}: {msg}"
-                inv.quantity = max(0.0, (inv.quantity or 0.0) - qty_in_inv_unit)
-                self._log_adjustment(db, item_id=inv.id, delta=-qty_in_inv_unit, unit=inv.unit,
-                                     adjustment_type="rollback", reason="Çek silinməsi",
-                                     reference=f"receipt:{receipt.id}")
-        receipt.is_cancelled = True
-        db.commit()
-        return True, "Çek silindi və stok geri alındı"
+        try:
+            receipt = self.get_purchase_receipt(db, receipt_id)
+            if not receipt:
+                return False, "Çek tapılmadı"
+            for it in receipt.items:
+                inv = it.inventory_item
+                if inv:
+                    ok, qty_in_inv_unit, msg = convert_quantity(float(it.quantity or 0.0), it.unit, inv.unit)
+                    if not ok:
+                        db.rollback()
+                        return False, f"{it.item_name}: {msg}"
+                    inv.quantity = max(0.0, (inv.quantity or 0.0) - qty_in_inv_unit)
+                    self._log_adjustment(db, item_id=inv.id, delta=-qty_in_inv_unit, unit=inv.unit,
+                                         adjustment_type="rollback", reason="Çek silinməsi",
+                                         reference=f"receipt:{receipt.id}")
+            receipt.is_cancelled = True
+            db.commit()
+            return True, "Çek silindi və stok geri alındı"
+        except Exception as e:
+            db.rollback()
+            return False, f"Çek silinərkən xəta: {str(e)}"
 
     def get_low_stock_count(self, db: Session) -> int:
         return db.query(InventoryItem).filter(InventoryItem.quantity <= InventoryItem.min_quantity).count()

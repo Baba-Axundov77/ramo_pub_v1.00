@@ -77,20 +77,24 @@ class AuthService:
 
     def create_user(self, db: Session, username: str, full_name: str,
                     password: str, role: str, phone: str = None):
-        existing = db.query(User).filter(User.username == username).first()
-        if existing:
-            return False, "Bu istifadeci adi artiq movcuddur."
-        user = User(
-            username  = username,
-            full_name = full_name,
-            password  = self.hash_password(password),
-            role      = UserRole[role],
-            phone     = phone,
-        )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
-        return True, user
+        try:
+            existing = db.query(User).filter(User.username == username).first()
+            if existing:
+                return False, "Bu istifadeci adi artiq movcuddur."
+            user = User(
+                username  = username,
+                full_name = full_name,
+                password  = self.hash_password(password),
+                role      = UserRole[role],
+                phone     = phone,
+            )
+            db.add(user)
+            db.commit()
+            db.refresh(user)
+            return True, user
+        except Exception as e:
+            db.rollback()
+            return False, f"İstifadəçi yaradılarkən xəta: {str(e)}"
 
     def get_role_display(self, user: User) -> str:
         return ROLES.get(user.role.value, user.role.value)

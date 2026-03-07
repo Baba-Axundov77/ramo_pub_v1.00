@@ -8,10 +8,12 @@ from database.models import User, Shift, UserRole
 
 class StaffService:
 
-    def get_all_staff(self, db: Session, active_only: bool = True) -> List[User]:
+    def get_all_staff(self, db: Session, active_only: bool = True, limit: int = None) -> List[User]:
         q = db.query(User)
         if active_only:
             q = q.filter(User.is_active == True)
+        if limit:
+            q = q.limit(limit)
         return q.order_by(User.full_name).all()
 
     def get_user(self, db: Session, user_id: int) -> Optional[User]:
@@ -24,26 +26,34 @@ class StaffService:
         return svc.create_user(db, username, full_name, password, role, phone)
 
     def update_staff(self, db: Session, user_id: int, **kwargs) -> Tuple[bool, object]:
-        user = self.get_user(db, user_id)
-        if not user:
-            return False, "Isci tapilmadi."
-        for k, v in kwargs.items():
-            if k == "password" and v:
-                from modules.auth.auth_service import AuthService
-                v = AuthService.hash_password(v)
-                setattr(user, "password", v)
-            elif hasattr(user, k):
-                setattr(user, k, v)
-        db.commit()
-        return True, user
+        try:
+            user = self.get_user(db, user_id)
+            if not user:
+                return False, "Isci tapilmadi."
+            for k, v in kwargs.items():
+                if k == "password" and v:
+                    from modules.auth.auth_service import AuthService
+                    v = AuthService.hash_password(v)
+                    setattr(user, "password", v)
+                elif hasattr(user, k):
+                    setattr(user, k, v)
+            db.commit()
+            return True, user
+        except Exception as e:
+            db.rollback()
+            return False, f"Işçi yenilənərkən xəta: {str(e)}"
 
     def deactivate(self, db: Session, user_id: int) -> Tuple[bool, str]:
-        user = self.get_user(db, user_id)
-        if not user:
-            return False, "Tapilmadi."
-        user.is_active = False
-        db.commit()
-        return True, f"{user.full_name} deaktiv edildi."
+        try:
+            user = self.get_user(db, user_id)
+            if not user:
+                return False, "Tapilmadi."
+            user.is_active = False
+            db.commit()
+            return True, f"{user.full_name} deaktiv edildi."
+        except Exception as e:
+            db.rollback()
+            return False, f"İşçi deaktiv edilərkən xəta: {str(e)}"
 
     def get_shifts(self, db: Session, user_id: Optional[int] = None,
                    target_date: Optional[date] = None) -> List[Shift]:
@@ -57,8 +67,8 @@ class StaffService:
     def add_shift(self, db: Session, user_id: int, shift_date: date,
                   start: str = "09:00", end: str = "21:00",
                   notes: str = "") -> Tuple[bool, object]:
-        from datetime import time as dtime
         try:
+            from datetime import time as dtime
             sh, sm = map(int, start.split(":"))
             eh, em = map(int, end.split(":"))
             shift = Shift(
@@ -68,18 +78,25 @@ class StaffService:
                 end_time   = dtime(eh, em),
                 notes      = notes,
             )
-            db.add(shift); db.commit(); db.refresh(shift)
+            db.add(shift)
+            db.commit()
+            db.refresh(shift)
             return True, shift
         except Exception as e:
-            return False, str(e)
+            db.rollback()
+            return False, f"Növbə əlavə edilərkən xəta: {str(e)}"
 
     def delete_shift(self, db: Session, shift_id: int) -> Tuple[bool, str]:
-        shift = db.query(Shift).filter(Shift.id == shift_id, Shift.is_active == True).first()
-        if not shift:
-            return False, "Novbe tapilmadi."
-        shift.is_active = False
-        db.commit()
-        return True, "Novbe arxivləndi."
+        try:
+            shift = db.query(Shift).filter(Shift.id == shift_id, Shift.is_active == True).first()
+            if not shift:
+                return False, "Novbe tapilmadi."
+            shift.is_active = False
+            db.commit()
+            return True, "Novbe arxivləndi."
+        except Exception as e:
+            db.rollback()
+            return False, f"Növbə arxivlənərkən xəta: {str(e)}"
 
     def get_today_shifts(self, db: Session) -> List[Shift]:
         return self.get_shifts(db, target_date=date.today())

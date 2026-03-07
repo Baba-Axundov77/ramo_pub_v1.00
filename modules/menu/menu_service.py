@@ -78,33 +78,45 @@ class MenuService:
 
     def create_category(self, db: Session, name: str, description: str = None,
                         icon: str = "🍽️", sort_order: int = 0):
-        cat = MenuCategory(name=name, description=description, icon=icon, sort_order=sort_order)
-        db.add(cat)
-        db.commit()
-        db.refresh(cat)
-        return True, cat
+        try:
+            cat = MenuCategory(name=name, description=description, icon=icon, sort_order=sort_order)
+            db.add(cat)
+            db.commit()
+            db.refresh(cat)
+            return True, cat
+        except Exception as e:
+            db.rollback()
+            return False, f"Kateqoriya yaradılarkən xəta: {str(e)}"
 
     def update_category(self, db: Session, cat_id: int, **kwargs):
-        cat = db.query(MenuCategory).filter(MenuCategory.id == cat_id).first()
-        if not cat:
-            return False, "Kateqoriya tapılmadı."
-        for k, v in kwargs.items():
-            if hasattr(cat, k):
-                setattr(cat, k, v)
-        db.commit()
-        db.refresh(cat)
-        return True, cat
+        try:
+            cat = db.query(MenuCategory).filter(MenuCategory.id == cat_id).first()
+            if not cat:
+                return False, "Kateqoriya tapılmadı."
+            for k, v in kwargs.items():
+                if hasattr(cat, k):
+                    setattr(cat, k, v)
+            db.commit()
+            db.refresh(cat)
+            return True, cat
+        except Exception as e:
+            db.rollback()
+            return False, f"Kateqoriya yenilənərkən xəta: {str(e)}"
 
     def delete_category(self, db: Session, cat_id: int):
-        cat = db.query(MenuCategory).filter(MenuCategory.id == cat_id).first()
-        if not cat:
-            return False, "Kateqoriya tapılmadı."
-        items = db.query(MenuItem).filter(MenuItem.category_id == cat_id, MenuItem.is_active == True).count()
-        if items > 0:
-            return False, f"Bu kateqoriyada {items} aktiv məhsul var."
-        cat.is_active = False
-        db.commit()
-        return True, "Kateqoriya silindi."
+        try:
+            cat = db.query(MenuCategory).filter(MenuCategory.id == cat_id).first()
+            if not cat:
+                return False, "Kateqoriya tapılmadı."
+            items = db.query(MenuItem).filter(MenuItem.category_id == cat_id, MenuItem.is_active == True).count()
+            if items > 0:
+                return False, f"Bu kateqoriyada {items} aktiv məhsul var."
+            cat.is_active = False
+            db.commit()
+            return True, "Kateqoriya silindi."
+        except Exception as e:
+            db.rollback()
+            return False, f"Kateqoriya silinərkən xəta: {str(e)}"
 
     def get_items(self, db: Session, category_id: int = None, active_only: bool = True, available_only: bool = False):
         q = db.query(MenuItem).options(
@@ -162,11 +174,23 @@ class MenuService:
         db.flush()
 
         if recipe_lines is not None:
-            self.replace_recipes(db, item.id, recipe_lines)
+            try:
+                self.replace_recipes(db, item.id, recipe_lines)
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                return False, f"Recipe xətası: {str(e)}"
         else:
-            db.commit()
-        db.refresh(item)
-        return True, item
+            try:
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                return False, f"Məhsul saxlanılarkən xəta: {str(e)}"
+        try:
+            db.refresh(item)
+            return True, item
+        except Exception as e:
+            return False, f"Məhsul məlumatları yenilənərkən xəta: {str(e)}"
 
     def update_item(self, db: Session, item_id: int, **kwargs):
         item = self.get_item(db, item_id)
@@ -193,11 +217,23 @@ class MenuService:
                 setattr(item, k, v)
 
         if recipe_lines is not None:
-            self.replace_recipes(db, item.id, recipe_lines)
+            try:
+                self.replace_recipes(db, item.id, recipe_lines)
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                return False, f"Recipe xətası: {str(e)}"
         else:
-            db.commit()
-        db.refresh(item)
-        return True, item
+            try:
+                db.commit()
+            except Exception as e:
+                db.rollback()
+                return False, f"Məhsul saxlanılarkən xəta: {str(e)}"
+        try:
+            db.refresh(item)
+            return True, item
+        except Exception as e:
+            return False, f"Məhsul məlumatları yenilənərkən xəta: {str(e)}"
 
     def get_item_recipes(self, db: Session, menu_item_id: int):
         today = date.today()
@@ -210,48 +246,60 @@ class MenuService:
         )
 
     def replace_recipes(self, db: Session, menu_item_id: int, recipe_lines: list[dict]):
-        today = date.today()
-        active_rows = db.query(MenuItemRecipe).filter(
-            MenuItemRecipe.menu_item_id == menu_item_id,
-            MenuItemRecipe.is_active == True,
-        ).all()
-        for row in active_rows:
-            row.is_active = False
-            row.valid_until = today
+        try:
+            today = date.today()
+            active_rows = db.query(MenuItemRecipe).filter(
+                MenuItemRecipe.menu_item_id == menu_item_id,
+                MenuItemRecipe.is_active == True,
+            ).all()
+            for row in active_rows:
+                row.is_active = False
+                row.valid_until = today
 
-        for line in recipe_lines or []:
-            inv_id = int(line.get("inventory_item_id") or 0)
-            qty = float(line.get("quantity_per_unit") or 0)
-            qty_unit = (line.get("quantity_unit") or "").strip() or None
-            if inv_id <= 0 or qty <= 0:
-                continue
-            db.add(
-                MenuItemRecipe(
-                    menu_item_id=menu_item_id,
-                    inventory_item_id=inv_id,
-                    quantity_per_unit=qty,
-                    quantity_unit=qty_unit,
-                    valid_from=today,
-                    is_active=True,
+            for line in recipe_lines or []:
+                inv_id = int(line.get("inventory_item_id") or 0)
+                qty = float(line.get("quantity_per_unit") or 0)
+                qty_unit = (line.get("quantity_unit") or "").strip() or None
+                if inv_id <= 0 or qty <= 0:
+                    continue
+                db.add(
+                    MenuItemRecipe(
+                        menu_item_id=menu_item_id,
+                        inventory_item_id=inv_id,
+                        quantity_per_unit=qty,
+                        quantity_unit=qty_unit,
+                        valid_from=today,
+                        is_active=True,
+                    )
                 )
-            )
-        db.commit()
+            db.commit()
+        except Exception as e:
+            db.rollback()
+            raise
 
     def toggle_available(self, db: Session, item_id: int):
-        item = self.get_item(db, item_id)
-        if not item:
-            return False, "Tapılmadı."
-        item.is_available = not item.is_available
-        db.commit()
-        return True, item
+        try:
+            item = self.get_item(db, item_id)
+            if not item:
+                return False, "Tapılmadı."
+            item.is_available = not item.is_available
+            db.commit()
+            return True, item
+        except Exception as e:
+            db.rollback()
+            return False, f"Məhsul statusu dəyişdirilərkən xəta: {str(e)}"
 
     def delete_item(self, db: Session, item_id: int):
-        item = self.get_item(db, item_id)
-        if not item:
-            return False, "Tapılmadı."
-        item.is_active = False
-        db.commit()
-        return True, "Məhsul silindi."
+        try:
+            item = self.get_item(db, item_id)
+            if not item:
+                return False, "Tapılmadı."
+            item.is_active = False
+            db.commit()
+            return True, "Məhsul silindi."
+        except Exception as e:
+            db.rollback()
+            return False, f"Məhsul silinərkən xəta: {str(e)}"
 
 
 menu_service = MenuService()

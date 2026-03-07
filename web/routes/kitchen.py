@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from flask import Blueprint, g, jsonify, render_template
 
-from modules.orders.kitchen_service import kitchen_service
+from modules.kitchen.realtime_kds_service import RealTimeKDSService
 from web.auth import permission_required, permission_required_api
 
 kitchen_bp = Blueprint("kitchen", __name__, url_prefix="/kitchen")
@@ -11,14 +11,18 @@ kitchen_bp = Blueprint("kitchen", __name__, url_prefix="/kitchen")
 @kitchen_bp.route("/")
 @permission_required("manage_kitchen")
 def index():
-    queue = kitchen_service.get_queue(g.db)
+    kds_service = RealTimeKDSService(g.db)
+    queue_result = kds_service.get_kitchen_queue()
+    queue = queue_result.get('queue', [])
     return render_template("kitchen/index.html", queue=queue)
 
 
 @kitchen_bp.route("/api/queue")
 @permission_required_api("manage_kitchen")
 def api_queue():
-    queue = kitchen_service.get_queue(g.db)
+    kds_service = RealTimeKDSService(g.db)
+    queue_result = kds_service.get_kitchen_queue()
+    queue = queue_result.get('queue', [])
     payload = []
     for order in queue:
         payload.append(

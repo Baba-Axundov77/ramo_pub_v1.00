@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List, Dict, Optional
 from datetime import date, datetime, timedelta
 from sqlalchemy.orm import Session, joinedload, selectinload
-from sqlalchemy import func
+from sqlalchemy import func, extract
 from database.models import (
     Payment, Order, OrderItem, MenuItem,
     MenuCategory, OrderStatus, PaymentMethod
@@ -56,20 +56,20 @@ class ReportService:
             .one()
         )
         orders_total = (
-            db.query(func.count(Order.id))
-            .filter(Order.created_at >= start, Order.created_at < end)
-            .scalar()
-            or 0
+                db.query(func.count(Order.id))
+                .filter(Order.created_at >= start, Order.created_at < end)
+                .scalar()
+                or 0
         )
         by_method = self._method_totals(db, start, end)
         return {
-            "date":         target_date,
-            "revenue":      float(revenue or 0.0),
-            "discounts":    float(discounts or 0.0),
+            "date": target_date,
+            "revenue": float(revenue or 0.0),
+            "discounts": float(discounts or 0.0),
             "orders_total": int(orders_total),
-            "orders_paid":  int(orders_paid or 0),
-            "avg_check":    (float(revenue or 0.0) / float(orders_paid)) if orders_paid else 0.0,
-            "by_method":    by_method,
+            "orders_paid": int(orders_paid or 0),
+            "avg_check": (float(revenue or 0.0) / float(orders_paid)) if orders_paid else 0.0,
+            "by_method": by_method,
         }
 
     def monthly_summary(self, db: Session, year: int, month: int) -> Dict:
@@ -91,20 +91,20 @@ class ReportService:
             total_revenue += amount
 
         payments_count = (
-            db.query(func.count(Payment.id))
-            .filter(Payment.created_at >= start, Payment.created_at < end)
-            .scalar()
-            or 0
+                db.query(func.count(Payment.id))
+                .filter(Payment.created_at >= start, Payment.created_at < end)
+                .scalar()
+                or 0
         )
-        days   = list(range(1, last_day + 1))
+        days = list(range(1, last_day + 1))
         values = [daily.get(d, 0.0) for d in days]
         return {
-            "year":    year,
-            "month":   month,
+            "year": year,
+            "month": month,
             "revenue": total_revenue,
-            "count":   int(payments_count),
-            "days":    days,
-            "values":  values,
+            "count": int(payments_count),
+            "days": days,
+            "values": values,
         }
 
     def top_items(self, db: Session, limit: int = 10,
@@ -130,7 +130,7 @@ class ReportService:
         ]
 
     def category_breakdown(self, db: Session,
-                            since_date: Optional[date] = None) -> List[Dict]:
+                           since_date: Optional[date] = None) -> List[Dict]:
         q = (
             db.query(
                 MenuCategory.name,
@@ -151,25 +151,32 @@ class ReportService:
     def yearly_summary(self, db: Session, year: int) -> Dict:
         start = datetime(year, 1, 1)
         end = datetime(year + 1, 1, 1)
-        rows = (
-            db.query(Payment.created_at, Payment.final_amount)
+
+        # SQL aqreqasiyası ilə aylıq məlumatları birbaşa hesabla
+        monthly_data = (
+            db.query(
+                extract('month', Payment.created_at).label('month'),
+                func.coalesce(func.sum(Payment.final_amount), 0.0).label('revenue'),
+                func.count(Payment.id).label('orders')
+            )
             .filter(Payment.created_at >= start, Payment.created_at < end)
+            .group_by(extract('month', Payment.created_at))
             .all()
         )
+
         monthly_revenue: List[float] = [0.0 for _ in range(12)]
         monthly_orders: List[int] = [0 for _ in range(12)]
-        for created_at, final_amount in rows:
-            if not created_at:
-                continue
-            idx = created_at.month - 1
-            monthly_revenue[idx] += float(final_amount or 0.0)
-            monthly_orders[idx] += 1
+
+        for month, revenue, orders in monthly_data:
+            idx = int(month) - 1
+            monthly_revenue[idx] = float(revenue or 0.0)
+            monthly_orders[idx] = int(orders or 0)
         return {
-            "year":            year,
+            "year": year,
             "monthly_revenue": monthly_revenue,
-            "monthly_orders":  monthly_orders,
-            "total_revenue":   sum(monthly_revenue),
-            "total_orders":    sum(monthly_orders),
+            "monthly_orders": monthly_orders,
+            "total_revenue": sum(monthly_revenue),
+            "total_orders": sum(monthly_orders),
         }
 
     def weekly_summary(self, db: Session, target_date: date) -> Dict:
@@ -194,7 +201,6 @@ class ReportService:
             "values": values,
             "total": sum(values),
         }
-
 
     def completed_sales(self, db: Session, target_date: date, limit: int = 50) -> List[Dict]:
         start = datetime.combine(target_date, datetime.min.time())
@@ -240,17 +246,17 @@ class ReportService:
 
     def hourly_heatmap(self, db: Session, target_date: date) -> Dict:
         start = datetime.combine(target_date, datetime.min.time())
-        end   = datetime.combine(target_date, datetime.max.time())
+        end = datetime.combine(target_date, datetime.max.time())
         orders = db.query(Order).filter(
             Order.created_at >= start,
             Order.created_at <= end,
-            Order.status     != OrderStatus.cancelled,
+            Order.status != OrderStatus.cancelled,
         ).all()
         hourly: Dict[int, int] = {h: 0 for h in range(24)}
         for o in orders:
             hourly[o.created_at.hour] += 1
         return {
-            "hours":  list(range(24)),
+            "hours": list(range(24)),
             "counts": [hourly[h] for h in range(24)],
         }
 

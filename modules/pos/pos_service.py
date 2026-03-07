@@ -28,68 +28,73 @@ class POSService:
         Ödənişi icra et.
         Qaytarır: (True, payment_obj) | (False, xəta_mesajı)
         """
-        order = (
-            db.query(Order)
-            .options(
-                joinedload(Order.table),
-                selectinload(Order.items).joinedload(OrderItem.menu_item),
+        try:
+            order = (
+                db.query(Order)
+                .options(
+                    joinedload(Order.table),
+                    selectinload(Order.items).joinedload(OrderItem.menu_item),
+                )
+                .filter(Order.id == order_id)
+                .first()
             )
-            .filter(Order.id == order_id)
-            .first()
-        )
-        if not order:
-            return False, "Sifariş tapılmadı."
-        if order.status == OrderStatus.paid:
-            return False, "Bu sifariş artıq ödənilib."
-        if order.status == OrderStatus.cancelled:
-            return False, "Ləğv edilmiş sifariş ödənilə bilməz."
+            if not order:
+                return False, "Sifariş tapılmadı."
+            if order.status == OrderStatus.paid:
+                return False, "Bu sifariş artıq ödənilib."
+            if order.status == OrderStatus.cancelled:
+                return False, "Ləğv edilmiş sifariş ödənilə bilməz."
 
-        discount_amount = order.discount_amount or 0.0
+            discount_amount = order.discount_amount or 0.0
 
-        if discount_code:
-            ok, disc_result = self._apply_discount_code(db, order, discount_code)
-            if ok:
-                discount_amount += disc_result
-            else:
-                return False, disc_result
+            if discount_code:
+                ok, disc_result = self._apply_discount_code(db, order, discount_code)
+                if ok:
+                    discount_amount += disc_result
+                else:
+                    return False, disc_result
 
-        if loyalty_points_used > 0 and order.customer_id:
-            ok, points_value = self._use_loyalty_points(
-                db, order.customer_id, loyalty_points_used
+            if loyalty_points_used > 0 and order.customer_id:
+                ok, points_value = self._use_loyalty_points(
+                    db, order.customer_id, loyalty_points_used
+                )
+                if ok:
+                    discount_amount += points_value
+
+            final_amount = max(0.0, order.subtotal - discount_amount)
+            order.discount_amount = discount_amount
+            order.total = final_amount
+
+            ok, stock_result = self._consume_inventory_for_order(db, order)
+            if not ok:
+                db.rollback()
+                return False, stock_result
+
+            payment = Payment(
+                order_id=order_id,
+                amount=order.subtotal,
+                discount_amount=discount_amount,
+                final_amount=final_amount,
+                method=PaymentMethod[method],
+                cashier_id=cashier_id,
             )
-            if ok:
-                discount_amount += points_value
+            db.add(payment)
 
-        final_amount = max(0.0, order.subtotal - discount_amount)
-        order.discount_amount = discount_amount
-        order.total = final_amount
+            order.status = OrderStatus.paid
+            order.paid_at = datetime.now()
+            if order.table:
+                from database.models import TableStatus
+                order.table.status = TableStatus.available
 
-        ok, stock_result = self._consume_inventory_for_order(db, order)
-        if not ok:
-            return False, stock_result
+            if order.customer_id:
+                self._earn_loyalty_points(db, order.customer_id, final_amount)
 
-        payment = Payment(
-            order_id=order_id,
-            amount=order.subtotal,
-            discount_amount=discount_amount,
-            final_amount=final_amount,
-            method=PaymentMethod[method],
-            cashier_id=cashier_id,
-        )
-        db.add(payment)
-
-        order.status = OrderStatus.paid
-        order.paid_at = datetime.now()
-        if order.table:
-            from database.models import TableStatus
-            order.table.status = TableStatus.available
-
-        if order.customer_id:
-            self._earn_loyalty_points(db, order.customer_id, final_amount)
-
-        db.commit()
-        db.refresh(payment)
-        return True, payment
+            db.commit()
+            db.refresh(payment)
+            return True, payment
+        except Exception as e:
+            db.rollback()
+            return False, f"Ödəniş zamanı xəta: {str(e)}"
 
     def _consume_inventory_for_order(self, db: Session, order: Order):
         shortages: list[str] = []
@@ -100,44 +105,44 @@ class POSService:
         if not active_items:
             return True, None
 
+        # Bulk load all recipe lines and inventory items at once
         menu_item_ids = {oi.menu_item_id for oi in active_items if oi.menu_item_id}
         today = date.today()
+        
+        # Load all recipe lines in single query
         recipe_lines = (
             db.query(MenuItemRecipe)
             .filter(
                 MenuItemRecipe.menu_item_id.in_(menu_item_ids),
                 MenuItemRecipe.is_active == True,
-            )
-            .filter(
-                (MenuItemRecipe.valid_from == None) | (MenuItemRecipe.valid_from <= today)
-            )
-            .filter(
+                (MenuItemRecipe.valid_from == None) | (MenuItemRecipe.valid_from <= today),
                 (MenuItemRecipe.valid_until == None) | (MenuItemRecipe.valid_until >= today)
             )
             .all()
         ) if menu_item_ids else []
 
-        recipes_by_menu_item: dict[int, list[MenuItemRecipe]] = {}
-        for line in recipe_lines:
-            recipes_by_menu_item.setdefault(line.menu_item_id, []).append(line)
-
-        inventory_ids: set[int] = set()
+        # Collect all inventory IDs needed
+        inventory_ids = set()
         for line in recipe_lines:
             if line.inventory_item_id:
                 inventory_ids.add(line.inventory_item_id)
+        
         for oi in active_items:
-            menu_item = oi.menu_item
-            if not menu_item:
-                continue
-            if menu_item.inventory_item_id:
-                inventory_ids.add(menu_item.inventory_item_id)
+            if oi.menu_item and oi.menu_item.inventory_item_id:
+                inventory_ids.add(oi.menu_item.inventory_item_id)
 
+        # Bulk load all inventory items at once
         inventory_rows = (
             db.query(InventoryItem)
             .filter(InventoryItem.id.in_(inventory_ids))
             .all()
         ) if inventory_ids else []
+        
+        # Create lookup dictionaries for O(1) access
         inventory_map = {inv.id: inv for inv in inventory_rows}
+        recipes_by_menu_item = {}
+        for line in recipe_lines:
+            recipes_by_menu_item.setdefault(line.menu_item_id, []).append(line)
 
         for oi in active_items:
             menu_item = oi.menu_item
