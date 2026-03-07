@@ -2,42 +2,599 @@
 {% block title %}İşçilər{% endblock %}
 {% block breadcrumb %}İşçilər{% endblock %}
 {% block content %}
-<div class="card">
-  <h2>İşçilər</h2>
-  <form method="post" action="{{ url_for('staff.create') }}" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px;">
-    <input name="username" placeholder="username" required>
-    <input name="full_name" placeholder="Ad soyad" required>
-    <input name="password" type="password" placeholder="Şifrə" required>
-    <select name="role" id="staffRoleSelect"><option value="waiter">waiter</option><option value="cashier">cashier</option><option value="manager">manager</option><option value="kitchen">kitchen</option><option value="admin">admin</option></select>
-    <select name="role"><option value="waiter">waiter</option><option value="cashier">cashier</option><option value="manager">manager</option><option value="kitchen">kitchen</option><option value="admin">admin</option></select>
-    <select name="role"><option value="waiter">waiter</option><option value="cashier">cashier</option><option value="admin">admin</option></select>
-    <input name="phone" placeholder="Telefon">
-    <button class="btn btn-primary">Əlavə et</button>
-  </form>
-  <table class="table"><thead><tr><th>ID</th><th>Ad</th><th>Rol</th><th>Telefon</th><th>Status</th><th></th></tr></thead><tbody>
-  {% for u in users %}
-    <tr>
-      <td>{{ u.id }}</td><td>{{ u.full_name }}</td><td>{{ u.role.value }}</td><td>{{ u.phone or '-' }}</td><td>{{ 'Aktiv' if u.is_active else 'Passiv' }}</td>
-      <td>{% if u.is_active %}<form method="post" action="{{ url_for('staff.deactivate', user_id=u.id) }}"><button class="btn btn-danger">Deaktiv et</button></form>{% endif %}</td>
-    </tr>
-  {% endfor %}
-  </tbody></table>
-</div>
-<div class="card" style="margin-top:12px;">
-  <h3>Bugünkü növbələr</h3>
-  <form method="post" action="{{ url_for('staff.create_shift') }}" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;margin-bottom:10px;">
-    <select name="user_id">{% for u in users %}<option value="{{ u.id }}">{{ u.full_name }}</option>{% endfor %}</select>
-    <input name="date" type="date" required>
-    <input name="start" type="time" value="09:00">
-    <input name="end" type="time" value="21:00">
-    <input name="notes" placeholder="Qeyd">
-    <button class="btn">Növbə əlavə et</button>
-  </form>
-  <ul>{% for s in shifts %}<li>{{ s.user.full_name if s.user else '-' }} — {{ s.start_time }} - {{ s.end_time }}</li>{% else %}<li>Yoxdur</li>{% endfor %}</ul>
-</div>
-{% endblock %}
+<div class="staff-container">
+    <!-- Header Section -->
+    <div class="staff-header">
+        <div class="header-content">
+            <h1 class="page-title">👥 İşçilər İdarəetmə</h1>
+            <p class="page-description">Restoran işçilərini idarə edin, növbələri təyin edin</p>
+        </div>
+        <div class="header-stats">
+            <div class="stat-card">
+                <div class="stat-number">{{ users|length }}</div>
+                <div class="stat-label">Ümumi İşçi</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ users|selectattr('is_active')|list|length }}</div>
+                <div class="stat-label">Aktiv İşçi</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-number">{{ shifts|length }}</div>
+                <div class="stat-label">Bugünkü Növbə</div>
+            </div>
+        </div>
+    </div>
 
-{% block extra_js %}<script>
-const roleSelects=document.querySelectorAll('form[action="{{ url_for('staff.create') }}"] select[name="role"]');
-roleSelects.forEach((el,idx)=>{ if(idx>0) el.remove(); });
-</script>{% endblock %}
+    <!-- Create Staff Section -->
+    <div class="card staff-create-card">
+        <div class="card-header">
+            <h2>🆕 Yeni İşçi Əlavə Et</h2>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{{ url_for('staff.create') }}" class="staff-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="username">👤 Username</label>
+                        <input type="text" id="username" name="username" placeholder="İstifadəçi adı" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="full_name">👨‍💼 Ad Soyad</label>
+                        <input type="text" id="full_name" name="full_name" placeholder="Tam ad" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="password">🔒 Şifrə</label>
+                        <input type="password" id="password" name="password" placeholder="Şifrə" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="role">🎭 Rol</label>
+                        <select id="role" name="role" class="role-select">
+                            <option value="waiter">🍽️ Waiter</option>
+                            <option value="cashier">💰 Cashier</option>
+                            <option value="manager">👔 Manager</option>
+                            <option value="kitchen">👨‍🍳 Kitchen</option>
+                            <option value="admin">👑 Admin</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="phone">📱 Telefon</label>
+                        <input type="tel" id="phone" name="phone" placeholder="+994 XX XXX XX XX">
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary btn-large">
+                            <span class="btn-icon">➕</span>
+                            İşçi Əlavə Et
+                        </button>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Staff List Section -->
+    <div class="card staff-list-card">
+        <div class="card-header">
+            <h2>📋 İşçi Siyahısı</h2>
+            <div class="header-actions">
+                <input type="text" placeholder="🔍 İşçi axtar..." class="search-input" id="staffSearch">
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="modern-table">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Şəkil</th>
+                            <th>Ad Soyad</th>
+                            <th>Rol</th>
+                            <th>Telefon</th>
+                            <th>Status</th>
+                            <th>Əməliyyatlar</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for u in users %}
+                        <tr class="staff-row" data-name="{{ u.full_name|lower }}">
+                            <td class="staff-id">{{ u.id }}</td>
+                            <td class="staff-avatar">
+                                <div class="avatar">
+                                    <span class="avatar-text">{{ u.full_name[:2]|upper }}</span>
+                                </div>
+                            </td>
+                            <td class="staff-name">
+                                <div class="name-container">
+                                    <span class="name">{{ u.full_name }}</span>
+                                    <span class="username">@{{ u.username }}</span>
+                                </div>
+                            </td>
+                            <td class="staff-role">
+                                <span class="role-badge {{ u.role.value }}">
+                                    {% if u.role.value == 'admin' %}👑 Admin
+                                    {% elif u.role.value == 'manager' %}👔 Manager
+                                    {% elif u.role.value == 'cashier' %}💰 Cashier
+                                    {% elif u.role.value == 'kitchen' %}👨‍🍳 Kitchen
+                                    {% else %}🍽️ Waiter
+                                    {% endif %}
+                                </span>
+                            </td>
+                            <td class="staff-phone">{{ u.phone or '-' }}</td>
+                            <td class="staff-status">
+                                <span class="status-badge {{ 'active' if u.is_active else 'inactive' }}">
+                                    {{ '🟢 Aktiv' if u.is_active else '🔴 Deaktiv' }}
+                                </span>
+                            </td>
+                            <td class="staff-actions">
+                                <div class="action-buttons">
+                                    {% if u.is_active %}
+                                        <button class="btn btn-sm btn-info" onclick="viewStaff({{ u.id }})" title="Bax">
+                                            👁️
+                                        </button>
+                                        <button class="btn btn-sm btn-warning" onclick="editStaff({{ u.id }})" title="Redaktə et">
+                                            ✏️
+                                        </button>
+                                        <form method="post" action="{{ url_for('staff.deactivate', user_id=u.id) }}" class="deactivate-form">
+                                            <button type="submit" class="btn btn-sm btn-danger" title="Deaktiv et">
+                                                🚫
+                                            </button>
+                                        </form>
+                                    {% else %}
+                                        <span class="inactive-text">Deaktiv</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Shifts Section -->
+    <div class="card shifts-card">
+        <div class="card-header">
+            <h2>🕐 Bugünkü Növbələr</h2>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{{ url_for('staff.create_shift') }}" class="shift-form">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="shift_user">👤 İşçi</label>
+                        <select id="shift_user" name="user_id" class="user-select">
+                            {% for u in users %}
+                            <option value="{{ u.id }}">{{ u.full_name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="shift_date">📅 Tarix</label>
+                        <input type="date" id="shift_date" name="date" required>
+                    </div>
+                    <div class="form-group">
+                        <label for="shift_start">🕐 Başlanğıc</label>
+                        <input type="time" id="shift_start" name="start" value="09:00">
+                    </div>
+                    <div class="form-group">
+                        <label for="shift_end">🕕 Bitiş</label>
+                        <input type="time" id="shift_end" name="end" value="21:00">
+                    </div>
+                    <div class="form-group">
+                        <label for="shift_notes">📝 Qeydlər</label>
+                        <input type="text" id="shift_notes" name="notes" placeholder="Əlavə qeyd">
+                    </div>
+                    <div class="form-group">
+                        <button type="submit" class="btn btn-primary">
+                            <span class="btn-icon">➕</span>
+                            Növbə Əlavə Et
+                        </button>
+                    </div>
+                </div>
+            </form>
+            
+            <div class="shifts-list">
+                {% for s in shifts %}
+                <div class="shift-item">
+                    <div class="shift-info">
+                        <span class="shift-user">{{ s.user.full_name if s.user else '-' }}</span>
+                        <span class="shift-time">{{ s.start_time }} - {{ s.end_time }}</span>
+                    </div>
+                    <div class="shift-notes">{{ s.notes or '-' }}</div>
+                </div>
+                {% else %}
+                <div class="no-shifts">
+                    <p>📭 Bugün üçün növbə təyin edilməyib</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.staff-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header Styles */
+.staff-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    padding: 30px;
+    margin-bottom: 30px;
+    color: white;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.header-content h1 {
+    margin: 0 0 10px 0;
+    font-size: 28px;
+    font-weight: bold;
+}
+
+.header-content p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 16px;
+}
+
+.header-stats {
+    display: flex;
+    gap: 20px;
+}
+
+.stat-card {
+    background: rgba(255,255,255,0.1);
+    padding: 20px;
+    border-radius: 15px;
+    text-align: center;
+    min-width: 120px;
+    backdrop-filter: blur(10px);
+}
+
+.stat-number {
+    font-size: 32px;
+    font-weight: bold;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 14px;
+    opacity: 0.8;
+}
+
+/* Card Styles */
+.card {
+    background: white;
+    border-radius: 15px;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    margin-bottom: 30px;
+    overflow: hidden;
+}
+
+.card-header {
+    background: #f8f9fa;
+    padding: 20px 30px;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.card-header h2 {
+    margin: 0;
+    color: #495057;
+    font-size: 20px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.card-body {
+    padding: 30px;
+}
+
+/* Form Styles */
+.staff-form, .shift-form {
+    margin: 0;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 20px;
+    align-items: end;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #495057;
+    font-size: 14px;
+}
+
+.form-group input,
+.form-group select {
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+}
+
+.form-group input:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.role-select, .user-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23495057' d='M6 9L2 5l4-4 4 4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 35px;
+}
+
+/* Button Styles */
+.btn {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 10px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 14px;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+}
+
+.btn-large {
+    padding: 14px 28px;
+    font-size: 16px;
+}
+
+.btn-sm {
+    padding: 8px 12px;
+    font-size: 12px;
+    border-radius: 8px;
+}
+
+.btn-info { background: #17a2b8; color: white; }
+.btn-warning { background: #ffc107; color: #212529; }
+.btn-danger { background: #dc3545; color: white; }
+
+/* Table Styles */
+.table-responsive {
+    overflow-x: auto;
+}
+
+.modern-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.modern-table th {
+    background: #f8f9fa;
+    padding: 15px;
+    text-align: left;
+    font-weight: 600;
+    color: #495057;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.modern-table td {
+    padding: 15px;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.staff-row:hover {
+    background: #f8f9fa;
+}
+
+.staff-avatar .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-weight: bold;
+}
+
+.name-container {
+    display: flex;
+    flex-direction: column;
+}
+
+.name {
+    font-weight: 600;
+    color: #495057;
+}
+
+.username {
+    font-size: 12px;
+    color: #6c757d;
+}
+
+.role-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.role-badge.admin { background: #dc3545; color: white; }
+.role-badge.manager { background: #fd7e14; color: white; }
+.role-badge.cashier { background: #20c997; color: white; }
+.role-badge.kitchen { background: #6f42c1; color: white; }
+.role-badge.waiter { background: #0d6efd; color: white; }
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.status-badge.active { background: #28a745; color: white; }
+.status-badge.inactive { background: #6c757d; color: white; }
+
+.action-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.deactivate-form {
+    display: inline;
+}
+
+/* Search Styles */
+.search-input {
+    padding: 10px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    font-size: 14px;
+    width: 250px;
+}
+
+/* Shifts Styles */
+.shifts-list {
+    margin-top: 20px;
+}
+
+.shift-item {
+    background: #f8f9fa;
+    padding: 15px;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.shift-info {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.shift-user {
+    font-weight: 600;
+    color: #495057;
+}
+
+.shift-time {
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.shift-notes {
+    color: #6c757d;
+    font-size: 14px;
+}
+
+.no-shifts {
+    text-align: center;
+    padding: 40px;
+    color: #6c757d;
+}
+
+.inactive-text {
+    color: #6c757d;
+    font-style: italic;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .staff-header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .header-stats {
+        justify-content: center;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .card-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .modern-table {
+        font-size: 14px;
+    }
+    
+    .modern-table th,
+    .modern-table td {
+        padding: 10px;
+    }
+    
+    .action-buttons {
+        flex-direction: column;
+        gap: 5px;
+    }
+}
+</style>
+
+<script>
+// Staff search functionality
+document.getElementById('staffSearch').addEventListener('input', function(e) {
+    const searchTerm = e.target.value.toLowerCase();
+    const rows = document.querySelectorAll('.staff-row');
+    
+    rows.forEach(row => {
+        const name = row.dataset.name;
+        if (name.includes(searchTerm)) {
+            row.style.display = '';
+        } else {
+            row.style.display = 'none';
+        }
+    });
+});
+
+// View staff function
+function viewStaff(staffId) {
+    // Implementation for viewing staff details
+    console.log('Viewing staff:', staffId);
+}
+
+// Edit staff function
+function editStaff(staffId) {
+    window.location.href = '/staff/' + staffId + '/edit';
+}
+
+// Set today's date for shift
+document.getElementById('shift_date').valueAsDate = new Date();
+</script>
+{% endblock %}

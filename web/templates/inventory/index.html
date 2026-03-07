@@ -117,45 +117,467 @@
     </table>
 </div>
 
-<!-- ── YENİ ALIŞ ÇEKİ ── -->
-<div class="card" style="margin-bottom:20px;">
-    <h3>🛒 Yeni Alış Çeki</h3>
-    <form method="post" action="{{ url_for('inventory.create_receipt') }}">
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:12px;">
-            <div class="form-group">
-                <label>Mağaza adı</label>
-                <input class="form-input" name="store_name" placeholder="Araz Market...">
-            </div>
-            <div class="form-group">
-                <label>Tarix</label>
-                <input class="form-input" type="datetime-local" name="purchased_at">
-            </div>
-            <div class="form-group">
-                <label>Qeyd</label>
-                <input class="form-input" name="note" placeholder="Qeyd...">
+<!-- ═══════════════════════════════════════════
+     YENİ ALIŞ ÇEKİ — Müasir Dizayn
+══════════════════════════════════════════ -->
+<div class="card modern-receipt-card">
+    <div class="receipt-header">
+        <div class="header-left">
+            <h3 class="receipt-title">🛒 Yeni Alış Çeki</h3>
+            <p class="receipt-subtitle">Stok üçün yeni məhsul alışı</p>
+        </div>
+        <div class="header-right">
+            <div class="receipt-stats">
+                <div class="stat-item">
+                    <span class="stat-label">Məhsul Sayı:</span>
+                    <span class="stat-value" id="itemCount">0</span>
+                </div>
+                <div class="stat-item">
+                    <span class="stat-label">Cəmi Məbləğ:</span>
+                    <span class="stat-value" id="totalAmount">0.00 ₼</span>
+                </div>
             </div>
         </div>
-        <table class="table" style="margin-bottom:10px;">
-            <thead>
-                <tr>
-                    <th>Məhsul adı</th>
-                    <th>Say (ədəd)</th>
-                    <th>Hər ədədin miqdarı</th>
-                    <th>Ölçü vahidi</th>
-                    <th>1 ədəd qiyməti (₼)</th>
-                    <th>Toplam miqdar</th>
-                    <th>Sətir cəmi</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody id="receiptLines"></tbody>
-        </table>
-        <div style="display:flex;gap:10px;">
-            <button class="btn btn-secondary" type="button" onclick="addReceiptLine()">+ Sətir əlavə et</button>
-            <button class="btn btn-primary" type="submit">💾 Çeki yadda saxla</button>
+    </div>
+    
+    <form method="post" action="{{ url_for('inventory.create_receipt') }}" class="receipt-form">
+        <div class="form-section">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="store_name">🏪 Mağaza Adı</label>
+                    <input type="text" id="store_name" name="store_name" class="modern-input" placeholder="Araz Market, Grand Market...">
+                </div>
+                <div class="form-group">
+                    <label for="purchased_at">📅 Tarix və Saat</label>
+                    <input type="datetime-local" id="purchased_at" name="purchased_at" class="modern-input">
+                </div>
+                <div class="form-group">
+                    <label for="note">📝 Qeyd</label>
+                    <input type="text" id="note" name="note" class="modern-input" placeholder="Əlavə qeydlər...">
+                </div>
+            </div>
+        </div>
+        
+        <div class="receipt-items-section">
+            <div class="section-header">
+                <h4>📦 Məhsullar</h4>
+                <button type="button" class="btn btn-primary btn-sm" onclick="addReceiptLine()">
+                    <span class="btn-icon">➕</span>
+                    Məhsul Əlavə Et
+                </button>
+            </div>
+            
+            <div class="items-table-container">
+                <table class="modern-items-table">
+                    <thead>
+                        <tr>
+                            <th>Məhsul Adı</th>
+                            <th>Say (ədəd)</th>
+                            <th>Hər ədədin Miqdarı</th>
+                            <th>Ölçü Vahidi</th>
+                            <th>1 ədəd Qiyməti (₼)</th>
+                            <th>Toplam Miqdar</th>
+                            <th>Sətir Cəmi</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody id="receiptLines">
+                        <tr class="empty-row">
+                            <td colspan="9" style="text-align: center; padding: 40px; color: #6c757d;">
+                                <div class="empty-state">
+                                    <div class="empty-icon">📦</div>
+                                    <p>Hələ heç bir məhsul əlavə edilməyib</p>
+                                    <p style="font-size: 14px; margin-top: 10px;">"Məhsul Əlavə Et" düyməsini basaraq başlayın</p>
+                                </div>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="form-actions">
+            <button type="button" class="btn btn-secondary" onclick="clearReceipt()">
+                <span class="btn-icon">🗑️</span>
+                Təmizlə
+            </button>
+            <button type="submit" class="btn btn-success btn-large">
+                <span class="btn-icon">💾</span>
+                Çeki Yadda Saxla
+            </button>
         </div>
     </form>
 </div>
+
+<style>
+.modern-receipt-card {
+    background: white;
+    border-radius: 20px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    overflow: hidden;
+    margin-bottom: 30px;
+}
+
+.receipt-header {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 30px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-left h3 {
+    margin: 0 0 8px 0;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.header-left p {
+    margin: 0;
+    opacity: 0.9;
+    font-size: 14px;
+}
+
+.receipt-stats {
+    display: flex;
+    flex-direction: column;
+    gap: 15px;
+    background: rgba(255,255,255,0.1);
+    padding: 20px;
+    border-radius: 15px;
+    backdrop-filter: blur(10px);
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    min-width: 200px;
+}
+
+.stat-label {
+    font-size: 14px;
+    opacity: 0.9;
+}
+
+.stat-value {
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.receipt-form {
+    padding: 30px;
+}
+
+.form-section {
+    margin-bottom: 30px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+}
+
+.form-group label {
+    margin-bottom: 8px;
+    font-weight: 600;
+    color: #495057;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.modern-input {
+    padding: 12px 16px;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background: white;
+}
+
+.modern-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.receipt-items-section {
+    background: #f8f9fa;
+    padding: 20px;
+    border-radius: 15px;
+    margin-bottom: 20px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+}
+
+.section-header h4 {
+    margin: 0;
+    color: #495057;
+    font-size: 18px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.items-table-container {
+    background: white;
+    border-radius: 10px;
+    overflow: hidden;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+}
+
+.modern-items-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.modern-items-table th {
+    background: #495057;
+    color: white;
+    padding: 15px 12px;
+    text-align: left;
+    font-weight: 600;
+    font-size: 13px;
+}
+
+.modern-items-table td {
+    padding: 12px;
+    border-bottom: 1px solid #e9ecef;
+    vertical-align: middle;
+}
+
+.modern-items-table tr:hover {
+    background: #f8f9fa;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 20px;
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 15px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-end;
+    padding: 0 30px 30px;
+}
+
+.btn-success {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+}
+
+.btn-success:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(40, 167, 69, 0.3);
+}
+
+.btn-large {
+    padding: 14px 32px;
+    font-size: 16px;
+}
+
+.btn-icon {
+    margin-right: 8px;
+}
+
+/* Item row styles */
+.receipt-item-row {
+    animation: slideIn 0.3s ease;
+}
+
+@keyframes slideIn {
+    from {
+        opacity: 0;
+        transform: translateY(-10px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.item-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    font-size: 13px;
+}
+
+.item-input:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.2);
+}
+
+.remove-btn {
+    background: #dc3545;
+    color: white;
+    border: none;
+    padding: 6px 10px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 12px;
+    transition: all 0.3s ease;
+}
+
+.remove-btn:hover {
+    background: #c82333;
+    transform: scale(1.05);
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+    .receipt-header {
+        flex-direction: column;
+        gap: 20px;
+        text-align: center;
+    }
+    
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 15px;
+        text-align: center;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .modern-items-table {
+        font-size: 12px;
+    }
+    
+    .modern-items-table th,
+    .modern-items-table td {
+        padding: 8px 6px;
+    }
+}
+</style>
+
+<script>
+let itemCount = 0;
+let totalAmount = 0.00;
+
+function addReceiptLine() {
+    const tbody = document.getElementById('receiptLines');
+    const emptyRow = tbody.querySelector('.empty-row');
+    
+    if (emptyRow) {
+        emptyRow.remove();
+    }
+    
+    const row = document.createElement('tr');
+    row.className = 'receipt-item-row';
+    row.innerHTML = `
+        <td><input type="text" name="item_name_${itemCount}" class="item-input" placeholder="Məhsul adı..." required></td>
+        <td><input type="number" name="quantity_${itemCount}" class="item-input" placeholder="Say" step="0.01" min="0" required onchange="updateTotals()"></td>
+        <td><input type="number" name="package_quantity_${itemCount}" class="item-input" placeholder="Ədəd" step="0.01" min="0" required onchange="updateTotals()"></td>
+        <td><input type="text" name="unit_${itemCount}" class="item-input" placeholder="kg, ədəd, l..." required></td>
+        <td><input type="number" name="unit_cost_${itemCount}" class="item-input" placeholder="0.00" step="0.01" min="0" required onchange="updateTotals()"></td>
+        <td><input type="number" name="total_quantity_${itemCount}" class="item-input" placeholder="0.00" step="0.01" min="0" readonly></td>
+        <td><input type="number" name="line_total_${itemCount}" class="item-input" placeholder="0.00" step="0.01" min="0" readonly></td>
+        <td><button type="button" class="remove-btn" onclick="removeReceiptLine(this)">🗑️</button></td>
+    `;
+    
+    tbody.appendChild(row);
+    itemCount++;
+    updateTotals();
+}
+
+function removeReceiptLine(button) {
+    const row = button.closest('tr');
+    row.remove();
+    itemCount--;
+    updateTotals();
+    
+    const tbody = document.getElementById('receiptLines');
+    if (tbody.children.length === 0) {
+        tbody.innerHTML = `
+            <tr class="empty-row">
+                <td colspan="9" style="text-align: center; padding: 40px; color: #6c757d;">
+                    <div class="empty-state">
+                        <div class="empty-icon">📦</div>
+                        <p>Hələ heç bir məhsul əlavə edilməyib</p>
+                        <p style="font-size: 14px; margin-top: 10px;">"Məhsul Əlavə Et" düyməsini basaraq başlayın</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }
+}
+
+function updateTotals() {
+    let count = 0;
+    let total = 0.00;
+    
+    const rows = document.querySelectorAll('#receiptLines .receipt-item-row');
+    rows.forEach((row, index) => {
+        const quantity = parseFloat(row.querySelector(`input[name="quantity_${index}"]`).value) || 0;
+        const packageQuantity = parseFloat(row.querySelector(`input[name="package_quantity_${index}"]`).value) || 0;
+        const unitCost = parseFloat(row.querySelector(`input[name="unit_cost_${index}"]`).value) || 0;
+        
+        const totalQuantity = quantity * packageQuantity;
+        const lineTotal = totalQuantity * unitCost;
+        
+        row.querySelector(`input[name="total_quantity_${index}"]`).value = totalQuantity.toFixed(2);
+        row.querySelector(`input[name="line_total_${index}"]`).value = lineTotal.toFixed(2);
+        
+        if (quantity > 0) {
+            count++;
+            total += lineTotal;
+        }
+    });
+    
+    document.getElementById('itemCount').textContent = count;
+    document.getElementById('totalAmount').textContent = total.toFixed(2) + ' ₼';
+}
+
+function clearReceipt() {
+    if (confirm('Bütün məhsullar silinsin?')) {
+        document.getElementById('receiptLines').innerHTML = `
+            <tr class="empty-row">
+                <td colspan="9" style="text-align: center; padding: 40px; color: #6c757d;">
+                    <div class="empty-state">
+                        <div class="empty-icon">📦</div>
+                        <p>Hələ heç bir məhsul əlavə edilməyib</p>
+                        <p style="font-size: 14px; margin-top: 10px;">"Məhsul Əlavə Et" düyməsini basaraq başlayın</p>
+                    </div>
+                </td>
+            </tr>
+        `;
+        itemCount = 0;
+        updateTotals();
+    }
+}
+
+// Set current datetime
+document.getElementById('purchased_at').value = new Date().toISOString().slice(0, 16);
+</script>
 
 <!-- ══════════════════════════════════════════════
      SON ALIŞ ÇEKLƏRİ — Market çeki görünüşü
