@@ -52,6 +52,40 @@ def create_customer():
     return redirect(url_for("loyalty.index"))
 
 
+@loyalty_bp.route("/customers/<int:customer_id>/edit", methods=["GET", "POST"])
+@permission_required("manage_discounts")
+def edit_customer(customer_id: int):
+    """Müştəri məlumatlarını redaktə etmək"""
+    customer = loyalty_service.get_customer(g.db, customer_id)
+    if not customer:
+        flash("Müştəri tapılmadı.", "danger")
+        return redirect(url_for("loyalty.index"))
+    
+    if request.method == "POST":
+        # Birthday handling
+        bday = None
+        bd = request.form.get("birthday", "").strip()
+        if bd:
+            try:
+                from datetime import datetime
+                bday = datetime.strptime(bd, "%Y-%m-%d").date()
+            except ValueError:
+                pass
+        
+        ok, result = loyalty_service.update_customer(
+            g.db,
+            customer_id,
+            full_name=request.form.get("full_name", "").strip(),
+            phone=request.form.get("phone", "").strip(),
+            email=request.form.get("email", "").strip(),
+            birthday=bday,
+        )
+        flash("Müştəri yeniləndi." if ok else str(result), "success" if ok else "danger")
+        return redirect(url_for("loyalty.index"))
+    
+    return render_template("loyalty/edit_customer.html", customer=customer)
+
+
 @loyalty_bp.route("/customers/<int:customer_id>/delete", methods=["POST"])
 @admin_required
 def delete_customer(customer_id: int):

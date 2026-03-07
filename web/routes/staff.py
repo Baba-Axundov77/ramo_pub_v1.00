@@ -33,6 +33,30 @@ def create():
     return redirect(url_for("staff.index"))
 
 
+@staff_bp.route("/<int:user_id>/edit", methods=["GET", "POST"])
+@permission_required("manage_users")
+def edit_staff(user_id: int):
+    """İşçi məlumatlarını redaktə etmək"""
+    user = staff_service.get_user(g.db, user_id)
+    if not user:
+        flash("İşçi tapılmadı.", "danger")
+        return redirect(url_for("staff.index"))
+    
+    if request.method == "POST":
+        ok, result = staff_service.update_staff(
+            g.db,
+            user_id,
+            username=request.form.get("username", "").strip(),
+            full_name=request.form.get("full_name", "").strip(),
+            role=request.form.get("role", "waiter").strip(),
+            phone=request.form.get("phone", "").strip(),
+        )
+        flash("İşçi yeniləndi." if ok else str(result), "success" if ok else "danger")
+        return redirect(url_for("staff.index"))
+    
+    return render_template("staff/edit.html", user=user)
+
+
 @staff_bp.route("/<int:user_id>/deactivate", methods=["POST"])
 @permission_required("manage_users")
 def deactivate(user_id: int):

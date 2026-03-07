@@ -89,6 +89,7 @@
     box-shadow: 0 20px 40px rgba(0,0,0,0.1);
     overflow: hidden;
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    border: 1px solid var(--border, #e9ecef);
 }
 
 .receipt-header {
@@ -141,7 +142,7 @@
 }
 
 .receipt-body {
-    background: white;
+    background: var(--bg2, white);
     padding: 20px;
 }
 
@@ -163,17 +164,17 @@
     justify-content: space-between;
     align-items: center;
     padding: 12px 0;
-    border-bottom: 1px solid #f0f0f0;
+    border-bottom: 1px solid var(--border, #f0f0f0);
 }
 
 .receipt-row .label {
-    color: #666;
+    color: var(--muted, #666);
     font-size: 14px;
 }
 
 .receipt-row .value {
     font-weight: 600;
-    color: #333;
+    color: var(--text, #333);
     font-size: 15px;
 }
 
@@ -197,17 +198,19 @@
 }
 
 .payment-method {
-    background: #f8f9fa;
+    background: var(--bg3, #f8f9fa);
     padding: 4px 12px;
     border-radius: 20px;
     font-size: 13px;
     color: #495057;
+    border: 1px solid var(--border, #e9ecef);
 }
 
 .receipt-footer {
-    background: #f8f9fa;
+    background: var(--bg3, #f8f9fa);
     padding: 20px;
     text-align: center;
+    border: 1px solid var(--border, #e9ecef);
 }
 
 .receipt-thank h3 {
@@ -217,13 +220,13 @@
 }
 
 .receipt-thank p {
-    color: #666;
+    color: var(--muted, #666);
     margin: 0 0 20px 0;
     font-size: 14px;
 }
 
 .receipt-contact p {
-    color: #666;
+    color: var(--muted, #666);
     margin: 5px 0;
     font-size: 13px;
 }
@@ -240,7 +243,7 @@
 }
 
 .receipt-error p {
-    color: #666;
+    color: var(--muted, #666);
     margin: 0;
 }
 
@@ -248,6 +251,7 @@
     .receipt-container {
         box-shadow: none;
         margin: 0;
+        border: none;
     }
     
     .receipt-header, .receipt-body, .receipt-footer {

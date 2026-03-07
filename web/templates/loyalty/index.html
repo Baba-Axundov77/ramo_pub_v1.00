@@ -85,6 +85,10 @@
                             onclick="openPointsModal({{ c.id }}, '{{ c.full_name }}', {{ c.points }})">
                         ⭐ Xal
                     </button>
+                    <button class="btn btn-sm btn-warning"
+                            onclick="editCustomer({{ c.id }})">
+                        ✏️ Redaktə
+                    </button>
                     <form method="post" action="{{ url_for('loyalty.delete_customer', customer_id=c.id) }}"
                           onsubmit="return confirm('{{ c.full_name }} silinsin?')">
                         <button type="submit" class="btn btn-sm btn-danger">🗑</button>
@@ -272,6 +276,10 @@ function openPointsModal(custId, custName, points) {
     document.getElementById('pointsForm').action =
         '/loyalty/customers/' + custId + '/points';
 }
+function editCustomer(customerId) {
+    window.location.href = '/loyalty/customers/' + customerId + '/edit';
+}
+
 [document.getElementById('addCustModal'),
  document.getElementById('addDiscModal'),
  document.getElementById('pointsModal')].forEach(function(m) {

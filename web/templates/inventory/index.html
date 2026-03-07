@@ -211,11 +211,12 @@
 
 <style>
 .modern-receipt-card {
-    background: white;
+    background: var(--bg2, white);
     border-radius: 20px;
     box-shadow: 0 10px 30px rgba(0,0,0,0.1);
     overflow: hidden;
     margin-bottom: 30px;
+    border: 1px solid var(--border, #e9ecef);
 }
 
 .receipt-header {
@@ -268,6 +269,7 @@
 
 .receipt-form {
     padding: 30px;
+    background: var(--bg2, white);
 }
 
 .form-section {
@@ -288,7 +290,7 @@
 .form-group label {
     margin-bottom: 8px;
     font-weight: 600;
-    color: #495057;
+    color: var(--text, #495057);
     font-size: 14px;
     display: flex;
     align-items: center;
@@ -297,11 +299,12 @@
 
 .modern-input {
     padding: 12px 16px;
-    border: 2px solid #e9ecef;
+    border: 2px solid var(--border, #e9ecef);
     border-radius: 10px;
     font-size: 14px;
     transition: all 0.3s ease;
-    background: white;
+    background: var(--bg2, white);
+    color: var(--text, #495057);
 }
 
 .modern-input:focus {
@@ -311,10 +314,11 @@
 }
 
 .receipt-items-section {
-    background: #f8f9fa;
+    background: var(--bg3, #f8f9fa);
     padding: 20px;
     border-radius: 15px;
     margin-bottom: 20px;
+    border: 1px solid var(--border, #e9ecef);
 }
 
 .section-header {
@@ -326,7 +330,7 @@
 
 .section-header h4 {
     margin: 0;
-    color: #495057;
+    color: var(--text, #495057);
     font-size: 18px;
     display: flex;
     align-items: center;
@@ -334,10 +338,11 @@
 }
 
 .items-table-container {
-    background: white;
+    background: var(--bg2, white);
     border-radius: 10px;
     overflow: hidden;
     box-shadow: 0 2px 10px rgba(0,0,0,0.05);
+    border: 1px solid var(--border, #e9ecef);
 }
 
 .modern-items-table {
@@ -356,12 +361,12 @@
 
 .modern-items-table td {
     padding: 12px;
-    border-bottom: 1px solid #e9ecef;
+    border-bottom: 1px solid var(--border, #e9ecef);
     vertical-align: middle;
 }
 
 .modern-items-table tr:hover {
-    background: #f8f9fa;
+    background: var(--bg3, #f8f9fa);
 }
 
 .empty-state {
