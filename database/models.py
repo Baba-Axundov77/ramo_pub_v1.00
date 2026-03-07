@@ -58,6 +58,7 @@ class User(Base):
 
     orders = relationship("Order", back_populates="waiter")
     shifts = relationship("Shift", back_populates="user")
+<<<<<<< Updated upstream
     
     # Staff management relationships
     performance_records = relationship("StaffPerformance", back_populates="staff")
@@ -66,6 +67,8 @@ class User(Base):
     waste_records = relationship("WasteRecord", back_populates="staff")
     tip_distributions = relationship("TipDistribution", back_populates="staff")
     order_modifications = relationship("OrderModification", back_populates="staff")
+=======
+>>>>>>> Stashed changes
 
 
 # ─── MASALAR ──────────────────────────────────────────────────────────────────
@@ -123,7 +126,10 @@ class MenuItem(Base):
     image_path = Column(String(255))
     inventory_item_id = Column(Integer, ForeignKey("inventory_items.id"), nullable=True)
     stock_usage_qty = Column(Float, default=0.0)  # 1 satışda anbardan düşəcək miqdar
+<<<<<<< Updated upstream
     kitchen_station_id = Column(Integer, ForeignKey("kitchen_stations.id"), nullable=True)
+=======
+>>>>>>> Stashed changes
     sort_order = Column(Integer, default=0)
     is_available = Column(Boolean, default=True)
     is_active = Column(Boolean, default=True)
@@ -160,21 +166,27 @@ class Order(Base):
     updated_at = Column(DateTime, onupdate=func.now())
     paid_at = Column(DateTime, nullable=True)
     closed_at = Column(DateTime, nullable=True)
+<<<<<<< Updated upstream
     
     # Kitchen tracking fields
     priority = Column(String(20), default='normal')  # low, normal, high, urgent
     preparation_started_at = Column(DateTime, nullable=True)
     ready_at = Column(DateTime, nullable=True)
     estimated_completion = Column(DateTime, nullable=True)
+=======
+>>>>>>> Stashed changes
 
     table = relationship("Table", back_populates="orders", foreign_keys=[table_id])
     waiter = relationship("User", back_populates="orders")
     customer = relationship("Customer", back_populates="orders")
     items = relationship("OrderItem", back_populates="order")
     payment = relationship("Payment", back_populates="order", uselist=False)
+<<<<<<< Updated upstream
     modifications = relationship("OrderModification", back_populates="order")
     tip_distributions = relationship("TipDistribution", back_populates="order")
     payment_transactions = relationship("PaymentTransaction", back_populates="order")
+=======
+>>>>>>> Stashed changes
 
 
 class OrderItem(Base):
@@ -189,6 +201,7 @@ class OrderItem(Base):
     notes = Column(String(255))
     note = Column(Text)
     sent_to_kitchen_at = Column(DateTime, nullable=True)
+<<<<<<< Updated upstream
     started_at = Column(DateTime, nullable=True)  # When preparation started
     completed_at = Column(DateTime, nullable=True)  # When item completed
     prepared_by = Column(Integer, ForeignKey("users.id"), nullable=True)  # Kitchen staff
@@ -200,6 +213,8 @@ class OrderItem(Base):
     added_at = Column(DateTime, nullable=True)
     modified_by = Column(Integer, ForeignKey("users.id"), nullable=True)
     modified_at = Column(DateTime, nullable=True)
+=======
+>>>>>>> Stashed changes
     status = Column(Enum(OrderStatus), default=OrderStatus.new)
     created_at = Column(DateTime, server_default=func.now())
 
@@ -216,15 +231,23 @@ class Payment(Base):
     )
 
     id = Column(Integer, primary_key=True, index=True)
+<<<<<<< Updated upstream
     order_id = Column(Integer, ForeignKey("orders.id"))  # Remove unique for split payments
     amount = Column(Float, nullable=False)
     tip_amount = Column(Float, default=0.0)  # Tip for this payment
     discount_amount = Column(Float, default=0.0)
     final_amount = Column(Float, nullable=False)  # amount + tip_amount
+=======
+    order_id = Column(Integer, ForeignKey("orders.id"), unique=True)
+    amount = Column(Float, nullable=False)
+    discount_amount = Column(Float, default=0.0)
+    final_amount = Column(Float, nullable=False)
+>>>>>>> Stashed changes
     method = Column(Enum(PaymentMethod), nullable=False)
     cashier_id = Column(Integer, ForeignKey("users.id"))
     paid_at = Column(DateTime, nullable=True)
     created_at = Column(DateTime, server_default=func.now())
+<<<<<<< Updated upstream
     
     # Split payment fields
     parent_payment_id = Column(Integer, ForeignKey("payments.id"), nullable=True)  # For refunds
@@ -233,6 +256,8 @@ class Payment(Base):
     card_type = Column(String(50), nullable=True)
     status = Column(String(20), default="completed")  # completed, failed, refunded
     reason = Column(String(255), nullable=True)  # For refunds/voids
+=======
+>>>>>>> Stashed changes
 
     order = relationship("Order", back_populates="payment")
 
@@ -356,6 +381,7 @@ class Customer(Base):
     birthday = Column(Date, nullable=True)
     is_active = Column(Boolean, default=True)
     created_at = Column(DateTime, server_default=func.now())
+<<<<<<< Updated upstream
     
     # Customer analytics fields
     tier_id = Column(Integer, ForeignKey("customer_tiers.id"), nullable=True)
@@ -365,6 +391,8 @@ class Customer(Base):
     preferred_items = Column(Text)  # JSON string of preferred menu items
     loyalty_score = Column(Float, default=0.0)  # 0 to 100
     churn_risk = Column(String(20), default='low')  # low, medium, high
+=======
+>>>>>>> Stashed changes
 
     orders = relationship("Order", back_populates="customer")
     tier = relationship("CustomerTier", back_populates="customers")
