@@ -14,6 +14,7 @@ from flask import (
 
 from database.connection import get_db, init_database
 from modules.auth.permissions import permission_service
+from config import FLASK_SECRET, MAX_CONTENT_LENGTH
 
 
 def _resolve_media_file(path_value: str | None):
@@ -69,17 +70,13 @@ def create_app(config: dict = None) -> Flask:
     )
 
     # ── Konfiqurasiya ─────────────────────────────────────────────────────────
-    app.secret_key = (
-        os.environ.get("FLASK_SECRET")
-        or os.environ.get("SECRET_KEY")
-        or secrets.token_hex(32)
-    )
+    app.secret_key = FLASK_SECRET or secrets.token_hex(32)
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
     app.config["SESSION_COOKIE_SECURE"] = (
         os.environ.get("SESSION_COOKIE_SECURE", "0") == "1"
     )
-    app.config["MAX_CONTENT_LENGTH"] = 16 * 1024 * 1024  # 16 MB
+    app.config["MAX_CONTENT_LENGTH"] = MAX_CONTENT_LENGTH
 
     if config:
         app.config.update(config)
@@ -184,8 +181,18 @@ if __name__ == "__main__":
         print(f"[XƏTA] Verilənlər bazasına qoşulmaq olmadı: {msg}")
         sys.exit(1)
 
+    # Database session-ı yenilə
+    from database.connection import get_db
+    try:
+        test_db = get_db()
+        test_db.close()
+        print("[OK] Database connection verified")
+    except Exception as e:
+        print(f"[XƏTA] Database connection failed: {e}")
+        sys.exit(1)
+
     app = create_app()
     print("[OK] Ramo Pub Web Paneli başlayır...")
     print("[OK] http://localhost:5000")
-    debug_mode = os.environ.get("FLASK_DEBUG", "0") == "1"
+    debug_mode = os.environ.get("FLASK_DEBUG", "1") == "1"
     app.run(host="0.0.0.0", port=5000, debug=debug_mode)

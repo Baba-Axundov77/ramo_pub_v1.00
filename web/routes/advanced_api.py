@@ -4,38 +4,44 @@
 from flask import Blueprint, request, jsonify, g
 from datetime import datetime, timedelta
 from database.connection import get_db
+from sqlalchemy import text
 from modules.orders.advanced_order_service import AdvancedOrderService
 from modules.kitchen.realtime_kds_service import RealTimeKDSService
 from modules.menu.advanced_recipe_costing import AdvancedRecipeCostingService
 from modules.staff.advanced_staff_management import AdvancedStaffManagementService
 from modules.analytics.advanced_customer_analytics import AdvancedCustomerAnalyticsService
 from modules.bi.advanced_business_intelligence import AdvancedBusinessIntelligenceService
+from modules.analytics.dashboard_service import DashboardService
+from modules.analytics.cache_manager import cached, invalidate_order_cache, invalidate_inventory_cache
+from modules.auth.jwt_decorators import jwt_required, admin_required, manager_required, staff_required
 from functools import wraps
 import traceback
+import logging
+
+logger = logging.getLogger(__name__)
 
 # Create Blueprint
 advanced_bp = Blueprint('advanced', __name__, url_prefix='/api/v2')
 
+# Legacy decorators for backward compatibility
 def require_auth(f):
-    @wraps(f)
-    def decorated_function(*args, **kwargs):
-        # Simple auth check - in production, use proper JWT
-        if not hasattr(g, 'user') or not g.user:
-            return jsonify({'success': False, 'message': 'Authentication required'}), 401
-        return f(*args, **kwargs)
-    return decorated_function
+    """Legacy decorator - use jwt_required instead"""
+    return jwt_required(f)
 
 def handle_errors(f):
+    """Enhanced error handling with logging"""
     @wraps(f)
     def decorated_function(*args, **kwargs):
         try:
             return f(*args, **kwargs)
         except Exception as e:
+            logger.error(f"API Error in {f.__name__}: {str(e)}")
             return jsonify({
                 'success': False,
                 'error': str(e),
                 'message': 'Internal server error',
-                'traceback': traceback.format_exc()
+                'error_code': 'INTERNAL_ERROR',
+                'timestamp': datetime.utcnow().isoformat()
             }), 500
     return decorated_function
 
@@ -56,12 +62,14 @@ def create_split_payment_order():
         return jsonify({
             'success': True,
             'data': result,
-            'message': 'Split payment order created successfully'
+            'message': 'Split payment order created successfully',
+            'timestamp': datetime.utcnow().isoformat()
         })
     else:
         return jsonify({
             'success': False,
-            'message': result
+            'message': result,
+            'error_code': 'ORDER_CREATION_FAILED'
         }), 400
 
 @advanced_bp.route('/orders/<int:order_id>/split-payment', methods=['POST'])
@@ -79,7 +87,7 @@ def process_split_payment(order_id):
         card_amount=data.get('card_amount', 0),
         online_amount=data.get('online_amount', 0),
         tip_amount=data.get('tip_amount', 0),
-        processed_by=g.user.id
+        processed_by=g.user_id
     )
     
     if success:
@@ -727,44 +735,141 @@ def system_health_check():
         }), 500
 
 @advanced_bp.route('/system/metrics', methods=['GET'])
-@require_auth
+@jwt_required
 @handle_errors
 def get_system_metrics():
-    """Get detailed system metrics"""
+    """Get detailed system metrics from real database"""
     db = get_db()
+    dashboard_service = DashboardService(db)
     
-    # Get database metrics
-    order_count = db.execute("SELECT COUNT(*) FROM orders").scalar()
-    customer_count = db.execute("SELECT COUNT(*) FROM customers").scalar()
-    user_count = db.execute("SELECT COUNT(*) FROM users").scalar()
-    
-    # Get performance metrics
-    metrics = {
-        'database': {
-            'orders': order_count,
-            'customers': customer_count,
-            'users': user_count,
-            'menu_items': db.execute("SELECT COUNT(*) FROM menu_items").scalar()
-        },
-        'performance': {
-            'avg_response_time': '125ms',
-            'requests_per_minute': 45,
-            'error_rate': '0.2%',
-            'uptime_percentage': '99.8%'
-        },
-        'business': {
-            'today_revenue': 2450.50,
-            'today_orders': 47,
-            'active_customers': 124,
-            'staff_online': 8
+    try:
+        # Get real database metrics
+        order_count = db.execute(text("SELECT COUNT(*) FROM orders")).scalar()
+        customer_count = db.execute(text("SELECT COUNT(*) FROM customers")).scalar()
+        user_count = db.execute(text("SELECT COUNT(*) FROM users WHERE is_active = true")).scalar()
+        menu_item_count = db.execute(text("SELECT COUNT(*) FROM menu_items WHERE is_active = true")).scalar()
+        table_count = db.execute(text("SELECT COUNT(*) FROM tables WHERE is_active = true")).scalar()
+        
+        # Get business metrics from dashboard service
+        today_revenue = dashboard_service.get_today_revenue()
+        today_orders = dashboard_service.get_today_orders()
+        active_staff = dashboard_service.get_active_staff_count()
+        occupancy_rate = dashboard_service.get_table_occupancy_rate()
+        critical_stock = len(dashboard_service.get_critical_stock_items())
+        
+        metrics = {
+            'database': {
+                'orders': order_count or 0,
+                'customers': customer_count or 0,
+                'users': user_count or 0,
+                'menu_items': menu_item_count or 0,
+                'tables': table_count or 0
+            },
+            'business': {
+                'today_revenue': round(today_revenue, 2),
+                'today_orders': today_orders,
+                'active_staff': active_staff,
+                'table_occupancy_rate': occupancy_rate,
+                'critical_stock_items': critical_stock
+            },
+            'performance': {
+                'cache_status': 'active',
+                'last_updated': datetime.utcnow().isoformat()
+            }
         }
-    }
+        
+        return jsonify({
+            'success': True,
+            'metrics': metrics,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+        
+    except Exception as e:
+        logger.error(f"Error getting system metrics: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to retrieve system metrics',
+            'error_code': 'METRICS_ERROR'
+        }), 500
+
+# ==================== DASHBOARD ANALYTICS ====================
+
+@advanced_bp.route('/dashboard/overview', methods=['GET'])
+@jwt_required
+@handle_errors
+def get_dashboard_overview():
+    """Get comprehensive dashboard overview with real data"""
+    db = get_db()
+    dashboard_service = DashboardService(db)
     
-    return jsonify({
-        'success': True,
-        'metrics': metrics,
-        'timestamp': datetime.now().isoformat()
-    })
+    result = dashboard_service.get_comprehensive_dashboard()
+    
+    if result['success']:
+        return jsonify(result)
+    else:
+        return jsonify({
+            'success': False,
+            'message': result.get('message', 'Failed to load dashboard'),
+            'error_code': 'DASHBOARD_ERROR'
+        }), 500
+
+@advanced_bp.route('/dashboard/revenue', methods=['GET'])
+@jwt_required
+@handle_errors
+def get_revenue_data():
+    """Get revenue analytics with caching"""
+    db = get_db()
+    dashboard_service = DashboardService(db)
+    
+    # Get parameters
+    days = request.args.get('days', 7, type=int)
+    
+    try:
+        revenue_data = {
+            'today': dashboard_service.get_today_revenue(),
+            'sales_chart': dashboard_service.get_sales_chart_data(days),
+            'hourly_sales': dashboard_service.get_hourly_sales_data()
+        }
+        
+        return jsonify({
+            'success': True,
+            'data': revenue_data,
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error getting revenue data: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to retrieve revenue data',
+            'error_code': 'REVENUE_ERROR'
+        }), 500
+
+@advanced_bp.route('/dashboard/inventory/critical', methods=['GET'])
+@jwt_required
+@handle_errors
+def get_critical_inventory():
+    """Get critical stock items"""
+    db = get_db()
+    dashboard_service = DashboardService(db)
+    
+    try:
+        critical_items = dashboard_service.get_critical_stock_items()
+        
+        return jsonify({
+            'success': True,
+            'data': {
+                'critical_items': critical_items,
+                'count': len(critical_items)
+            },
+            'timestamp': datetime.utcnow().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error getting critical inventory: {str(e)}")
+        return jsonify({
+            'success': False,
+            'message': 'Failed to retrieve inventory data',
+            'error_code': 'INVENTORY_ERROR'
+        }), 500
 
 # ==================== ERROR HANDLERS ====================
 

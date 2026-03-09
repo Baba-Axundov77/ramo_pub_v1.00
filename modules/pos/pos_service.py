@@ -295,6 +295,8 @@ class POSService:
             "total": total,
             "by_method": by_method,
             "discount_total": sum(p.discount_amount for p in payments),
+            "start": start,
+            "end": end,
         }
 
     def check_discount_code(self, db: Session, code: str, order_subtotal: float):

@@ -215,6 +215,34 @@ const STATUS_LABEL = {
 let _card = null;
 let _orderId = null;
 
+/* ── API Helper ─────────────────────────────────── */
+async function apiFetch(url, options = {}) {
+    const defaultOptions = {
+        headers: {
+            'Content-Type': 'application/json',
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    };
+    
+    const finalOptions = {
+        ...defaultOptions,
+        ...options,
+        headers: {
+            ...defaultOptions.headers,
+            ...options.headers
+        }
+    };
+    
+    try {
+        const response = await fetch(url, finalOptions);
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('API Fetch Error:', error);
+        return { ok: false, msg: 'Network error' };
+    }
+}
+
 /* ── Utilities ─────────────────────────────────── */
 function openModal(id)  { document.getElementById(id).style.display = "flex"; }
 function closeModal(id) { document.getElementById(id).style.display = "none"; }

@@ -1,17 +1,470 @@
 {% extends "base.html" %}
 {% block title %}Kassa{% endblock %}
 {% block breadcrumb %}Kassa{% endblock %}
+
 {% block content %}
+<div class="page-header">
+    <div>
+        <h1 class="page-title">💳 Kassa & Ödəniş</h1>
+        <p class="page-sub">Sifarişlərin ödənişini idarə edin</p>
+    </div>
+    <div class="header-actions">
+        <button class="btn btn-secondary" onclick="location.reload()">
+            <i class="fas fa-sync-alt"></i> Yenilə
+        </button>
+    </div>
+</div>
+
+<!-- Stat Kartlar -->
+<div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: 20px;">
+    <div class="stat-card stat-blue">
+        <div class="stat-icon">📋</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ active_orders|length }}</div>
+            <div class="stat-label">Aktiv Sifariş</div>
+        </div>
+    </div>
+    <div class="stat-card stat-green">
+        <div class="stat-icon">💰</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ "%.2f"|format(total_revenue) }} ₼</div>
+            <div class="stat-label">Cəmi Gəlir</div>
+        </div>
+    </div>
+    <div class="stat-card stat-amber">
+        <div class="stat-icon">🧾</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ paid_today }}</div>
+            <div class="stat-label">Ödənilib</div>
+        </div>
+    </div>
+    <div class="stat-card stat-purple">
+        <div class="stat-icon">👥</div>
+        <div class="stat-body">
+            <div class="stat-value">{{ current_user.full_name }}</div>
+            <div class="stat-label">Kassir</div>
+        </div>
+    </div>
+</div>
+
+<!-- Ödəniş Kartı -->
 <div class="card">
-  <h2>Kassa / Ödəniş</h2>
-  <form method="post" action="{{ url_for('pos.pay') }}" style="display:grid;grid-template-columns:repeat(6,1fr);gap:8px;align-items:end;">
-    <select name="order_id" required>
-      {% for o in active_orders %}<option value="{{ o.id }}">#{{ o.id }} / Masa {{ o.table.number if o.table else '-' }} / {{ '%.2f'|format(o.total or o.subtotal or 0) }} ₼</option>{% endfor %}
-    </select>
-    <select name="method"><option value="cash">Nağd</option><option value="card">Kart</option><option value="online">Online</option></select>
-    <input name="discount_code" placeholder="Endirim kodu">
-    <input name="loyalty_points_used" type="number" min="0" placeholder="Loyallıq xal">
-    <button class="btn btn-primary">Ödənişi tamamla</button>
-  </form>
+    <div class="card-header">
+        <h3><i class="fas fa-credit-card"></i> Ödəniş Əməliyyatı</h3>
+    </div>
+    <div class="card-body">
+        <form method="post" action="{{ url_for('pos.pay') }}" class="payment-form">
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="order_id">
+                        <i class="fas fa-receipt"></i> Sifariş Seçimi
+                    </label>
+                    <select id="order_id" name="order_id" class="form-select" required>
+                        <option value="">Sifariş seçin...</option>
+                        {% for o in active_orders %}
+                        <option value="{{ o.id }}">
+                            #{{ o.id }} / Masa {{ o.table.number if o.table else '-' }} / {{ '%.2f'|format(o.total or o.subtotal or 0) }} ₼
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <small class="form-help">Ödəniş ediləcək sifarişi seçin</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="method">
+                        <i class="fas fa-money-bill"></i> Ödəniş Üsulu
+                    </label>
+                    <select id="method" name="method" class="form-select" required>
+                        <option value="cash">💵 Nağd</option>
+                        <option value="card">💳 Kart</option>
+                        <option value="online">📱 Online</option>
+                    </select>
+                    <small class="form-help">Ödəniş metodunu seçin</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="discount_code">
+                        <i class="fas fa-tag"></i> Endirim Kodu
+                    </label>
+                    <input type="text" id="discount_code" name="discount_code" 
+                           class="form-input" placeholder="Endirim kodu daxil edin...">
+                    <small class="form-help">Varsa endirim kodunu daxil edin</small>
+                </div>
+                
+                <div class="form-group">
+                    <label for="loyalty_points_used">
+                        <i class="fas fa-star"></i> Loyallıq Xalları
+                    </label>
+                    <input type="number" id="loyalty_points_used" name="loyalty_points_used" 
+                           class="form-input" min="0" placeholder="İstifadə ediləcək xal...">
+                    <small class="form-help">Müştəri loyallıq xallarını istifadə edin</small>
+                </div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary btn-large">
+                    <i class="fas fa-check-circle"></i> Ödənişi Tamamla
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="resetForm()">
+                    <i class="fas fa-undo"></i> Sıfırla
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Aktiv Sifarişlər -->
+<div class="card" style="margin-top: 20px;">
+    <div class="card-header">
+        <h3><i class="fas fa-list"></i> Aktiv Sifarişlər</h3>
+        <div class="header-actions">
+            <button class="btn btn-sm btn-secondary" onclick="refreshOrders()">
+                <i class="fas fa-sync-alt"></i> Yenilə
+            </button>
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="orders-grid" id="activeOrdersGrid">
+            {% if active_orders %}
+                {% for o in active_orders %}
+                <div class="order-card" data-order-id="{{ o.id }}">
+                    <div class="order-header">
+                        <div class="order-number">#{{ o.id }}</div>
+                        <div class="order-table">Masa {{ o.table.number if o.table else '-' }}</div>
+                        <div class="order-amount">{{ '%.2f'|format(o.total or o.subtotal or 0) }} ₼</div>
+                    </div>
+                    <div class="order-details">
+                        <div class="order-time">{{ o.created_at.strftime('%H:%M') }}</div>
+                        <div class="order-status">
+                            <span class="status-badge {{ o.status }}">{{ o.status }}</span>
+                        </div>
+                    </div>
+                    <div class="order-actions">
+                        <button class="btn btn-sm btn-primary" onclick="selectOrder({{ o.id }})">
+                            <i class="fas fa-check"></i> Seç
+                        </button>
+                        <button class="btn btn-sm btn-info" onclick="viewOrder({{ o.id }})">
+                            <i class="fas fa-eye"></i> Bax
+                        </button>
+                    </div>
+                </div>
+                {% endfor %}
+            {% else %}
+                <div class="empty-state">
+                    <div class="empty-icon">📭</div>
+                    <h4>Aktiv Sifariş Yoxdur</h4>
+                    <p>Hazırda ödəniş gözləyən aktiv sifariş yoxdur.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Ödəniş Metodları -->
+<div class="card" style="margin-top: 20px;">
+    <div class="card-header">
+        <h3><i class="fas fa-chart-pie"></i> Ödəniş Statistikası</h3>
+    </div>
+    <div class="card-body">
+        <div class="payment-stats">
+            <div class="payment-stat">
+                <div class="payment-icon cash">💵</div>
+                <div class="payment-info">
+                    <h4>Nağd Ödənişlər</h4>
+                    <div class="payment-count">{{ cash_payments or 0 }}</div>
+                    <div class="payment-amount">{{ '%.2f'|format(cash_amount or 0) }} ₼</div>
+                </div>
+            </div>
+            <div class="payment-stat">
+                <div class="payment-icon card">💳</div>
+                <div class="payment-info">
+                    <h4>Kart Ödənişlər</h4>
+                    <div class="payment-count">{{ card_payments or 0 }}</div>
+                    <div class="payment-amount">{{ '%.2f'|format(card_amount or 0) }} ₼</div>
+                </div>
+            </div>
+            <div class="payment-stat">
+                <div class="payment-icon online">📱</div>
+                <div class="payment-info">
+                    <h4>Online Ödənişlər</h4>
+                    <div class="payment-count">{{ online_payments or 0 }}</div>
+                    <div class="payment-amount">{{ '%.2f'|format(online_amount or 0) }} ₼</div>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}
+
+<style>
+/* Payment Form */
+.payment-form {
+    display: grid;
+    gap: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 20px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.form-group label {
+    font-weight: 600;
+    color: var(--text);
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-input, .form-select {
+    padding: 12px 16px;
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    font-size: 14px;
+    transition: all 0.3s ease;
+    background: var(--bg2);
+    color: var(--text);
+}
+
+.form-input:focus, .form-select:focus {
+    outline: none;
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.form-select {
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 12 12'%3E%3Cpath fill='%23495057' d='M6 9L2 5l4-4 4 4z'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right 12px center;
+    padding-right: 35px;
+}
+
+.form-help {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 12px;
+    margin-top: 20px;
+}
+
+.btn-large {
+    padding: 14px 28px;
+    font-size: 16px;
+}
+
+/* Orders Grid */
+.orders-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 16px;
+}
+
+.order-card {
+    background: var(--bg3);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    transition: all 0.3s ease;
+}
+
+.order-card:hover {
+    border-color: var(--accent);
+    box-shadow: var(--shadow);
+}
+
+.order-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 12px;
+}
+
+.order-number {
+    font-weight: bold;
+    color: var(--text);
+    font-size: 18px;
+}
+
+.order-table {
+    background: var(--accent);
+    color: white;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.order-amount {
+    font-weight: bold;
+    color: var(--accent);
+    font-size: 16px;
+}
+
+.order-details {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.order-time {
+    color: var(--muted);
+    font-size: 14px;
+}
+
+.order-actions {
+    display: flex;
+    gap: 8px;
+}
+
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: 40px;
+    color: var(--muted);
+}
+
+.empty-icon {
+    font-size: 48px;
+    margin-bottom: 16px;
+}
+
+.empty-state h4 {
+    margin: 0 0 8px 0;
+    color: var(--text);
+}
+
+.empty-state p {
+    margin: 0;
+    font-size: 14px;
+}
+
+/* Payment Stats */
+.payment-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 16px;
+}
+
+.payment-stat {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px;
+    background: var(--bg3);
+    border: 2px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.payment-icon {
+    font-size: 32px;
+    width: 60px;
+    height: 60px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--bg2);
+    border-radius: var(--radius);
+}
+
+.payment-icon.cash { background: linear-gradient(135deg, #2ecc71, #27ae60); }
+.payment-icon.card { background: linear-gradient(135deg, #3498db, #2980b9); }
+.payment-icon.online { background: linear-gradient(135deg, #9b59b6, #8e44ad); }
+
+.payment-info {
+    flex: 1;
+}
+
+.payment-info h4 {
+    margin: 0 0 8px 0;
+    color: var(--text);
+    font-size: 14px;
+}
+
+.payment-count {
+    font-size: 24px;
+    font-weight: bold;
+    color: var(--accent);
+    margin-bottom: 4px;
+}
+
+.payment-amount {
+    font-size: 16px;
+    color: var(--muted);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+    
+    .orders-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .payment-stats {
+        grid-template-columns: 1fr;
+    }
+    
+    .payment-stat {
+        flex-direction: column;
+        text-align: center;
+    }
+    
+    .order-header {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+    
+    .order-details {
+        flex-direction: column;
+        gap: 8px;
+        text-align: center;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+function selectOrder(orderId) {
+    document.getElementById('order_id').value = orderId;
+    document.getElementById('order_id').focus();
+}
+
+function viewOrder(orderId) {
+    // Implementation for viewing order details
+    console.log('Viewing order:', orderId);
+    window.open('/orders/' + orderId, '_blank');
+}
+
+function resetForm() {
+    document.getElementById('order_id').value = '';
+    document.getElementById('method').selectedIndex = 0;
+    document.getElementById('discount_code').value = '';
+    document.getElementById('loyalty_points_used').value = '';
+}
+
+function refreshOrders() {
+    location.reload();
+}
+
+// Auto-refresh orders every 30 seconds
+setInterval(refreshOrders, 30000);
+</script>

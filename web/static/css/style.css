@@ -1,25 +1,18 @@
 /* ═══════════════════════════════════════════════════════════
-   Ramo Pub Web Panel — Dark Tema CSS
+   Ramo Pub Web Panel — Dark/Light Tema CSS
    Python 3.10 uyğun Flask tətbiqi üçün
    ═══════════════════════════════════════════════════════════ */
 
 :root {
-  --bg:       #0D0D0D;
-  --bg2:      #141420;
-  --bg3:      #1C1C2E;
-  --border:   #2E2E4E;
-  --text:     #F0EAD6;
-  --muted:    #8080A0;
-  --accent:   #E8A045;
-  --green:    #2ECC71;
-  --red:      #E74C3C;
-  --blue:     #3498DB;
-  --purple:   #9B59B6;
-  --amber:    #E8A045;
   --sidebar-w: 0px;
-  --radius:   12px;
-  --shadow:   0 4px 24px rgba(0,0,0,0.5);
+  --radius: 12px;
+  --shadow: 0 4px 24px rgba(0,0,0,0.5);
   --transition: 0.2s ease;
+  --green: #2ECC71;
+  --red: #E74C3C;
+  --blue: #3498DB;
+  --purple: #9B59B6;
+  --amber: #E8A045;
 }
 
 *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -836,4 +829,45 @@ body { display: flex; }
 .status-option.active {
   border-color: var(--accent);
   color: var(--accent);
+}
+
+/* ── Status Badges ─────────────────────────────────────────── */
+.status-badge {
+  display: inline-block;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.status-badge.pending {
+  background: rgba(243, 156, 18, 0.2);
+  color: #f39c12;
+  border: 1px solid rgba(243, 156, 18, 0.3);
+}
+
+.status-badge.preparing {
+  background: rgba(52, 152, 219, 0.2);
+  color: #3498db;
+  border: 1px solid rgba(52, 152, 219, 0.3);
+}
+
+.status-badge.ready {
+  background: rgba(46, 204, 113, 0.2);
+  color: #2ecc71;
+  border: 1px solid rgba(46, 204, 113, 0.3);
+}
+
+.status-badge.paid {
+  background: rgba(155, 89, 182, 0.2);
+  color: #9b59b6;
+  border: 1px solid rgba(155, 89, 182, 0.3);
+}
+
+.status-badge.cancelled {
+  background: rgba(231, 76, 60, 0.2);
+  color: #e74c3c;
+  border: 1px solid rgba(231, 76, 60, 0.3);
 }

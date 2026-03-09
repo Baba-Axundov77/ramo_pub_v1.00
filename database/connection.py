@@ -5,9 +5,15 @@ from sqlalchemy.orm import sessionmaker, declarative_base
 from sqlalchemy.exc import OperationalError
 import sys
 import os
+import time
+import logging
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from config import DATABASE_URL
+
+# Configure logging for database operations
+logging.basicConfig(level=logging.INFO)
+db_logger = logging.getLogger(__name__)
 
 Base = declarative_base()
 engine = None
@@ -88,40 +94,108 @@ def _auto_migrate(conn):
 
 
 def init_database():
-    """Verilənlər bazasına qos, cedvelleri yarat, eksik sutunlari elave et."""
+    """Verilənlər bazasına qos, cedvelleri yarat, eksik sutunlari elave et.
+    
+    KRİTİK: SQLite fallback tamamen kaldırıldı. Sistem PostgreSQL olmadan başlamaz.
+    Optimizasyon: Connection pooling ve retry mekanizması eklendi.
+    """
     global engine, SessionLocal
-    try:
-        engine = create_engine(
-            DATABASE_URL,
-            pool_pre_ping=True,
-            pool_size=10,
-            max_overflow=20,
-            echo=False,
-        )
-        with engine.connect() as conn:
-            conn.execute(text("SELECT 1"))
-    except OperationalError:
-        sqlite_url = os.getenv("SQLITE_FALLBACK_URL", "sqlite:///ramo_pub.sqlite3")
-        engine = create_engine(sqlite_url, connect_args={"check_same_thread": False})
+    SessionLocal = None  # Reset
+    
+    # Retry mechanism for PostgreSQL connection
+    max_retries = 3
+    retry_delay = 5  # seconds
+    
+    for attempt in range(max_retries):
+        try:
+            db_logger.info(f"PostgreSQL bağlantı denemesi {attempt + 1}/{max_retries}")
+            
+            engine = create_engine(
+                DATABASE_URL,
+                # Optimized connection pooling
+                pool_pre_ping=True,
+                pool_size=20,           # Increased from 10
+                max_overflow=10,         # Reduced from 20 for better control
+                pool_timeout=30,         # New: Connection timeout
+                pool_recycle=1800,       # New: Recycle connections after 30 minutes
+                echo=False,              # Set to True for SQL debugging
+                # PostgreSQL specific optimizations
+                connect_args={
+                    "application_name": "ramo_pub_enterprise",
+                    "connect_timeout": 10,
+                }
+            )
+            
+            # Test connection
+            with engine.connect() as conn:
+                conn.execute(text("SELECT 1"))
+                db_logger.info("PostgreSQL bağlantısı başarılı")
+            
+            # If connection successful, break the retry loop
+            break
+            
+        except OperationalError as e:
+            db_logger.error(f"PostgreSQL bağlantı xətası (deneme {attempt + 1}): {str(e)}")
+            
+            if attempt < max_retries - 1:
+                db_logger.info(f"{retry_delay} saniye sonra yeniden denenecek...")
+                time.sleep(retry_delay)
+            else:
+                # KRİTİK: SQLite fallback kaldırıldı - sistem PostgreSQL olmadan başlamamalı
+                error_msg = (
+                    f"PostgreSQL bağlantı xətası: {str(e)}\n\n"
+                    f"{max_retries} deneme başarısız oldu.\n\n"
+                    "Zəhmət olmasa:\n"
+                    "1. PostgreSQL serverinin işlədiyini yoxlayın\n"
+                    "2. .env faylındakı DB məlumatlarını yoxlayın\n"
+                    "3. 'ramo_pub' bazasının mövcud olduğunu yoxlayın\n"
+                    "4. PostgreSQL user şifrəsinin düzgün olduğunu yoxlayın\n"
+                    "5. Firewall və network bağlantısını yoxlayın"
+                )
+                db_logger.critical(error_msg)
+                return False, error_msg
+                
+        except Exception as e:
+            error_msg = f"Beklenmedik xeta: {str(e)}"
+            db_logger.critical(error_msg)
+            return False, error_msg
 
     try:
-        SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+        SessionLocal = sessionmaker(
+            autocommit=False, 
+            autoflush=False, 
+            bind=engine,
+            # Additional session configuration
+            expire_on_commit=False
+        )
 
         # Yeni cedvelleri yarat (movcudlari deyismir)
         from database.models import create_all_tables
         create_all_tables(engine)
+        db_logger.info("Veritabanı tabloları başarıyla oluşturuldu/kontrol edildi")
 
         # Alembic-first axını: runtime auto-migrate yalnız açıq şəkildə istənəndə işləsin.
         run_auto_migrate = os.getenv("ENABLE_RUNTIME_AUTO_MIGRATE", "0") == "1"
         if run_auto_migrate:
             with engine.connect() as conn:
                 _auto_migrate(conn)
+                db_logger.info("Runtime auto-migration tamamlandı")
 
-        return True, "Verilənlər bazasına ugurla qosuldu."
+        success_msg = (
+            "Verilənlər bazası PostgreSQL üzerinden başarıyla bağlandı.\n"
+            f"Connection Pool: pool_size=20, max_overflow=10, pool_timeout=30s"
+        )
+        db_logger.info(success_msg)
+        return True, success_msg
+        
     except OperationalError as e:
-        return False, f"Baglanti xetasi: {str(e)}"
+        error_msg = f"PostgreSQL bağlantı xətası (session oluşturma): {str(e)}"
+        db_logger.critical(error_msg)
+        return False, error_msg
     except Exception as e:
-        return False, f"Xeta: {str(e)}"
+        error_msg = f"Session oluşturma xətası: {str(e)}"
+        db_logger.critical(error_msg)
+        return False, error_msg
 
 
 def get_session():
@@ -138,3 +212,13 @@ def get_db():
     if SessionLocal is None:
         raise RuntimeError("Verilənlər bazası inisializasiya edilməyib.")
     return SessionLocal()
+
+def get_db_session():
+    """Generator-based database session for Flask app context"""
+    if SessionLocal is None:
+        raise RuntimeError("Verilənlər bazası inisializasiya edilməyib.")
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()

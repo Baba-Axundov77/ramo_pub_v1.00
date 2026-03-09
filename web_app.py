@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from web.app import create_app
 from database.connection import init_database
 from modules.auth.auth_service import create_default_admin
+from config import WEB_HOST, WEB_PORT, FLASK_DEBUG, DEFAULT_ADMIN_PASSWORD
 
 def main():
     """Start the Enterprise Restaurant Management System Web Application"""
@@ -46,18 +47,18 @@ def main():
     
     print("=" * 60)
     print("Enterprise Restaurant Management System Ready!")
-    print("Access at: http://localhost:5000")
-    print("Login: admin / admin123")
-    print("Dashboard: http://localhost:5000/dashboard-enterprise")
-    print("API: http://localhost:5000/api/v2/*")
+    print(f"Access at: http://{WEB_HOST}:{WEB_PORT}")
+    print(f"Login: admin / {DEFAULT_ADMIN_PASSWORD}")
+    print(f"Dashboard: http://{WEB_HOST}:{WEB_PORT}/dashboard-enterprise")
+    print(f"API: http://{WEB_HOST}:{WEB_PORT}/api/v2/*")
     print("=" * 60)
     
     # Start Flask application
     try:
         app.run(
-            host='0.0.0.0',
-            port=5000,
-            debug=True,
+            host=WEB_HOST,
+            port=WEB_PORT,
+            debug=FLASK_DEBUG,
             use_reloader=False
         )
     except KeyboardInterrupt:

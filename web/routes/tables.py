@@ -7,6 +7,7 @@ from flask import (
     url_for, g, jsonify, request, flash
 )
 from modules.tables.table_service import TableService
+from modules.orders.workflow_service import order_workflow_service
 from web.auth import permission_required, permission_required_api
 
 bp = Blueprint("tables", __name__, url_prefix="/tables")
