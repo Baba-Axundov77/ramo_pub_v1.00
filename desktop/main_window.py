@@ -99,6 +99,10 @@ class MainWindow(QMainWindow):
         from modules.desktop.dashboard_thread import DashboardDataThread
         self.dashboard_thread = DashboardDataThread(self.api_client)
         self.dashboard_thread.data_received.connect(self._on_dashboard_update)
+        
+        # Enable adaptive refresh to optimize performance
+        self.dashboard_thread.set_adaptive_refresh(True)
+        
         self.dashboard_thread.start()
         
         # Log token availability

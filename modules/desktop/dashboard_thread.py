@@ -21,8 +21,23 @@ class DashboardDataThread(QThread):
         self.api_client = api_client
         self.is_running = False
         self.auto_refresh = True
-        self.refresh_interval = 30000  # 30 seconds
+        self.refresh_interval = 2000  # 2 seconds as recommended
         self.current_data = {}
+        self.last_data_hash = None  # Track data changes to avoid unnecessary updates
+        
+    def _data_hash(self, data: dict) -> str:
+        """Generate hash of data to detect changes"""
+        import json
+        try:
+            # Create a simplified version for comparison
+            simplified = {
+                'tables': data.get('tables', {}),
+                'orders': data.get('orders', {}),
+                'revenue': data.get('revenue', {})
+            }
+            return json.dumps(simplified, sort_keys=True)
+        except:
+            return str(hash(str(data)))
         
     def run(self):
         """Main thread loop"""
@@ -36,8 +51,29 @@ class DashboardDataThread(QThread):
                     result = self.api_client.get_dashboard_overview()
                     
                     if result.get('success'):
-                        self.current_data = result
-                        self.data_received.emit(result)
+                        # Check if data actually changed
+                        current_hash = self._data_hash(result)
+                        if current_hash != self.last_data_hash:
+                            self.current_data = result
+                            self.last_data_hash = current_hash
+                            self.data_received.emit(result)
+                            logger.debug("Dashboard data updated - changes detected")
+                            
+                            # Reset no-change counter on activity
+                            if hasattr(self, 'no_change_count'):
+                                self.no_change_count = 0
+                            else:
+                                self.no_change_count = 0
+                        else:
+                            # Increment no-change counter
+                            if hasattr(self, 'no_change_count'):
+                                self.no_change_count += 1
+                            else:
+                                self.no_change_count = 1
+                            logger.debug(f"Dashboard data unchanged - skipping update (count: {self.no_change_count})")
+                        
+                        # Adjust refresh interval based on activity
+                        self._adjust_refresh_interval()
                         
                         # Emit connection restored if we were disconnected
                         if not hasattr(self, '_was_connected'):
@@ -70,6 +106,29 @@ class DashboardDataThread(QThread):
         """Update refresh interval"""
         self.refresh_interval = interval_ms
         logger.info(f"Dashboard refresh interval set to {interval_ms}ms")
+    
+    def set_adaptive_refresh(self, enabled: bool = True):
+        """Enable adaptive refresh based on activity"""
+        self.adaptive_refresh = enabled
+        self.activity_counter = 0
+        logger.info(f"Dashboard adaptive refresh {'enabled' if enabled else 'disabled'}")
+    
+    def _adjust_refresh_interval(self):
+        """Adjust refresh interval based on recent activity"""
+        if not hasattr(self, 'adaptive_refresh') or not self.adaptive_refresh:
+            return
+            
+        # If no data changes for 10 consecutive cycles, increase interval
+        if hasattr(self, 'no_change_count'):
+            if self.no_change_count >= 10:
+                self.refresh_interval = min(10000, self.refresh_interval + 1000)  # Max 10 seconds
+                logger.debug(f"Increased refresh interval to {self.refresh_interval}ms due to inactivity")
+                self.no_change_count = 0
+            else:
+                # Reset on activity
+                self.refresh_interval = 2000  # Back to normal 2 seconds
+        else:
+            self.no_change_count = 0
     
     def set_auto_refresh(self, enabled: bool):
         """Enable/disable auto refresh"""
