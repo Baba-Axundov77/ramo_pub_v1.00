@@ -6,7 +6,7 @@ from alembic import context
 from sqlalchemy import engine_from_config, pool
 
 from config import DATABASE_URL
-from database.connection import Base
+from src.core.database.connection import Base
 from database import models  # noqa: F401
 
 config = context.config

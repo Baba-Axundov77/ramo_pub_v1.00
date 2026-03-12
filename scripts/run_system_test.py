@@ -49,7 +49,7 @@ def check_database():
     
     try:
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        from database.connection import init_database, get_db
+        from src.core.database.connection import init_database, get_db
         
         print("   Testing database initialization...")
         ok, msg = init_database()

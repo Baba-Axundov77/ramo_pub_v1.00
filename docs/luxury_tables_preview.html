@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Luxury Tables War Room Preview | Ramo Pub</title>
+    <link rel="stylesheet" href="web/static/css/luxury-tables.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&family=Inter+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Demo Controls */
+        .demo-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            z-index: 10000;
+            backdrop-filter: blur(20px);
+            max-width: 320px;
+        }
+        
+        .demo-controls h4 {
+            margin: 0 0 16px 0;
+            color: var(--gold-primary, #c6a659);
+            font-size: 16px;
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .demo-controls button {
+            display: block;
+            width: 100%;
+            margin: 8px 0;
+            padding: 12px 16px;
+            background: rgba(198, 166, 89, 0.1);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .demo-controls button:hover {
+            background: rgba(198, 166, 89, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .demo-info {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(198, 166, 89, 0.2);
+            font-size: 11px;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
+        
+        .demo-status {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            border-radius: 8px;
+            color: #2ecc71;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .demo-controls {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin: 20px;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Demo Controls -->
+    <div class="demo-controls">
+        <h4>🎛️ War Room Controls</h4>
+        <button onclick="simulateTableLock()">
+            <i class="fas fa-lock"></i> Lock Table
+        </button>
+        <button onclick="simulateTableUnlock()">
+            <i class="fas fa-unlock"></i> Unlock Table
+        </button>
+        <button onclick="simulateNewOrder()">
+            <i class="fas fa-plus"></i> New Order
+        </button>
+        <button onclick="simulateTableStatus()">
+            <i class="fas fa-chair"></i> Change Status
+        </button>
+        <button onclick="simulateWaitingCall()">
+            <i class="fas fa-hand-paper"></i> Service Call
+        </button>
+        <button onclick="testResponsive()">
+            <i class="fas fa-mobile-alt"></i> Test Responsive
+        </button>
+        
+        <div class="demo-info">
+            <strong>WebSocket:</strong> Simulated<br>
+            <strong>State:</strong> localStorage enabled<br>
+            <strong>Locks:</strong> <span id="lockCount">0</span> active<br>
+            <strong>Viewport:</strong> <span id="viewportSize">--</span>
+        </div>
+        
+        <div class="demo-status" id="demoStatus">
+            ✨ War Room Ready
+        </div>
+    </div>
+
+    <!-- Zone Navigation Tabs -->
+    <div class="zone-tabs">
+        <button class="zone-tab active" data-zone="main-hall">
+            <span class="zone-tab-icon">🏛️</span>
+            <span>Main Hall</span>
+        </button>
+        <button class="zone-tab" data-zone="vip-lounge">
+            <span class="zone-tab-icon">⭐</span>
+            <span>VIP Lounge</span>
+        </button>
+        <button class="zone-tab" data-zone="terrace">
+            <span class="zone-tab-icon">🌿</span>
+            <span>Terrace</span>
+        </button>
+        <button class="zone-tab" data-zone="private">
+            <span class="zone-tab-icon">🔐</span>
+            <span>Private Rooms</span>
+        </button>
+    </div>
+
+    <!-- War Room Layout -->
+    <div class="luxury-war-room">
+        <!-- Floor Plan Container -->
+        <main class="floor-plan-container">
+            <!-- Main Hall Zone -->
+            <div class="zone-content active" id="main-hall">
+                <div class="floor-map">
+                    <div class="smart-grid" id="mainHallGrid">
+                        <!-- Sample tables will be generated -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIP Lounge Zone -->
+            <div class="zone-content" id="vip-lounge">
+                <div class="floor-map">
+                    <div class="smart-grid" id="vipLoungeGrid">
+                        <!-- Sample tables will be generated -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Terrace Zone -->
+            <div class="zone-content" id="terrace">
+                <div class="floor-map">
+                    <div class="smart-grid" id="terraceGrid">
+                        <!-- Sample tables will be generated -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Private Rooms Zone -->
+            <div class="zone-content" id="private">
+                <div class="floor-map">
+                    <div class="smart-grid" id="privateGrid">
+                        <!-- Sample tables will be generated -->
+                    </div>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- Radial Menu -->
+    <div class="radial-menu" id="radialMenu">
+        <div class="radial-menu-header">
+            <div class="radial-menu-title">
+                <span>🪑</span>
+                <span id="radialMenuTableName">Masa</span>
+            </div>
+            <button class="radial-menu-close" id="radialMenuClose">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="radial-menu-actions">
+            <button class="radial-action" data-action="order">
+                <div class="radial-action-icon">📝</div>
+                <div class="radial-action-label">Sifariş Al</div>
+            </button>
+            <button class="radial-action" data-action="bill">
+                <div class="radial-action-icon">🧾</div>
+                <div class="radial-action-label">Hesabı Çıxart</div>
+            </button>
+            <button class="radial-action" data-action="move">
+                <div class="radial-action-icon">🔄</div>
+                <div class="radial-action-label">Masanı Dəyiş</div>
+            </button>
+            <button class="radial-action" data-action="reserve">
+                <div class="radial-action-icon">📅</div>
+                <div class="radial-action-label">Rezerv Et</div>
+            </button>
+        </div>
+    </div>
+
+    <!-- Order Entry Panel -->
+    <div class="order-panel" id="orderPanel">
+        <div class="order-panel-header">
+            <div class="order-panel-title">
+                <span>📝</span>
+                <span id="orderPanelTableName">Sifariş</span>
+            </div>
+            <button class="order-panel-close" id="orderPanelClose">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="order-panel-content">
+            <div class="product-categories">
+                <div class="category-section">
+                    <div class="category-title">
+                        <span class="category-icon">🥤</span>
+                        <span>Soyuqlar</span>
+                    </div>
+                    <div class="product-grid">
+                        <div class="product-item" data-product="1">
+                            <div class="product-image">🥤</div>
+                            <div class="product-name">Kola</div>
+                            <div class="product-price">2.50 ₼</div>
+                        </div>
+                        <div class="product-item" data-product="2">
+                            <div class="product-image">🧃</div>
+                            <div class="product-name">Meyvə Şərbəti</div>
+                            <div class="product-price">3.00 ₼</div>
+                        </div>
+                        <div class="product-item" data-product="3">
+                            <div class="product-image">💧</div>
+                            <div class="product-name">Su</div>
+                            <div class="product-price">1.00 ₼</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="category-section">
+                    <div class="category-title">
+                        <span class="category-icon">🍽️</span>
+                        <span>İsti Yeməklər</span>
+                    </div>
+                    <div class="product-grid">
+                        <div class="product-item" data-product="4">
+                            <div class="product-image">🍕</div>
+                            <div class="product-name">Pizza</div>
+                            <div class="product-price">15.00 ₼</div>
+                        </div>
+                        <div class="product-item" data-product="5">
+                            <div class="product-image">🍔</div>
+                            <div class="product-name">Burger</div>
+                            <div class="product-price">12.00 ₼</div>
+                        </div>
+                        <div class="product-item" data-product="6">
+                            <div class="product-image">🥗</div>
+                            <div class="product-name">Salad</div>
+                            <div class="product-price">8.00 ₼</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="category-section">
+                    <div class="category-title">
+                        <span class="category-icon">🍺</span>
+                        <span>İçkilər</span>
+                    </div>
+                    <div class="product-grid">
+                        <div class="product-item" data-product="7">
+                            <div class="product-image">🍺</div>
+                            <div class="product-name">Bira</div>
+                            <div class="product-price">4.00 ₼</div>
+                        </div>
+                        <div class="product-item" data-product="8">
+                            <div class="product-image">🍷</div>
+                            <div class="product-name">Qırmızı Şərab</div>
+                            <div class="product-price">18.00 ₼</div>
+                        </div>
+                        <div class="product-item" data-product="9">
+                            <div class="product-image">🥃</div>
+                            <div class="product-name">Viski</div>
+                            <div class="product-price">25.00 ₼</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay Backdrop -->
+    <div class="overlay-backdrop" id="overlayBackdrop"></div>
+
+    <script>
+        // Luxury Tables War Room Demo
+        class LuxuryTablesWarRoomDemo {
+            constructor() {
+                this.state = {
+                    tables: [],
+                    selectedTable: null,
+                    lockedTables: new Map(),
+                    currentUser: 'Demo User',
+                    ws: null
+                };
+                this.init();
+            }
+            
+            init() {
+                this.loadStateFromStorage();
+                this.generateSampleTables();
+                this.initZoneTabs();
+                this.renderTables();
+                this.initRadialMenu();
+                this.initOrderPanel();
+                this.initTouchHandlers();
+                this.updateViewportSize();
+                this.updateLockCount();
+                window.addEventListener('resize', () => this.updateViewportSize());
+            }
+            
+            // State Management with localStorage
+            loadStateFromStorage() {
+                try {
+                    const savedState = localStorage.getItem('luxuryTablesState');
+                    if (savedState) {
+                        const parsed = JSON.parse(savedState);
+                        this.state.lockedTables = new Map(parsed.lockedTables || []);
+                        this.state.selectedTable = parsed.selectedTable || null;
+                    }
+                } catch (error) {
+                    console.log('No saved state found');
+                }
+            }
+            
+            saveStateToStorage() {
+                try {
+                    const stateToSave = {
+                        lockedTables: Array.from(this.state.lockedTables.entries()),
+                        selectedTable: this.state.selectedTable,
+                        timestamp: Date.now()
+                    };
+                    localStorage.setItem('luxuryTablesState', JSON.stringify(stateToSave));
+                } catch (error) {
+                    console.error('Failed to save state:', error);
+                }
+            }
+            
+            // Generate sample tables
+            generateSampleTables() {
+                const zones = ['main', 'vip', 'terrace', 'private'];
+                const statuses = ['available', 'occupied', 'reserved', 'cleaning'];
+                const names = ['Window', 'Corner', 'Center', 'Bar', 'Garden', 'Terrace'];
+                
+                let tableId = 1;
+                zones.forEach(zone => {
+                    const zonePrefix = zone.charAt(0).toUpperCase() + zone.slice(1);
+                    const tableCount = zone === 'vip' ? 6 : zone === 'private' ? 4 : 12;
+                    
+                    for (let i = 1; i <= tableCount; i++) {
+                        const status = Math.random() > 0.6 ? 'occupied' : 
+                                       Math.random() > 0.8 ? 'reserved' : 
+                                       Math.random() > 0.9 ? 'cleaning' : 'available';
+                        
+                        const table = {
+                            id: tableId++,
+                            number: i,
+                            name: names[Math.floor(Math.random() * names.length)],
+                            zone: zone,
+                            status: status,
+                            current_order: status === 'occupied' ? {
+                                id: 1000 + tableId,
+                                total_amount: Math.random() * 100 + 20,
+                                created_at: new Date(Date.now() - Math.random() * 7200000).toISOString()
+                            } : null
+                        };
+                        
+                        this.state.tables.push(table);
+                    }
+                });
+            }
+            
+            // Zone Management
+            initZoneTabs() {
+                const tabs = document.querySelectorAll('.zone-tab');
+                const zones = document.querySelectorAll('.zone-content');
+                
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const zoneId = tab.dataset.zone;
+                        
+                        // Update active states
+                        tabs.forEach(t => t.classList.remove('active'));
+                        zones.forEach(z => z.classList.remove('active'));
+                        
+                        tab.classList.add('active');
+                        document.getElementById(zoneId).classList.add('active');
+                    });
+                });
+            }
+            
+            // Render Tables
+            renderTables() {
+                const zones = {
+                    'main-hall': this.state.tables.filter(t => t.zone === 'main'),
+                    'vip-lounge': this.state.tables.filter(t => t.zone === 'vip'),
+                    'terrace': this.state.tables.filter(t => t.zone === 'terrace'),
+                    'private': this.state.tables.filter(t => t.zone === 'private')
+                };
+                
+                Object.entries(zones).forEach(([zoneId, zoneTables]) => {
+                    const grid = document.getElementById(`${zoneId}Grid`);
+                    if (grid) {
+                        grid.innerHTML = zoneTables.map(table => this.createTableCard(table)).join('');
+                    }
+                });
+                
+                this.initTableInteractions();
+            }
+            
+            createTableCard(table) {
+                const isLocked = this.state.lockedTables.has(table.id);
+                const lockInfo = this.state.lockedTables.get(table.id);
+                
+                let statusClass = table.status;
+                let detailsHtml = '';
+                
+                if (table.status === 'occupied' && table.current_order) {
+                    const duration = this.calculateDuration(table.current_order.created_at);
+                    detailsHtml = `
+                        <div class="table-details">
+                            <div class="table-amount">${table.current_order.total_amount.toFixed(2)} ₼</div>
+                            <div class="table-duration">${duration}</div>
+                        </div>
+                    `;
+                }
+                
+                if (Math.random() > 0.9) { // Random waiting call
+                    statusClass += ' waiting';
+                }
+                
+                if (isLocked && lockInfo.user !== this.state.currentUser) {
+                    statusClass += ' locked';
+                }
+                
+                return `
+                    <div class="table-card ${statusClass}" 
+                         data-table-id="${table.id}"
+                         data-table-number="${table.number}"
+                         data-table-name="${table.name || ''}"
+                         data-status="${table.status}">
+                        <div class="table-number">${table.number}</div>
+                        <div class="table-name">${table.name || ''}</div>
+                        <div class="table-status">${this.getStatusLabel(table.status)}</div>
+                        ${detailsHtml}
+                        ${isLocked && lockInfo.user !== this.state.currentUser ? `
+                            <div class="lock-info">
+                                <div class="lock-user">${lockInfo.user_name}</div>
+                            </div>
+                        ` : ''}
+                    </div>
+                `;
+            }
+            
+            getStatusLabel(status) {
+                const labels = {
+                    'available': 'Boş',
+                    'occupied': 'Dolu',
+                    'reserved': 'Rezerv',
+                    'cleaning': 'Təmizlik',
+                    'waiting': 'Çağırış'
+                };
+                return labels[status] || status;
+            }
+            
+            calculateDuration(startTime) {
+                const start = new Date(startTime);
+                const now = new Date();
+                const diff = Math.floor((now - start) / 60000);
+                
+                if (diff < 60) {
+                    return `${diff} dəq`;
+                } else {
+                    const hours = Math.floor(diff / 60);
+                    const minutes = diff % 60;
+                    return `${hours} saat ${minutes} dəq`;
+                }
+            }
+            
+            // Table Interactions
+            initTableInteractions() {
+                document.querySelectorAll('.table-card').forEach(card => {
+                    card.addEventListener('click', (e) => {
+                        if (!e.target.closest('.table-details')) {
+                            this.handleTableClick(card);
+                        }
+                    });
+                    
+                    // Long press for mobile
+                    let pressTimer;
+                    card.addEventListener('touchstart', (e) => {
+                        pressTimer = setTimeout(() => {
+                            this.handleTableClick(card);
+                        }, 500);
+                    });
+                    
+                    card.addEventListener('touchend', () => {
+                        clearTimeout(pressTimer);
+                    });
+                    
+                    card.addEventListener('touchmove', () => {
+                        clearTimeout(pressTimer);
+                    });
+                });
+            }
+            
+            handleTableClick(card) {
+                const tableId = parseInt(card.dataset.tableId);
+                const table = this.state.tables.find(t => t.id === tableId);
+                
+                if (!table) return;
+                
+                // Check if table is locked by another user
+                if (this.state.lockedTables.has(tableId)) {
+                    const lockInfo = this.state.lockedTables.get(tableId);
+                    if (lockInfo.user !== this.state.currentUser) {
+                        this.showLockNotification(lockInfo.user_name);
+                        return;
+                    }
+                }
+                
+                this.state.selectedTable = table;
+                this.saveStateToStorage();
+                this.showRadialMenu(table);
+            }
+            
+            // Radial Menu
+            showRadialMenu(table) {
+                const menu = document.getElementById('radialMenu');
+                const backdrop = document.getElementById('overlayBackdrop');
+                const title = document.getElementById('radialMenuTableName');
+                
+                title.textContent = `Masa ${table.number}`;
+                menu.classList.add('active');
+                backdrop.classList.add('active');
+                
+                // Lock the table
+                this.lockTable(table.id);
+            }
+            
+            hideRadialMenu() {
+                const menu = document.getElementById('radialMenu');
+                const backdrop = document.getElementById('overlayBackdrop');
+                
+                menu.classList.remove('active');
+                backdrop.classList.remove('active');
+                
+                // Unlock the table
+                if (this.state.selectedTable) {
+                    this.unlockTable(this.state.selectedTable.id);
+                }
+            }
+            
+            initRadialMenu() {
+                const closeBtn = document.getElementById('radialMenuClose');
+                const backdrop = document.getElementById('overlayBackdrop');
+                const actions = document.querySelectorAll('.radial-action');
+                
+                closeBtn.addEventListener('click', () => this.hideRadialMenu());
+                backdrop.addEventListener('click', () => this.hideRadialMenu());
+                
+                actions.forEach(action => {
+                    action.addEventListener('click', () => {
+                        const actionType = action.dataset.action;
+                        this.handleRadialAction(actionType);
+                    });
+                });
+            }
+            
+            handleRadialAction(action) {
+                if (!this.state.selectedTable) return;
+                
+                switch (action) {
+                    case 'order':
+                        this.showOrderPanel();
+                        break;
+                    case 'bill':
+                        this.generateBill();
+                        break;
+                    case 'move':
+                        this.moveTable();
+                        break;
+                    case 'reserve':
+                        this.reserveTable();
+                        break;
+                }
+                
+                this.hideRadialMenu();
+            }
+            
+            // Order Panel
+            showOrderPanel() {
+                const panel = document.getElementById('orderPanel');
+                const title = document.getElementById('orderPanelTableName');
+                
+                title.textContent = `Sifariş - Masa ${this.state.selectedTable.number}`;
+                panel.classList.add('active');
+            }
+            
+            hideOrderPanel() {
+                const panel = document.getElementById('orderPanel');
+                panel.classList.remove('active');
+            }
+            
+            initOrderPanel() {
+                const closeBtn = document.getElementById('orderPanelClose');
+                closeBtn.addEventListener('click', () => this.hideOrderPanel());
+                
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.product-item')) {
+                        this.selectProduct(e.target.closest('.product-item'));
+                    }
+                });
+            }
+            
+            selectProduct(productElement) {
+                const productId = productElement.dataset.product;
+                const productName = productElement.querySelector('.product-name').textContent;
+                
+                this.addProductToOrder(productId, productName);
+                
+                productElement.style.transform = 'scale(0.95)';
+                setTimeout(() => {
+                    productElement.style.transform = '';
+                }, 100);
+            }
+            
+            addProductToOrder(productId, productName) {
+                console.log(`Added product ${productId} (${productName}) to table ${this.state.selectedTable.id}`);
+                this.showNotification(`${productName} sifarişə əlavə edildi`, 'success');
+            }
+            
+            // Table Locking
+            lockTable(tableId) {
+                const lockInfo = {
+                    user: this.state.currentUser,
+                    user_name: this.state.currentUser,
+                    timestamp: Date.now()
+                };
+                
+                this.state.lockedTables.set(tableId, lockInfo);
+                this.saveStateToStorage();
+                this.updateTableLockUI(tableId, true);
+                this.updateLockCount();
+            }
+            
+            unlockTable(tableId) {
+                this.state.lockedTables.delete(tableId);
+                this.saveStateToStorage();
+                this.updateTableLockUI(tableId, false);
+                this.updateLockCount();
+            }
+            
+            updateTableLockUI(tableId, isLocked) {
+                const card = document.querySelector(`[data-table-id="${tableId}"]`);
+                if (card) {
+                    if (isLocked) {
+                        card.classList.add('locked');
+                    } else {
+                        card.classList.remove('locked');
+                    }
+                }
+            }
+            
+            showLockNotification(userName) {
+                const notification = document.createElement('div');
+                notification.className = 'lock-indicator';
+                notification.innerHTML = `
+                    <div class="lock-indicator-icon">🔒</div>
+                    <div class="lock-indicator-text">
+                        <div>Masa kilidlidir</div>
+                        <div class="lock-indicator-user">${userName}</div>
+                    </div>
+                `;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.remove();
+                }, 3000);
+            }
+            
+            // Touch Handlers
+            initTouchHandlers() {
+                let touchStartX = 0;
+                let touchStartY = 0;
+                
+                document.addEventListener('touchstart', (e) => {
+                    touchStartX = e.touches[0].clientX;
+                    touchStartY = e.touches[0].clientY;
+                });
+                
+                document.addEventListener('touchend', (e) => {
+                    const touchEndX = e.changedTouches[0].clientX;
+                    const touchEndY = e.changedTouches[0].clientY;
+                    
+                    const deltaX = touchEndX - touchStartX;
+                    const deltaY = touchEndY - touchStartY;
+                    
+                    if (deltaX > 50 && Math.abs(deltaY) < 50) {
+                        if (this.state.selectedTable) {
+                            this.showOrderPanel();
+                        }
+                    }
+                });
+            }
+            
+            // Notifications
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `luxury-flash ${type}`;
+                notification.innerHTML = `
+                    <span class="luxury-flash-icon">
+                        ${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}
+                    </span>
+                    <span>${message}</span>
+                `;
+                
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 10000;
+                    padding: 16px 20px;
+                    border-radius: 12px;
+                    background: ${type === 'success' ? 'rgba(46, 204, 113, 0.9)' : 'rgba(198, 166, 89, 0.9)'};
+                    color: white;
+                    font-weight: 500;
+                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+                    backdrop-filter: blur(10px);
+                    animation: slideInRight 0.3s ease-out;
+                `;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.animation = 'slideOutRight 0.3s ease-in';
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+            
+            // Demo Functions
+            updateViewportSize() {
+                const viewportSize = document.getElementById('viewportSize');
+                if (viewportSize) {
+                    viewportSize.textContent = `${window.innerWidth}x${window.innerHeight}px`;
+                }
+            }
+            
+            updateLockCount() {
+                const lockCount = document.getElementById('lockCount');
+                if (lockCount) {
+                    lockCount.textContent = this.state.lockedTables.size;
+                }
+            }
+            
+            updateDemoStatus(message, type = 'success') {
+                const status = document.getElementById('demoStatus');
+                if (status) {
+                    status.textContent = message;
+                    status.style.background = type === 'success' 
+                        ? 'rgba(46, 204, 113, 0.1)' 
+                        : 'rgba(198, 166, 89, 0.1)';
+                    status.style.borderColor = type === 'success'
+                        ? 'rgba(46, 204, 113, 0.3)'
+                        : 'rgba(198, 166, 89, 0.3)';
+                    status.style.color = type === 'success' ? '#2ecc71' : '#c6a659';
+                }
+            }
+        }
+        
+        // Demo Functions
+        window.simulateTableLock = function() {
+            const tables = document.querySelectorAll('.table-card:not(.locked)');
+            if (tables.length > 0) {
+                const randomTable = tables[Math.floor(Math.random() * tables.length)];
+                const tableId = parseInt(randomTable.dataset.tableId);
+                const warRoom = window.warRoom;
+                
+                warRoom.lockTable(tableId);
+                warRoom.showNotification(`Masa ${randomTable.dataset.tableNumber} kilidlendi`, 'info');
+                warRoom.updateDemoStatus('🔒 Table locked', 'info');
+            }
+        };
+        
+        window.simulateTableUnlock = function() {
+            const warRoom = window.warRoom;
+            if (warRoom.state.lockedTables.size > 0) {
+                const firstLocked = Array.from(warRoom.state.lockedTables.keys())[0];
+                const table = document.querySelector(`[data-table-id="${firstLocked}"]`);
+                
+                warRoom.unlockTable(firstLocked);
+                warRoom.showNotification(`Masa ${table.dataset.tableNumber} kilidi açıldı`, 'success');
+                warRoom.updateDemoStatus('🔓 Table unlocked', 'success');
+            }
+        };
+        
+        window.simulateNewOrder = function() {
+            const tables = document.querySelectorAll('.table-card.occupied');
+            if (tables.length > 0) {
+                const randomTable = tables[Math.floor(Math.random() * tables.length)];
+                const amount = (Math.random() * 50 + 10).toFixed(2);
+                
+                window.warRoom.showNotification(`Masa ${randomTable.dataset.tableNumber} üçün yeni sifariş: ${amount} ₼`, 'success');
+                window.warRoom.updateDemoStatus('📝 New order simulated', 'success');
+            }
+        };
+        
+        window.simulateTableStatus = function() {
+            const tables = document.querySelectorAll('.table-card');
+            if (tables.length > 0) {
+                const randomTable = tables[Math.floor(Math.random() * tables.length)];
+                const statuses = ['available', 'occupied', 'reserved', 'cleaning'];
+                const currentStatus = randomTable.dataset.status;
+                const newStatus = statuses[Math.floor(Math.random() * statuses.length)];
+                
+                if (currentStatus !== newStatus) {
+                    randomTable.dataset.status = newStatus;
+                    randomTable.className = randomTable.className.replace(/available|occupied|reserved|cleaning|waiting/g, newStatus);
+                    
+                    const statusElement = randomTable.querySelector('.table-status');
+                    const labels = {
+                        'available': 'Boş',
+                        'occupied': 'Dolu',
+                        'reserved': 'Rezerv',
+                        'cleaning': 'Təmizlik'
+                    };
+                    statusElement.textContent = labels[newStatus];
+                    
+                    window.warRoom.showNotification(`Masa ${randomTable.dataset.tableNumber} statusu: ${labels[newStatus]}`, 'info');
+                    window.warRoom.updateDemoStatus('🔄 Status changed', 'info');
+                }
+            }
+        };
+        
+        window.simulateWaitingCall = function() {
+            const tables = document.querySelectorAll('.table-card:not(.waiting)');
+            if (tables.length > 0) {
+                const randomTable = tables[Math.floor(Math.random() * tables.length)];
+                
+                randomTable.classList.add('waiting');
+                window.warRoom.showNotification(`Masa ${randomTable.dataset.tableNumber} xidmət çağırışı!`, 'info');
+                window.warRoom.updateDemoStatus('👋 Service call simulated', 'info');
+                
+                setTimeout(() => {
+                    randomTable.classList.remove('waiting');
+                }, 5000);
+            }
+        };
+        
+        window.testResponsive = function() {
+            const viewportInfo = `
+                Viewport: ${window.innerWidth}x${window.innerHeight}px
+                Device: ${window.innerWidth <= 480 ? 'Mobile' : window.innerWidth <= 768 ? 'Tablet' : 'Desktop'}
+                Touch: ${'ontouchstart' in window ? 'Available' : 'Not Available'}
+                Pixel Ratio: ${window.devicePixelRatio || 1}
+                State: ${localStorage.getItem('luxuryTablesState') ? 'Saved' : 'None'}
+            `;
+            
+            window.warRoom.showNotification('Responsive info logged to console', 'info');
+            console.log(viewportInfo);
+            window.warRoom.updateDemoStatus('📱 Responsive test complete', 'info');
+        };
+        
+        // Initialize War Room
+        document.addEventListener('DOMContentLoaded', () => {
+            window.warRoom = new LuxuryTablesWarRoomDemo();
+        });
+        
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from { opacity: 0; transform: translateX(20px); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+            
+            @keyframes slideOutRight {
+                from { opacity: 1; transform: translateX(0); }
+                to { opacity: 0; transform: translateX(20px); }
+            }
+            
+            .luxury-flash {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 16px 20px;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: 500;
+                color: white;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            }
+            
+            .luxury-flash.success {
+                background: rgba(46, 204, 113, 0.9);
+                border: 1px solid rgba(46, 204, 113, 0.3);
+            }
+            
+            .luxury-flash.error {
+                background: rgba(231, 76, 60, 0.9);
+                border: 1px solid rgba(231, 76, 60, 0.3);
+            }
+            
+            .luxury-flash.info {
+                background: rgba(198, 166, 89, 0.9);
+                border: 1px solid rgba(198, 166, 89, 0.3);
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

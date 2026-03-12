@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+{% block title %}Ödəniş Çeki{% endblock %}
+{% block breadcrumb %}Ödəniş Çeki{% endblock %}
+{% block content %}
+<div class="receipt-container">
+    <div class="receipt-header">
+        <div class="receipt-logo">
+            <h2>🏪 Ramo Pub & TeaHouse</h2>
+            <p class="receipt-address">Bakı, Azərbaycan</p>
+            <p class="receipt-phone">+994 XX XXX XX XX</p>
+        </div>
+        <div class="receipt-info">
+            <div class="receipt-number">
+                <span class="label">Çek №:</span>
+                <span class="value">{{ payment.id }}</span>
+            </div>
+            <div class="receipt-date">
+                <span class="label">Tarix:</span>
+                <span class="value">{{ payment.created_at.strftime('%d.%m.%Y %H:%M') }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="receipt-divider"></div>
+
+    <div class="receipt-body">
+        {% if payment %}
+        <div class="receipt-section">
+            <h3 class="section-title">💳 Ödəniş Məlumatları</h3>
+            <div class="receipt-row">
+                <span class="label">Sifariş ID:</span>
+                <span class="value">#{{ payment.order_id }}</span>
+            </div>
+            <div class="receipt-row">
+                <span class="label">Ödəniş Metodu:</span>
+                <span class="value payment-method">{{ payment.method.value if payment.method else '-' }}</span>
+            </div>
+        </div>
+
+        <div class="receipt-divider"></div>
+
+        <div class="receipt-section">
+            <h3 class="section-title">💰 Məbləğ</h3>
+            <div class="receipt-row">
+                <span class="label">Əsas Məbləğ:</span>
+                <span class="value">{{ '%.2f'|format(payment.amount or 0) }} ₼</span>
+            </div>
+            {% if payment.discount_amount and payment.discount_amount > 0 %}
+            <div class="receipt-row discount">
+                <span class="label">Endirim:</span>
+                <span class="value">-{{ '%.2f'|format(payment.discount_amount or 0) }} ₼</span>
+            </div>
+            {% endif %}
+            <div class="receipt-divider"></div>
+            <div class="receipt-row total">
+                <span class="label">Cəmi Məbləğ:</span>
+                <span class="value">{{ '%.2f'|format(payment.final_amount or 0) }} ₼</span>
+            </div>
+        </div>
+
+        <div class="receipt-divider"></div>
+
+        <div class="receipt-footer">
+            <div class="receipt-thank">
+                <h3>🙏 Təşəkkür edirik!</h3>
+                <p>Bizimi seçdiyiniz üçün minnətdarıq</p>
+            </div>
+            <div class="receipt-contact">
+                <p><strong>Ünvan:</strong> Bakı, Azərbaycan</p>
+                <p><strong>Telefon:</strong> +994 XX XXX XX XX</p>
+                <p><strong>İş vaxtı:</strong> 10:00 - 02:00</p>
+            </div>
+        </div>
+        {% else %}
+        <div class="receipt-error">
+            <h3>❌ Ödəniş tapılmadı</h3>
+            <p>Zəhmət olmasa, çek nömrəsini yoxlayın</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.receipt-container {
+    max-width: 400px;
+    margin: 20px auto;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    border-radius: 20px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+    overflow: hidden;
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    border: 1px solid var(--border, #e9ecef);
+}
+
+.receipt-header {
+    background: rgba(255,255,255,0.95);
+    padding: 30px 20px;
+    text-align: center;
+}
+
+.receipt-logo h2 {
+    color: #764ba2;
+    margin: 0 0 5px 0;
+    font-size: 24px;
+    font-weight: bold;
+}
+
+.receipt-address, .receipt-phone {
+    color: #666;
+    margin: 3px 0;
+    font-size: 14px;
+}
+
+.receipt-info {
+    display: flex;
+    justify-content: space-between;
+    margin-top: 20px;
+    padding: 0 10px;
+}
+
+.receipt-number, .receipt-date {
+    text-align: center;
+}
+
+.receipt-number .label, .receipt-date .label {
+    display: block;
+    font-size: 12px;
+    color: #888;
+    margin-bottom: 5px;
+}
+
+.receipt-number .value, .receipt-date .value {
+    font-size: 16px;
+    font-weight: bold;
+    color: #333;
+}
+
+.receipt-divider {
+    height: 1px;
+    background: linear-gradient(90deg, transparent, #ddd, transparent);
+    margin: 20px 0;
+}
+
+.receipt-body {
+    background: var(--bg2, white);
+    padding: 20px;
+}
+
+.receipt-section {
+    margin-bottom: 20px;
+}
+
+.section-title {
+    color: #764ba2;
+    font-size: 18px;
+    margin-bottom: 15px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.receipt-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border, #f0f0f0);
+}
+
+.receipt-row .label {
+    color: var(--muted, #666);
+    font-size: 14px;
+}
+
+.receipt-row .value {
+    font-weight: 600;
+    color: var(--text, #333);
+    font-size: 15px;
+}
+
+.receipt-row.discount .value {
+    color: #e74c3c;
+}
+
+.receipt-row.total {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    margin: 0 -20px;
+    padding: 15px 20px;
+    border-radius: 10px;
+    color: white;
+    font-size: 18px;
+    font-weight: bold;
+}
+
+.receipt-row.total .label,
+.receipt-row.total .value {
+    color: white;
+}
+
+.payment-method {
+    background: var(--bg3, #f8f9fa);
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 13px;
+    color: #495057;
+    border: 1px solid var(--border, #e9ecef);
+}
+
+.receipt-footer {
+    background: var(--bg3, #f8f9fa);
+    padding: 20px;
+    text-align: center;
+    border: 1px solid var(--border, #e9ecef);
+}
+
+.receipt-thank h3 {
+    color: #28a745;
+    margin: 0 0 10px 0;
+    font-size: 20px;
+}
+
+.receipt-thank p {
+    color: var(--muted, #666);
+    margin: 0 0 20px 0;
+    font-size: 14px;
+}
+
+.receipt-contact p {
+    color: var(--muted, #666);
+    margin: 5px 0;
+    font-size: 13px;
+}
+
+.receipt-error {
+    text-align: center;
+    padding: 40px 20px;
+    color: #e74c3c;
+}
+
+.receipt-error h3 {
+    margin: 0 0 15px 0;
+    font-size: 20px;
+}
+
+.receipt-error p {
+    color: var(--muted, #666);
+    margin: 0;
+}
+
+@media print {
+    .receipt-container {
+        box-shadow: none;
+        margin: 0;
+        border: none;
+    }
+    
+    .receipt-header, .receipt-body, .receipt-footer {
+        background: white !important;
+        color: black !important;
+    }
+    
+    .receipt-row.total {
+        background: #f0f0f0 !important;
+        color: black !important;
+    }
+    
+    .receipt-row.total .label,
+    .receipt-row.total .value {
+        color: black !important;
+    }
+}
+</style>
+{% endblock %}

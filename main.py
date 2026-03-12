@@ -31,7 +31,7 @@ def main():
         logger.info("Starting Ramo Pub Desktop Application...")
         
         # Import configuration first
-        from config import APP_NAME, APP_VERSION, DEFAULT_THEME, WEB_HOST, WEB_PORT
+        from src.config import APP_NAME, APP_VERSION, DEFAULT_THEME, WEB_HOST, WEB_PORT
         logger.info(f"Configuration loaded: {APP_NAME} v{APP_VERSION}")
         
         # Import PyQt6
@@ -41,7 +41,7 @@ def main():
         logger.info("PyQt6 imported successfully")
         
         # Import desktop modules
-        from modules.desktop.api_client import DesktopAPIClient
+        from src.core.modules.desktop.api_client import DesktopAPIClient
         logger.info("Desktop modules imported")
         
         # Create QApplication
@@ -74,7 +74,7 @@ def main():
         logger.info("API client created")
         
         # Import and create login view
-        from desktop.views.login_view import LoginView
+        from src.desktop.views.login_view import LoginView
         login_win = LoginView(api_client)
         logger.info("Login view created")
         
@@ -96,9 +96,9 @@ def main():
             )
             
             # Create real main window with API integration
-            from desktop.main_window import MainWindow
-            from database.connection import init_database, get_db
-            from modules.auth.auth_service import AuthService
+            from src.desktop.main_window import MainWindow
+            from src.core.database.connection import init_database, get_db
+            from src.core.modules.auth.auth_service import AuthService
             
             # Initialize database first
             ok, msg = init_database()
@@ -116,7 +116,7 @@ def main():
                     # Convert role string to enum for MainWindow compatibility
                     role_str = data.get('role', 'admin')
                     try:
-                        from database.models import UserRole
+                        from src.core.database.models import UserRole
                         self.role = UserRole(role_str) if role_str in [r.value for r in UserRole] else UserRole.ADMIN
                     except ImportError:
                         # Fallback if UserRole import fails

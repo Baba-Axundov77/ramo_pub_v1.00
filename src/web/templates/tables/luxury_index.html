@@ -1,0 +1,799 @@
+{% extends "base.html" %}
+{% block title %}Masalar{% endblock %}
+
+{% block content %}
+<!-- Zone Navigation Tabs -->
+<div class="zone-tabs">
+  <button class="zone-tab active" data-zone="main-hall">
+    <span class="zone-tab-icon">🏛️</span>
+    <span>Main Hall</span>
+  </button>
+  <button class="zone-tab" data-zone="vip-lounge">
+    <span class="zone-tab-icon">⭐</span>
+    <span>VIP Lounge</span>
+  </button>
+  <button class="zone-tab" data-zone="terrace">
+    <span class="zone-tab-icon">🌿</span>
+    <span>Terrace</span>
+  </button>
+  <button class="zone-tab" data-zone="private">
+    <span class="zone-tab-icon">🔐</span>
+    <span>Private Rooms</span>
+  </button>
+</div>
+
+<!-- War Room Layout -->
+<div class="luxury-war-room">
+  <!-- Floor Plan Container -->
+  <main class="floor-plan-container">
+    <!-- Main Hall Zone -->
+    <div class="zone-content active" id="main-hall">
+      <div class="floor-map">
+        <div class="smart-grid" id="mainHallGrid">
+          <!-- Tables will be loaded dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- VIP Lounge Zone -->
+    <div class="zone-content" id="vip-lounge">
+      <div class="floor-map">
+        <div class="smart-grid" id="vipLoungeGrid">
+          <!-- Tables will be loaded dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Terrace Zone -->
+    <div class="zone-content" id="terrace">
+      <div class="floor-map">
+        <div class="smart-grid" id="terraceGrid">
+          <!-- Tables will be loaded dynamically -->
+        </div>
+      </div>
+    </div>
+
+    <!-- Private Rooms Zone -->
+    <div class="zone-content" id="private">
+      <div class="floor-map">
+        <div class="smart-grid" id="privateGrid">
+          <!-- Tables will be loaded dynamically -->
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Radial Menu -->
+<div class="radial-menu" id="radialMenu">
+  <div class="radial-menu-header">
+    <div class="radial-menu-title">
+      <span>🪑</span>
+      <span id="radialMenuTableName">Masa</span>
+    </div>
+    <button class="radial-menu-close" id="radialMenuClose">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="radial-menu-actions">
+    <button class="radial-action" data-action="order">
+      <div class="radial-action-icon">📝</div>
+      <div class="radial-action-label">Sifariş Al</div>
+    </button>
+    <button class="radial-action" data-action="bill">
+      <div class="radial-action-icon">🧾</div>
+      <div class="radial-action-label">Hesabı Çıxart</div>
+    </button>
+    <button class="radial-action" data-action="move">
+      <div class="radial-action-icon">🔄</div>
+      <div class="radial-action-label">Masanı Dəyiş</div>
+    </button>
+    <button class="radial-action" data-action="reserve">
+      <div class="radial-action-icon">📅</div>
+      <div class="radial-action-label">Rezerv Et</div>
+    </button>
+  </div>
+</div>
+
+<!-- Order Entry Panel -->
+<div class="order-panel" id="orderPanel">
+  <div class="order-panel-header">
+    <div class="order-panel-title">
+      <span>📝</span>
+      <span id="orderPanelTableName">Sifariş</span>
+    </div>
+    <button class="order-panel-close" id="orderPanelClose">
+      <i class="fas fa-times"></i>
+    </button>
+  </div>
+  <div class="order-panel-content">
+    <div class="product-categories">
+      <div class="category-section">
+        <div class="category-title">
+          <span class="category-icon">🥤</span>
+          <span>Soyuqlar</span>
+        </div>
+        <div class="product-grid">
+          <div class="product-item" data-product="1">
+            <div class="product-image">🥤</div>
+            <div class="product-name">Kola</div>
+            <div class="product-price">2.50 ₼</div>
+          </div>
+          <div class="product-item" data-product="2">
+            <div class="product-image">🧃</div>
+            <div class="product-name">Meyvə Şərbəti</div>
+            <div class="product-price">3.00 ₼</div>
+          </div>
+          <div class="product-item" data-product="3">
+            <div class="product-image">💧</div>
+            <div class="product-name">Su</div>
+            <div class="product-price">1.00 ₼</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="category-section">
+        <div class="category-title">
+          <span class="category-icon">🍽️</span>
+          <span>İsti Yeməklər</span>
+        </div>
+        <div class="product-grid">
+          <div class="product-item" data-product="4">
+            <div class="product-image">🍕</div>
+            <div class="product-name">Pizza</div>
+            <div class="product-price">15.00 ₼</div>
+          </div>
+          <div class="product-item" data-product="5">
+            <div class="product-image">🍔</div>
+            <div class="product-name">Burger</div>
+            <div class="product-price">12.00 ₼</div>
+          </div>
+          <div class="product-item" data-product="6">
+            <div class="product-image">🥗</div>
+            <div class="product-name">Salad</div>
+            <div class="product-price">8.00 ₼</div>
+          </div>
+        </div>
+      </div>
+      
+      <div class="category-section">
+        <div class="category-title">
+          <span class="category-icon">🍺</span>
+          <span>İçkilər</span>
+        </div>
+        <div class="product-grid">
+          <div class="product-item" data-product="7">
+            <div class="product-image">🍺</div>
+            <div class="product-name">Bira</div>
+            <div class="product-price">4.00 ₼</div>
+          </div>
+          <div class="product-item" data-product="8">
+            <div class="product-image">🍷</div>
+            <div class="product-name">Qırmızı Şərab</div>
+            <div class="product-price">18.00 ₼</div>
+          </div>
+          <div class="product-item" data-product="9">
+            <div class="product-image">🥃</div>
+            <div class="product-name">Viski</div>
+            <div class="product-price">25.00 ₼</div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Overlay Backdrop -->
+<div class="overlay-backdrop" id="overlayBackdrop"></div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Luxury Tables War Room with State Management
+class LuxuryTablesWarRoom {
+  constructor() {
+    this.state = {
+      tables: [],
+      selectedTable: null,
+      lockedTables: new Map(),
+      currentUser: {{ current_user.full_name | tojson if current_user else 'null' }},
+      ws: null
+    };
+    this.init();
+  }
+  
+  init() {
+    this.loadStateFromStorage();
+    this.initWebSocket();
+    this.initZoneTabs();
+    this.loadTables();
+    this.initRadialMenu();
+    this.initOrderPanel();
+    this.initTouchHandlers();
+  }
+  
+  // State Management with localStorage
+  loadStateFromStorage() {
+    try {
+      const savedState = localStorage.getItem('luxuryTablesState');
+      if (savedState) {
+        const parsed = JSON.parse(savedState);
+        this.state.lockedTables = new Map(parsed.lockedTables || []);
+        this.state.selectedTable = parsed.selectedTable || null;
+      }
+    } catch (error) {
+      console.log('No saved state found');
+    }
+  }
+  
+  saveStateToStorage() {
+    try {
+      const stateToSave = {
+        lockedTables: Array.from(this.state.lockedTables.entries()),
+        selectedTable: this.state.selectedTable,
+        timestamp: Date.now()
+      };
+      localStorage.setItem('luxuryTablesState', JSON.stringify(stateToSave));
+    } catch (error) {
+      console.error('Failed to save state:', error);
+    }
+  }
+  
+  // WebSocket for real-time updates
+  initWebSocket() {
+    try {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      const wsUrl = `${protocol}//${window.location.host}/ws/tables`;
+      
+      this.state.ws = new WebSocket(wsUrl);
+      
+      this.state.ws.onopen = () => {
+        console.log('Tables WebSocket connected');
+        this.sendHeartbeat();
+      };
+      
+      this.state.ws.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        this.handleWebSocketMessage(data);
+      };
+      
+      this.state.ws.onclose = () => {
+        console.log('WebSocket disconnected, reconnecting...');
+        setTimeout(() => this.initWebSocket(), 3000);
+      };
+      
+      this.state.ws.onerror = (error) => {
+        console.error('WebSocket error:', error);
+      };
+    } catch (error) {
+      console.log('WebSocket not available, using polling');
+      this.initPolling();
+    }
+  }
+  
+  handleWebSocketMessage(data) {
+    switch (data.type) {
+      case 'table_locked':
+        this.handleTableLocked(data.table_id, data.user, data.user_name);
+        break;
+      case 'table_unlocked':
+        this.handleTableUnlocked(data.table_id);
+        break;
+      case 'table_status_changed':
+        this.updateTableStatus(data.table_id, data.status, data.details);
+        break;
+      case 'new_order':
+        this.handleNewOrder(data.table_id, data.order);
+        break;
+    }
+  }
+  
+  sendHeartbeat() {
+    if (this.state.ws && this.state.ws.readyState === WebSocket.OPEN) {
+      this.state.ws.send(JSON.stringify({ type: 'heartbeat', user: this.state.currentUser }));
+    }
+  }
+  
+  // Zone Management
+  initZoneTabs() {
+    const tabs = document.querySelectorAll('.zone-tab');
+    const zones = document.querySelectorAll('.zone-content');
+    
+    tabs.forEach(tab => {
+      tab.addEventListener('click', () => {
+        const zoneId = tab.dataset.zone;
+        
+        // Update active states
+        tabs.forEach(t => t.classList.remove('active'));
+        zones.forEach(z => z.classList.remove('active'));
+        
+        tab.classList.add('active');
+        document.getElementById(zoneId).classList.add('active');
+      });
+    });
+  }
+  
+  // Load Tables
+  async loadTables() {
+    try {
+      const response = await fetch('/tables/api/all');
+      const tables = await response.json();
+      this.state.tables = tables;
+      this.renderTables();
+    } catch (error) {
+      console.error('Error loading tables:', error);
+    }
+  }
+  
+  renderTables() {
+    const zones = {
+      'main-hall': this.state.tables.filter(t => t.zone === 'main'),
+      'vip-lounge': this.state.tables.filter(t => t.zone === 'vip'),
+      'terrace': this.state.tables.filter(t => t.zone === 'terrace'),
+      'private': this.state.tables.filter(t => t.zone === 'private')
+    };
+    
+    Object.entries(zones).forEach(([zoneId, zoneTables]) => {
+      const grid = document.getElementById(`${zoneId}Grid`);
+      if (grid) {
+        grid.innerHTML = zoneTables.map(table => this.createTableCard(table)).join('');
+      }
+    });
+    
+    this.initTableInteractions();
+  }
+  
+  createTableCard(table) {
+    const isLocked = this.state.lockedTables.has(table.id);
+    const lockInfo = this.state.lockedTables.get(table.id);
+    
+    let statusClass = table.status;
+    let detailsHtml = '';
+    
+    if (table.status === 'occupied' && table.current_order) {
+      const duration = this.calculateDuration(table.current_order.created_at);
+      detailsHtml = `
+        <div class="table-details">
+          <div class="table-amount">${table.current_order.total_amount.toFixed(2)} ₼</div>
+          <div class="table-duration">${duration}</div>
+        </div>
+      `;
+    }
+    
+    if (table.status === 'waiting') {
+      statusClass += ' waiting';
+    }
+    
+    if (isLocked && lockInfo.user !== this.state.currentUser) {
+      statusClass += ' locked';
+    }
+    
+    return `
+      <div class="table-card ${statusClass}" 
+           data-table-id="${table.id}"
+           data-table-number="${table.number}"
+           data-table-name="${table.name || ''}"
+           data-status="${table.status}">
+        <div class="table-number">${table.number}</div>
+        <div class="table-name">${table.name || ''}</div>
+        <div class="table-status">${this.getStatusLabel(table.status)}</div>
+        ${detailsHtml}
+        ${isLocked && lockInfo.user !== this.state.currentUser ? `
+          <div class="lock-info">
+            <div class="lock-user">${lockInfo.user_name}</div>
+          </div>
+        ` : ''}
+      </div>
+    `;
+  }
+  
+  getStatusLabel(status) {
+    const labels = {
+      'available': 'Boş',
+      'occupied': 'Dolu',
+      'reserved': 'Rezerv',
+      'cleaning': 'Təmizlik',
+      'waiting': 'Çağırış'
+    };
+    return labels[status] || status;
+  }
+  
+  calculateDuration(startTime) {
+    const start = new Date(startTime);
+    const now = new Date();
+    const diff = Math.floor((now - start) / 60000); // minutes
+    
+    if (diff < 60) {
+      return `${diff} dəq`;
+    } else {
+      const hours = Math.floor(diff / 60);
+      const minutes = diff % 60;
+      return `${hours} saat ${minutes} dəq`;
+    }
+  }
+  
+  // Table Interactions
+  initTableInteractions() {
+    document.querySelectorAll('.table-card').forEach(card => {
+      // Click for desktop
+      card.addEventListener('click', (e) => {
+        if (!e.target.closest('.table-details')) {
+          this.handleTableClick(card);
+        }
+      });
+      
+      // Long press for mobile
+      let pressTimer;
+      card.addEventListener('touchstart', (e) => {
+        pressTimer = setTimeout(() => {
+          this.handleTableClick(card);
+        }, 500);
+      });
+      
+      card.addEventListener('touchend', () => {
+        clearTimeout(pressTimer);
+      });
+      
+      card.addEventListener('touchmove', () => {
+        clearTimeout(pressTimer);
+      });
+    });
+  }
+  
+  handleTableClick(card) {
+    const tableId = parseInt(card.dataset.tableId);
+    const table = this.state.tables.find(t => t.id === tableId);
+    
+    if (!table) return;
+    
+    // Check if table is locked by another user
+    if (this.state.lockedTables.has(tableId)) {
+      const lockInfo = this.state.lockedTables.get(tableId);
+      if (lockInfo.user !== this.state.currentUser) {
+        this.showLockNotification(lockInfo.user_name);
+        return;
+      }
+    }
+    
+    this.state.selectedTable = table;
+    this.saveStateToStorage();
+    this.showRadialMenu(table);
+  }
+  
+  // Radial Menu
+  showRadialMenu(table) {
+    const menu = document.getElementById('radialMenu');
+    const backdrop = document.getElementById('overlayBackdrop');
+    const title = document.getElementById('radialMenuTableName');
+    
+    title.textContent = `Masa ${table.number}`;
+    menu.classList.add('active');
+    backdrop.classList.add('active');
+    
+    // Lock the table
+    this.lockTable(table.id);
+  }
+  
+  hideRadialMenu() {
+    const menu = document.getElementById('radialMenu');
+    const backdrop = document.getElementById('overlayBackdrop');
+    
+    menu.classList.remove('active');
+    backdrop.classList.remove('active');
+    
+    // Unlock the table
+    if (this.state.selectedTable) {
+      this.unlockTable(this.state.selectedTable.id);
+    }
+  }
+  
+  initRadialMenu() {
+    const closeBtn = document.getElementById('radialMenuClose');
+    const backdrop = document.getElementById('overlayBackdrop');
+    const actions = document.querySelectorAll('.radial-action');
+    
+    closeBtn.addEventListener('click', () => this.hideRadialMenu());
+    backdrop.addEventListener('click', () => this.hideRadialMenu());
+    
+    actions.forEach(action => {
+      action.addEventListener('click', () => {
+        const actionType = action.dataset.action;
+        this.handleRadialAction(actionType);
+      });
+    });
+  }
+  
+  handleRadialAction(action) {
+    if (!this.state.selectedTable) return;
+    
+    switch (action) {
+      case 'order':
+        this.showOrderPanel();
+        break;
+      case 'bill':
+        this.generateBill();
+        break;
+      case 'move':
+        this.moveTable();
+        break;
+      case 'reserve':
+        this.reserveTable();
+        break;
+    }
+    
+    this.hideRadialMenu();
+  }
+  
+  // Order Panel
+  showOrderPanel() {
+    const panel = document.getElementById('orderPanel');
+    const title = document.getElementById('orderPanelTableName');
+    
+    title.textContent = `Sifariş - Masa ${this.state.selectedTable.number}`;
+    panel.classList.add('active');
+    
+    // Load products for this table
+    this.loadProducts();
+  }
+  
+  hideOrderPanel() {
+    const panel = document.getElementById('orderPanel');
+    panel.classList.remove('active');
+  }
+  
+  initOrderPanel() {
+    const closeBtn = document.getElementById('orderPanelClose');
+    closeBtn.addEventListener('click', () => this.hideOrderPanel());
+    
+    // Product selection
+    document.addEventListener('click', (e) => {
+      if (e.target.closest('.product-item')) {
+        this.selectProduct(e.target.closest('.product-item'));
+      }
+    });
+  }
+  
+  selectProduct(productElement) {
+    const productId = productElement.dataset.product;
+    const productName = productElement.querySelector('.product-name').textContent;
+    
+    // Add to order
+    this.addProductToOrder(productId, productName);
+    
+    // Visual feedback
+    productElement.style.transform = 'scale(0.95)';
+    setTimeout(() => {
+      productElement.style.transform = '';
+    }, 100);
+  }
+  
+  addProductToOrder(productId, productName) {
+    // This would integrate with the order system
+    console.log(`Added product ${productId} (${productName}) to table ${this.state.selectedTable.id}`);
+    
+    // Show notification
+    this.showNotification(`${productName} sifarişə əlavə edildi`, 'success');
+  }
+  
+  // Table Locking
+  lockTable(tableId) {
+    const lockInfo = {
+      user: this.state.currentUser,
+      user_name: this.state.currentUser,
+      timestamp: Date.now()
+    };
+    
+    this.state.lockedTables.set(tableId, lockInfo);
+    this.saveStateToStorage();
+    
+    // Send WebSocket message
+    if (this.state.ws && this.state.ws.readyState === WebSocket.OPEN) {
+      this.state.ws.send(JSON.stringify({
+        type: 'lock_table',
+        table_id: tableId,
+        user: this.state.currentUser,
+        user_name: this.state.currentUser
+      }));
+    }
+    
+    // Update UI
+    this.updateTableLockUI(tableId, true);
+  }
+  
+  unlockTable(tableId) {
+    this.state.lockedTables.delete(tableId);
+    this.saveStateToStorage();
+    
+    // Send WebSocket message
+    if (this.state.ws && this.state.ws.readyState === WebSocket.OPEN) {
+      this.state.ws.send(JSON.stringify({
+        type: 'unlock_table',
+        table_id: tableId,
+        user: this.state.currentUser
+      }));
+    }
+    
+    // Update UI
+    this.updateTableLockUI(tableId, false);
+  }
+  
+  updateTableLockUI(tableId, isLocked) {
+    const card = document.querySelector(`[data-table-id="${tableId}"]`);
+    if (card) {
+      if (isLocked) {
+        card.classList.add('locked');
+      } else {
+        card.classList.remove('locked');
+      }
+    }
+  }
+  
+  handleTableLocked(tableId, user, userName) {
+    if (user !== this.state.currentUser) {
+      const lockInfo = { user, user_name: userName, timestamp: Date.now() };
+      this.state.lockedTables.set(tableId, lockInfo);
+      this.saveStateToStorage();
+      this.updateTableLockUI(tableId, true);
+      this.showLockNotification(userName);
+    }
+  }
+  
+  handleTableUnlocked(tableId) {
+    this.state.lockedTables.delete(tableId);
+    this.saveStateToStorage();
+    this.updateTableLockUI(tableId, false);
+  }
+  
+  showLockNotification(userName) {
+    const notification = document.createElement('div');
+    notification.className = 'lock-indicator';
+    notification.innerHTML = `
+      <div class="lock-indicator-icon">🔒</div>
+      <div class="lock-indicator-text">
+        <div>Masa kilidlidir</div>
+        <div class="lock-indicator-user">${userName}</div>
+      </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.remove();
+    }, 3000);
+  }
+  
+  // Touch Handlers
+  initTouchHandlers() {
+    let touchStartX = 0;
+    let touchStartY = 0;
+    
+    document.addEventListener('touchstart', (e) => {
+      touchStartX = e.touches[0].clientX;
+      touchStartY = e.touches[0].clientY;
+    });
+    
+    document.addEventListener('touchend', (e) => {
+      const touchEndX = e.changedTouches[0].clientX;
+      const touchEndY = e.changedTouches[0].clientY;
+      
+      const deltaX = touchEndX - touchStartX;
+      const deltaY = touchEndY - touchStartY;
+      
+      // Swipe right to open order panel
+      if (deltaX > 50 && Math.abs(deltaY) < 50) {
+        if (this.state.selectedTable) {
+          this.showOrderPanel();
+        }
+      }
+    });
+  }
+  
+  // Notifications
+  showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `luxury-flash ${type}`;
+    notification.innerHTML = `
+      <span class="luxury-flash-icon">
+        ${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}
+      </span>
+      <span>${message}</span>
+    `;
+    
+    notification.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 10000;
+      padding: 16px 20px;
+      border-radius: 12px;
+      background: ${type === 'success' ? 'rgba(46, 204, 113, 0.9)' : 'rgba(198, 166, 89, 0.9)'};
+      color: white;
+      font-weight: 500;
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+      backdrop-filter: blur(10px);
+      animation: slideInRight 0.3s ease-out;
+    `;
+    
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+      notification.style.animation = 'slideOutRight 0.3s ease-in';
+      setTimeout(() => notification.remove(), 300);
+    }, 3000);
+  }
+  
+  // Placeholder methods
+  generateBill() {
+    this.showNotification('Hesab hazırlanır...', 'info');
+  }
+  
+  moveTable() {
+    this.showNotification('Masa dəyişikliyi seçilir...', 'info');
+  }
+  
+  reserveTable() {
+    this.showNotification('Rezervasiya edilir...', 'info');
+  }
+  
+  loadProducts() {
+    // Load products for order panel
+    console.log('Loading products...');
+  }
+  
+  initPolling() {
+    // Fallback polling when WebSocket is not available
+    setInterval(() => {
+      this.loadTables();
+    }, 30000);
+  }
+}
+
+// Initialize War Room
+document.addEventListener('DOMContentLoaded', () => {
+  new LuxuryTablesWarRoom();
+});
+
+// Add CSS for animations
+const style = document.createElement('style');
+style.textContent = `
+  @keyframes slideInRight {
+    from { opacity: 0; transform: translateX(20px); }
+    to { opacity: 1; transform: translateX(0); }
+  }
+  
+  @keyframes slideOutRight {
+    from { opacity: 1; transform: translateX(0); }
+    to { opacity: 0; transform: translateX(20px); }
+  }
+  
+  .luxury-flash {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 16px 20px;
+    border-radius: 12px;
+    font-size: 14px;
+    font-weight: 500;
+    color: white;
+    backdrop-filter: blur(10px);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+  }
+  
+  .luxury-flash.success {
+    background: rgba(46, 204, 113, 0.9);
+    border: 1px solid rgba(46, 204, 113, 0.3);
+  }
+  
+  .luxury-flash.error {
+    background: rgba(231, 76, 60, 0.9);
+    border: 1px solid rgba(231, 76, 60, 0.3);
+  }
+  
+  .luxury-flash.info {
+    background: rgba(198, 166, 89, 0.9);
+    border: 1px solid rgba(198, 166, 89, 0.3);
+  }
+`;
+document.head.appendChild(style);
+</script>
+{% endblock %}

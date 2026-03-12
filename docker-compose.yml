@@ -1,48 +1,81 @@
 version: '3.8'
 
+# ═══════════════════════════════════════════════════════════════
+# RAMO PUB - PRODUCTION DEPLOYMENT (Zero-Downtime Infrastructure)
+# ═══════════════════════════════════════════════════════════════
+
 services:
-  # PostgreSQL Database
+  # ═══════════════════════════════════════════════════════════════
+  # POSTGRESQL DATABASE (High-Performance Configuration)
+  # ═══════════════════════════════════════════════════════════════
   db:
     image: postgres:15-alpine
-    container_name: restaurant_db
+    container_name: ramo_pub_db
     environment:
-      POSTGRES_DB: restaurant_enterprise
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
-      POSTGRES_INITDB_ARGS: "--encoding=UTF-8"
+      POSTGRES_DB: ${DB_NAME:-ramo_pub}
+      POSTGRES_USER: ${DB_USER:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_INITDB_ARGS: "--encoding=UTF-8 --locale=C"
+      # Performance optimizations
+      POSTGRES_SHARED_PRELOAD_LIBRARIES: pg_stat_statements
     ports:
       - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
-      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./database/schema_optimized.sql:/docker-entrypoint-initdb.d/01-schema.sql
+      - ./database/init.sql:/docker-entrypoint-initdb.d/02-init.sql
+      - ./database/backup:/backup
     restart: unless-stopped
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-ramo_pub}"]
       interval: 10s
       timeout: 5s
       retries: 5
+      start_period: 30s
+    command: >
+      postgres
+      -c shared_preload_libraries=pg_stat_statements
+      -c max_connections=200
+      -c shared_buffers=256MB
+      -c effective_cache_size=1GB
+      -c work_mem=4MB
+      -c maintenance_work_mem=64MB
+      -c checkpoint_completion_target=0.9
+      -c wal_buffers=16MB
+      -c default_statistics_target=100
+      -c random_page_cost=1.1
+      -c effective_io_concurrency=200
 
-  # Redis Cache
+  # ═══════════════════════════════════════════════════════════════
+  # REDIS CACHE (High-Performance Caching Layer)
+  # ═══════════════════════════════════════════════════════════════
   redis:
     image: redis:7-alpine
-    container_name: restaurant_redis
+    container_name: ramo_pub_redis
     ports:
       - "${REDIS_PORT:-6379}:6379"
     volumes:
       - redis_data:/data
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
+    command: redis-server /usr/local/etc/redis/redis.conf
+    sysctls:
+      - net.core.somaxconn=65535
 
-  # Web Application
+  # ═══════════════════════════════════════════════════════════════
+  # WEB APPLICATION (Flask App - Production Ready)
+  # ═══════════════════════════════════════════════════════════════
   web:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: restaurant_web
+      target: production
+    container_name: ramo_pub_web
     depends_on:
       db:
         condition: service_healthy
@@ -52,108 +85,210 @@ services:
       - .env
     environment:
       FLASK_ENV: production
-      DATABASE_URL: postgresql+psycopg2://postgres:${DB_PASSWORD:-postgres}@db:5432/restaurant_enterprise
+      FLASK_DEBUG: false
+      DATABASE_URL: postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD}@db:5432/${DB_NAME:-ramo_pub}
       REDIS_URL: redis://redis:6379/0
-      SECRET_KEY: ${SECRET_KEY:-your-secret-key-here}
-      JWT_SECRET_KEY: ${JWT_SECRET_KEY:-your-jwt-secret}
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      SENTRY_DSN: ${SENTRY_DSN}
+      # Performance settings
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-2}
+      GUNICORN_TIMEOUT: ${GUNICORN_TIMEOUT:-120}
+      GUNICORN_KEEPALIVE: ${GUNICORN_KEEPALIVE:-2}
     ports:
       - "${WEB_PORT:-5000}:5000"
     volumes:
       - ./logs:/app/logs
       - ./uploads:/app/uploads
+      - ./static:/app/static
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:5000/enterprise/health"]
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
       interval: 30s
       timeout: 10s
       retries: 3
       start_period: 40s
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+          cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
 
-  # Nginx Reverse Proxy
+  # ═══════════════════════════════════════════════════════════════
+  # NGINX REVERSE PROXY (SSL Termination & Load Balancing)
+  # ═══════════════════════════════════════════════════════════════
   nginx:
     image: nginx:alpine
-    container_name: restaurant_nginx
+    container_name: ramo_pub_nginx
     depends_on:
       - web
     ports:
-      - "${NGINX_PORT:-80}:80"
-      - "${NGINX_SSL_PORT:-443}:443"
+      - "${NGINX_HTTP_PORT:-80}:80"
+      - "${NGINX_HTTPS_PORT:-443}:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./nginx/ssl:/etc/nginx/ssl
-      - ./static:/var/www/static
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./static:/var/www/static:ro
+      - ./logs/nginx:/var/log/nginx
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  # ═══════════════════════════════════════════════════════════════
+  # CELERY WORKER (Background Tasks)
+  # ═══════════════════════════════════════════════════════════════
+  celery:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: ramo_pub_celery
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      FLASK_ENV: production
+      DATABASE_URL: postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD}@db:5432/${DB_NAME:-ramo_pub}
+      REDIS_URL: redis://redis:6379/0
+      SENTRY_DSN: ${SENTRY_DSN}
+    command: >
+      celery -A web.celery worker 
+      --loglevel=info 
+      --concurrency=${CELERY_CONCURRENCY:-4}
+      --max-tasks-per-child=1000
+      --time-limit=300
+    volumes:
+      - ./logs:/app/logs
+      - ./uploads:/app/uploads
+    restart: unless-stopped
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+          cpus: '0.5'
+
+  # ═══════════════════════════════════════════════════════════════
+  # CELERY BEAT (Scheduled Tasks)
+  # ═══════════════════════════════════════════════════════════════
+  celery-beat:
+    build:
+      context: .
+      dockerfile: Dockerfile
+      target: production
+    container_name: ramo_pub_celery_beat
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      FLASK_ENV: production
+      DATABASE_URL: postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD}@db:5432/${DB_NAME:-ramo_pub}
+      REDIS_URL: redis://redis:6379/0
+      SENTRY_DSN: ${SENTRY_DSN}
+    command: celery -A web.celery beat --loglevel=info --schedule=/tmp/celerybeat-schedule
+    volumes:
+      - ./logs:/app/logs
+      - ./celerybeat-schedule:/tmp/celerybeat-schedule
     restart: unless-stopped
 
-  # Prometheus Monitoring
+  # ═══════════════════════════════════════════════════════════════
+  # PROMETHEUS MONITORING
+  # ═══════════════════════════════════════════════════════════════
   prometheus:
     image: prom/prometheus:latest
-    container_name: restaurant_prometheus
+    container_name: ramo_pub_prometheus
     ports:
       - "${PROMETHEUS_PORT:-9090}:9090"
     volumes:
-      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml
+      - ./monitoring/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./monitoring/rules:/etc/prometheus/rules:ro
       - prometheus_data:/prometheus
-    restart: unless-stopped
     command:
       - '--config.file=/etc/prometheus/prometheus.yml'
       - '--storage.tsdb.path=/prometheus'
       - '--web.console.libraries=/etc/prometheus/console_libraries'
       - '--web.console.templates=/etc/prometheus/consoles'
+      - '--storage.tsdb.retention.time=30d'
+      - '--web.enable-lifecycle'
+    restart: unless-stopped
 
-  # Grafana Dashboard
+  # ═══════════════════════════════════════════════════════════════
+  # GRAFANA DASHBOARD
+  # ═══════════════════════════════════════════════════════════════
   grafana:
     image: grafana/grafana:latest
-    container_name: restaurant_grafana
+    container_name: ramo_pub_grafana
     ports:
       - "${GRAFANA_PORT:-3000}:3000"
     environment:
       GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_PASSWORD:-admin}
+      GF_INSTALL_PLUGINS: grafana-clock-panel,grafana-simple-json-datasource
+      GF_SECURITY_ALLOW_EMBEDDING: true
     volumes:
       - grafana_data:/var/lib/grafana
-      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards
-      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources
+      - ./monitoring/grafana/dashboards:/etc/grafana/provisioning/dashboards:ro
+      - ./monitoring/grafana/datasources:/etc/grafana/provisioning/datasources:ro
     restart: unless-stopped
 
-  # Celery Worker
-  celery:
+  # ═══════════════════════════════════════════════════════════════
+  # BLUE-GREEN DEPLOYMENT (Green Environment)
+  # ═══════════════════════════════════════════════════════════════
+  web-green:
     build:
       context: .
       dockerfile: Dockerfile
-    container_name: restaurant_celery
+      target: production
+    container_name: ramo_pub_web_green
     depends_on:
-      - db
-      - redis
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
     env_file:
       - .env
     environment:
       FLASK_ENV: production
-      DATABASE_URL: postgresql+psycopg2://postgres:${DB_PASSWORD:-postgres}@db:5432/restaurant_enterprise
+      DATABASE_URL: postgresql+psycopg2://${DB_USER:-postgres}:${DB_PASSWORD}@db:5432/${DB_NAME:-ramo_pub}
       REDIS_URL: redis://redis:6379/0
-    command: celery -A app.celery worker --loglevel=info
+      SECRET_KEY: ${SECRET_KEY}
+      JWT_SECRET_KEY: ${JWT_SECRET_KEY}
+      SENTRY_DSN: ${SENTRY_DSN}
+      GUNICORN_WORKERS: ${GUNICORN_WORKERS:-4}
+      GUNICORN_THREADS: ${GUNICORN_THREADS:-2}
+    ports:
+      - "${WEB_GREEN_PORT:-5001}:5000"
     volumes:
       - ./logs:/app/logs
+      - ./uploads:/app/uploads
+      - ./static:/app/static
     restart: unless-stopped
+    profiles:
+      - green
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
 
-  # Celery Beat Scheduler
-  celery-beat:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    container_name: restaurant_celery_beat
-    depends_on:
-      - db
-      - redis
-    env_file:
-      - .env
-    environment:
-      FLASK_ENV: production
-      DATABASE_URL: postgresql+psycopg2://postgres:${DB_PASSWORD:-postgres}@db:5432/restaurant_enterprise
-      REDIS_URL: redis://redis:6379/0
-    command: celery -A app.celery beat --loglevel=info
-    volumes:
-      - ./logs:/app/logs
-    restart: unless-stopped
-
+# ═══════════════════════════════════════════════════════════════
+# PERSISTENT VOLUMES
+# ═══════════════════════════════════════════════════════════════
 volumes:
   postgres_data:
     driver: local
@@ -163,7 +298,15 @@ volumes:
     driver: local
   grafana_data:
     driver: local
+  celerybeat_schedule:
+    driver: local
 
+# ═══════════════════════════════════════════════════════════════
+# NETWORK CONFIGURATION
+# ═══════════════════════════════════════════════════════════════
 networks:
   default:
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.20.0.0/16

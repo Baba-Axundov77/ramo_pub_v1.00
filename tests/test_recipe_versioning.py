@@ -3,9 +3,9 @@ from __future__ import annotations
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from database.connection import Base
-from database.models import MenuCategory, MenuItem, InventoryItem, MenuItemRecipe
-from modules.menu.menu_service import MenuService
+from src.core.database.connection import Base
+from src.core.database.models import MenuCategory, MenuItem, InventoryItem, MenuItemRecipe
+from src.core.modules.menu.menu_service import MenuService
 
 
 def test_replace_recipes_deactivates_old_versions(tmp_path):

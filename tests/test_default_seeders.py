@@ -3,10 +3,10 @@ from __future__ import annotations
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from database.connection import Base
-from database.models import MenuCategory, MenuItem, InventoryItem
-from modules.inventory.inventory_service import InventoryService
-from modules.menu.menu_service import MenuService
+from src.core.database.connection import Base
+from src.core.database.models import MenuCategory, MenuItem, InventoryItem
+from src.core.modules.inventory.inventory_service import InventoryService
+from src.core.modules.menu.menu_service import MenuService
 
 
 def test_menu_seed_defaults_creates_data_once(tmp_path):

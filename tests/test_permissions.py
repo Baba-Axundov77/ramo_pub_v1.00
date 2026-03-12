@@ -1,4 +1,4 @@
-from modules.auth.permissions import permission_service
+from src.core.modules.auth.permissions import permission_service
 
 
 def test_admin_has_manage_users_permission():

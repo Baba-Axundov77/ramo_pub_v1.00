@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Luxury Checkout Preview | Ramo Pub</title>
+    <link rel="stylesheet" href="web/static/css/luxury-checkout.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&family=Inter+Mono:wght@600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Demo Controls */
+        .demo-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            z-index: 10000;
+            backdrop-filter: blur(20px);
+            max-width: 320px;
+        }
+        
+        .demo-controls h4 {
+            margin: 0 0 16px 0;
+            color: var(--gold-primary, #c6a659);
+            font-size: 16px;
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .demo-controls button {
+            display: block;
+            width: 100%;
+            margin: 8px 0;
+            padding: 12px 16px;
+            background: rgba(198, 166, 89, 0.1);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .demo-controls button:hover {
+            background: rgba(198, 166, 89, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .demo-info {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(198, 166, 89, 0.2);
+            font-size: 11px;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
+        
+        .demo-status {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            border-radius: 8px;
+            color: #2ecc71;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .demo-controls {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin: 20px;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Demo Controls -->
+    <div class="demo-controls">
+        <h4>💳 Checkout Controls</h4>
+        <button onclick="testPaymentMethods()">
+            <i class="fas fa-credit-card"></i> Test Payment Methods
+        </button>
+        <button onclick="testHighDiscount()">
+            <i class="fas fa-percentage"></i> Test Safety Lock
+        </button>
+        <button onclick="testSplitBill()">
+            <i class="fas fa-users"></i> Test Split Bill
+        </button>
+        <button onclick="testCountingAnimation()">
+            <i class="fas fa-calculator"></i> Test Counting
+        </button>
+        <button onclick="testOfflineMode()">
+            <i class="fas fa-wifi-slash"></i> Test Offline Mode
+        </button>
+        <button onclick="testResponsive()">
+            <i class="fas fa-mobile-alt"></i> Test Responsive
+        </button>
+        
+        <div class="demo-info">
+            <strong>Payment:</strong> <span id="paymentMethod">Nəğd</span><br>
+            <strong>Service:</strong> <span id="serviceRate">10%</span><br>
+            <strong>Discount:</strong> <span id="discountRate">0%</span><br>
+            <strong>Total:</strong> <span id="totalAmount">0.00 ₼</span><br>
+            <strong>Connection:</strong> <span id="connectionStatus">Online</span>
+        </div>
+        
+        <div class="demo-status" id="demoStatus">
+            ✨ Checkout Ready
+        </div>
+    </div>
+
+    <div class="luxury-checkout-container">
+        <!-- Payment Management Panel -->
+        <div class="payment-panel">
+            <div class="payment-header">
+                <h1 class="payment-title">Ödəniş İdarəetmə</h1>
+                <p class="payment-subtitle">Masa 12</p>
+            </div>
+
+            <!-- Payment Methods -->
+            <div class="payment-methods">
+                <button class="payment-method-btn active" data-method="cash">
+                    <span class="payment-method-icon">💵</span>
+                    <span>Nəğd</span>
+                </button>
+                <button class="payment-method-btn" data-method="card">
+                    <span class="payment-method-icon">💳</span>
+                    <span>Kart</span>
+                </button>
+                <button class="payment-method-btn" data-method="terminal">
+                    <span class="payment-method-icon">📟</span>
+                    <span>Terminal</span>
+                </button>
+            </div>
+
+            <!-- Service Charge -->
+            <div class="glass-card">
+                <div class="glass-card-label">Xidmət haqqı (%)</div>
+                <input type="number" class="glass-card-input" id="serviceCharge" value="10" min="0" max="30" step="1">
+            </div>
+
+            <!-- Discount -->
+            <div class="glass-card">
+                <div class="glass-card-label">Endirim (%)</div>
+                <input type="number" class="glass-card-input" id="discount" value="0" min="0" max="50" step="1">
+            </div>
+
+            <!-- Safety Lock Warning -->
+            <div class="safety-lock" id="safetyLock">
+                <div class="safety-lock-header">
+                    <span>⚠️</span>
+                    <span>Təhlükəsizlik Xəbərdarlığı</span>
+                </div>
+                <div class="safety-lock-message">
+                    20%-dən yuxarı endirim menecer təsdiqi tələb edir. Davam etmək istəyirsiniz?
+                </div>
+                <div class="safety-lock-actions">
+                    <button class="safety-lock-btn safety-lock-confirm" onclick="confirmHighDiscount()">
+                        Təsdiqlə
+                    </button>
+                    <button class="safety-lock-btn safety-lock-cancel" onclick="cancelHighDiscount()">
+                        Ləğv et
+                    </button>
+                </div>
+            </div>
+
+            <!-- Split Bill Button -->
+            <button class="split-bill-trigger" onclick="openSplitBill()">
+                <span>🧾</span>
+                <span>Hesabı Böl</span>
+            </button>
+
+            <!-- Action Button -->
+            <button class="checkout-action-btn" onclick="processPayment()">
+                <span>Ödənişi Tamamla</span>
+            </button>
+        </div>
+
+        <!-- Receipt Preview Panel -->
+        <div class="receipt-panel">
+            <div class="receipt-content">
+                <div class="receipt-header">
+                    <div class="receipt-logo">RAMO PUB</div>
+                    <div class="receipt-subtitle">Premium Dining Experience</div>
+                </div>
+
+                <div class="receipt-items" id="receiptItems">
+                    <!-- Receipt items will be loaded dynamically -->
+                </div>
+
+                <div class="receipt-summary">
+                    <div class="receipt-summary-row">
+                        <span>Məbləğ:</span>
+                        <span id="subtotalAmount">0.00 ₼</span>
+                    </div>
+                    <div class="receipt-summary-row">
+                        <span>Xidmət haqqı:</span>
+                        <span id="serviceAmount">0.00 ₼</span>
+                    </div>
+                    <div class="receipt-summary-row">
+                        <span>Endirim:</span>
+                        <span id="discountAmount">0.00 ₼</span>
+                    </div>
+                    <div class="receipt-summary-row total">
+                        <span>Cəmi:</span>
+                        <span id="totalAmount">0.00 ₼</span>
+                    </div>
+                </div>
+
+                <div class="receipt-qr">
+                    <div class="receipt-qr-label">Rəqəmsal Çek</div>
+                    <div class="receipt-qr-code" id="qrCode">
+                        QR Kod
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Split Bill Modal -->
+    <div class="split-bill-modal" id="splitBillModal">
+        <div class="split-bill-content">
+            <div class="split-bill-header">
+                <h2 class="split-bill-title">Hesabı Böl</h2>
+                <p class="payment-subtitle">Adambaşı məbləği seçin</p>
+            </div>
+
+            <div class="golden-slider">
+                <div class="golden-slider-label">Adambaşı: <span id="personCount">2</span> nəfər</div>
+                <div class="golden-slider-track" id="sliderTrack">
+                    <div class="golden-slider-fill" id="sliderFill"></div>
+                    <div class="golden-slider-thumb" id="sliderThumb"></div>
+                </div>
+                <div class="golden-slider-value" id="perPersonAmount">0.00 ₼</div>
+            </div>
+
+            <div class="split-bill-actions">
+                <button class="split-bill-btn split-bill-cancel" onclick="closeSplitBill()">
+                    Ləğv et
+                </button>
+                <button class="split-bill-btn split-bill-confirm" onclick="confirmSplitBill()">
+                    Təsdiqlə
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class LuxuryCheckoutSystemDemo {
+            constructor() {
+                this.orderData = [];
+                this.paymentMethod = 'cash';
+                this.serviceCharge = 10;
+                this.discount = 0;
+                this.subtotal = 0;
+                this.total = 0;
+                this.pendingHighDiscount = false;
+                this.printBuffer = []; // Offline print buffer
+                this.init();
+            }
+            
+            init() {
+                this.loadOrderData();
+                this.initPaymentMethods();
+                this.initInputs();
+                this.initSplitBill();
+                this.updateReceipt();
+                this.initOfflineSupport();
+                this.updateDemoInfo();
+            }
+            
+            loadOrderData() {
+                // Comprehensive sample order data
+                this.orderData = [
+                    { name: 'Pizza Margherita', quantity: 2, price: 18.00 },
+                    { name: 'Çeşburger', quantity: 1, price: 15.00 },
+                    { name: 'Qırmızı Şərab', quantity: 1, price: 25.00 },
+                    { name: 'Sezar Salatı', quantity: 1, price: 12.00 },
+                    { name: 'Tiramisu', quantity: 2, price: 8.00 },
+                    { name: 'Bira', quantity: 3, price: 5.00 },
+                    { name: 'Limonata', quantity: 2, price: 6.00 }
+                ];
+                
+                this.calculateTotals();
+                this.renderReceiptItems();
+            }
+            
+            calculateTotals() {
+                this.subtotal = this.orderData.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+                const serviceAmount = this.subtotal * (this.serviceCharge / 100);
+                const discountAmount = this.subtotal * (this.discount / 100);
+                this.total = this.subtotal + serviceAmount - discountAmount;
+                
+                return { subtotal, serviceAmount, discountAmount, total: this.total };
+            }
+            
+            renderReceiptItems() {
+                const receiptItems = document.getElementById('receiptItems');
+                receiptItems.innerHTML = this.orderData.map(item => `
+                    <div class="receipt-item">
+                        <div class="receipt-item-name">${item.name}</div>
+                        <div class="receipt-item-quantity">×${item.quantity}</div>
+                        <div class="receipt-item-price">${(item.price * item.quantity).toFixed(2)} ₼</div>
+                    </div>
+                `).join('');
+            }
+            
+            initPaymentMethods() {
+                const buttons = document.querySelectorAll('.payment-method-btn');
+                buttons.forEach(btn => {
+                    btn.addEventListener('click', () => {
+                        buttons.forEach(b => b.classList.remove('active'));
+                        btn.classList.add('active');
+                        this.paymentMethod = btn.dataset.method;
+                        
+                        // Add glow effect
+                        btn.style.boxShadow = '0 0 30px rgba(198, 166, 89, 0.5)';
+                        setTimeout(() => {
+                            btn.style.boxShadow = '';
+                        }, 1000);
+                        
+                        this.updateDemoInfo();
+                    });
+                });
+            }
+            
+            initInputs() {
+                const serviceInput = document.getElementById('serviceCharge');
+                const discountInput = document.getElementById('discount');
+                
+                serviceInput.addEventListener('input', (e) => {
+                    this.serviceCharge = Math.max(0, Math.min(30, parseInt(e.target.value) || 0));
+                    e.target.value = this.serviceCharge;
+                    this.updateReceipt();
+                    this.updateDemoInfo();
+                });
+                
+                discountInput.addEventListener('input', (e) => {
+                    const value = Math.max(0, Math.min(50, parseInt(e.target.value) || 0));
+                    
+                    // Safety lock for high discounts
+                    if (value > 20 && !this.pendingHighDiscount) {
+                        this.showSafetyLock();
+                        this.pendingHighDiscount = true;
+                        return;
+                    }
+                    
+                    this.discount = value;
+                    e.target.value = this.discount;
+                    this.updateReceipt();
+                    this.updateDemoInfo();
+                    
+                    // Hide safety lock if discount is reduced
+                    if (value <= 20) {
+                        this.hideSafetyLock();
+                        this.pendingHighDiscount = false;
+                    }
+                });
+            }
+            
+            showSafetyLock() {
+                const safetyLock = document.getElementById('safetyLock');
+                safetyLock.classList.add('active');
+                this.updateDemoStatus('⚠️ Safety lock activated', 'warning');
+            }
+            
+            hideSafetyLock() {
+                const safetyLock = document.getElementById('safetyLock');
+                safetyLock.classList.remove('active');
+            }
+            
+            updateReceipt() {
+                const { subtotal, serviceAmount, discountAmount, total } = this.calculateTotals();
+                
+                // Update with counting animation
+                this.animateValue('subtotalAmount', subtotal);
+                this.animateValue('serviceAmount', serviceAmount);
+                this.animateValue('discountAmount', discountAmount);
+                this.animateValue('totalAmount', total);
+                
+                // Update QR code (simplified)
+                this.updateQRCode();
+            }
+            
+            animateValue(elementId, targetValue) {
+                const element = document.getElementById(elementId);
+                const startValue = parseFloat(element.textContent.replace(' ₼', '')) || 0;
+                const duration = 300;
+                const startTime = performance.now();
+                
+                const animate = (currentTime) => {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+                    const current = startValue + (targetValue - startValue) * easeOutQuart;
+                    
+                    element.textContent = `${current.toFixed(2)} ₼`;
+                    element.classList.add('counting-animation');
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    } else {
+                        element.classList.remove('counting-animation');
+                    }
+                };
+                
+                requestAnimationFrame(animate);
+            }
+            
+            updateQRCode() {
+                const qrCode = document.getElementById('qrCode');
+                // Generate simple QR code representation
+                const qrData = `RAMO PUB\n${this.total.toFixed(2)}₼\n${new Date().toLocaleString('az-AZ')}`;
+                qrCode.textContent = qrData.substring(0, 50) + '...';
+            }
+            
+            initSplitBill() {
+                const sliderThumb = document.getElementById('sliderThumb');
+                const sliderTrack = document.getElementById('sliderTrack');
+                let isDragging = false;
+                
+                const updateSlider = (clientX) => {
+                    const rect = sliderTrack.getBoundingClientRect();
+                    const percentage = Math.max(0, Math.min(1, (clientX - rect.left) / rect.width));
+                    const personCount = Math.max(2, Math.min(10, Math.round(percentage * 10) + 1));
+                    
+                    this.updateSplitBill(personCount);
+                };
+                
+                sliderThumb.addEventListener('mousedown', () => isDragging = true);
+                document.addEventListener('mousemove', (e) => {
+                    if (isDragging) updateSlider(e.clientX);
+                });
+                document.addEventListener('mouseup', () => isDragging = false);
+                
+                // Touch support
+                sliderThumb.addEventListener('touchstart', () => isDragging = true);
+                document.addEventListener('touchmove', (e) => {
+                    if (isDragging) updateSlider(e.touches[0].clientX);
+                });
+                document.addEventListener('touchend', () => isDragging = false);
+            }
+            
+            updateSplitBill(personCount) {
+                const perPerson = this.total / personCount;
+                
+                document.getElementById('personCount').textContent = personCount;
+                document.getElementById('perPersonAmount').textContent = `${perPerson.toFixed(2)} ₼`;
+                
+                const percentage = (personCount - 1) / 9;
+                document.getElementById('sliderFill').style.width = `${percentage * 100}%`;
+                document.getElementById('sliderThumb').style.left = `${percentage * 100}%`;
+            }
+            
+            initOfflineSupport() {
+                // Listen for online/offline events
+                window.addEventListener('online', () => {
+                    console.log('Connection restored');
+                    this.flushPrintBuffer();
+                    this.updateConnectionStatus('Online');
+                });
+                
+                window.addEventListener('offline', () => {
+                    console.log('Connection lost - using offline mode');
+                    this.updateConnectionStatus('Offline');
+                });
+            }
+            
+            addToPrintBuffer(receiptData) {
+                this.printBuffer.push({
+                    ...receiptData,
+                    timestamp: Date.now()
+                });
+                console.log('Added to print buffer:', receiptData);
+            }
+            
+            flushPrintBuffer() {
+                if (this.printBuffer.length > 0) {
+                    console.log(`Flushing ${this.printBuffer.length} buffered print jobs`);
+                    this.printBuffer = [];
+                }
+            }
+            
+            updateDemoInfo() {
+                document.getElementById('paymentMethod').textContent = this.getPaymentMethodLabel();
+                document.getElementById('serviceRate').textContent = `${this.serviceCharge}%`;
+                document.getElementById('discountRate').textContent = `${this.discount}%`;
+                document.getElementById('totalAmount').textContent = `${this.total.toFixed(2)} ₼`;
+            }
+            
+            updateConnectionStatus(status) {
+                document.getElementById('connectionStatus').textContent = status;
+                this.updateDemoStatus(status === 'Online' ? '🌐 Connection restored' : '📵 Offline mode', status === 'Online' ? 'success' : 'warning');
+            }
+            
+            getPaymentMethodLabel() {
+                const labels = {
+                    'cash': 'Nəğd',
+                    'card': 'Kart',
+                    'terminal': 'Terminal'
+                };
+                return labels[this.paymentMethod] || this.paymentMethod;
+            }
+            
+            updateDemoStatus(message, type = 'success') {
+                const status = document.getElementById('demoStatus');
+                if (status) {
+                    status.textContent = message;
+                    status.style.background = type === 'success' 
+                        ? 'rgba(46, 204, 113, 0.1)' 
+                        : type === 'warning'
+                        ? 'rgba(243, 156, 18, 0.1)'
+                        : 'rgba(198, 166, 89, 0.1)';
+                    status.style.borderColor = type === 'success'
+                        ? 'rgba(46, 204, 113, 0.3)'
+                        : type === 'warning'
+                        ? 'rgba(243, 156, 18, 0.3)'
+                        : 'rgba(198, 166, 89, 0.3)';
+                    status.style.color = type === 'success' ? '#2ecc71' : type === 'warning' ? '#f39c12' : '#c6a659';
+                }
+            }
+        }
+        
+        // Global functions
+        window.confirmHighDiscount = function() {
+            window.luxuryCheckout.pendingHighDiscount = false;
+            window.luxuryCheckout.hideSafetyLock();
+            window.luxuryCheckout.updateReceipt();
+            window.luxuryCheckout.updateDemoStatus('✅ High discount confirmed', 'success');
+        };
+        
+        window.cancelHighDiscount = function() {
+            const discountInput = document.getElementById('discount');
+            discountInput.value = 0;
+            window.luxuryCheckout.discount = 0;
+            window.luxuryCheckout.pendingHighDiscount = false;
+            window.luxuryCheckout.hideSafetyLock();
+            window.luxuryCheckout.updateReceipt();
+            window.luxuryCheckout.updateDemoInfo();
+            window.luxuryCheckout.updateDemoStatus('❌ High discount cancelled', 'info');
+        };
+        
+        window.openSplitBill = function() {
+            document.getElementById('splitBillModal').classList.add('active');
+            window.luxuryCheckout.updateSplitBill(2);
+            window.luxuryCheckout.updateDemoStatus('🧾 Split bill opened', 'info');
+        };
+        
+        window.closeSplitBill = function() {
+            document.getElementById('splitBillModal').classList.remove('active');
+            window.luxuryCheckout.updateDemoStatus('❌ Split bill closed', 'info');
+        };
+        
+        window.confirmSplitBill = function() {
+            const personCount = parseInt(document.getElementById('personCount').textContent);
+            const perPerson = window.luxuryCheckout.total / personCount;
+            
+            alert(`Hesab ${personCount} nəfər arasında bölündü.\nAdambaşı: ${perPerson.toFixed(2)} ₼`);
+            closeSplitBill();
+            window.luxuryCheckout.updateDemoStatus('✅ Bill split successfully', 'success');
+        };
+        
+        window.processPayment = function() {
+            const receiptData = {
+                paymentMethod: window.luxuryCheckout.paymentMethod,
+                total: window.luxuryCheckout.total,
+                serviceCharge: window.luxuryCheckout.serviceCharge,
+                discount: window.luxuryCheckout.discount,
+                items: window.luxuryCheckout.orderData,
+                timestamp: new Date().toISOString()
+            };
+            
+            // Check if online
+            if (navigator.onLine) {
+                // Process payment online
+                console.log('Processing payment online:', receiptData);
+                alert('Ödəniş uğurla tamamlandı!');
+                window.luxuryCheckout.updateDemoStatus('💳 Payment processed online', 'success');
+            } else {
+                // Add to print buffer for offline processing
+                window.luxuryCheckout.addToPrintBuffer(receiptData);
+                console.log('Payment added to offline buffer:', receiptData);
+                alert('Ödəniş ofline buffer-ə əlavə edildi. İnternet qayıdanda emal olunacaq.');
+                window.luxuryCheckout.updateDemoStatus('📋 Payment buffered for offline', 'warning');
+            }
+        };
+        
+        // Demo functions
+        window.testPaymentMethods = function() {
+            const methods = ['cash', 'card', 'terminal'];
+            const currentIndex = methods.indexOf(window.luxuryCheckout.paymentMethod);
+            const nextIndex = (currentIndex + 1) % methods.length;
+            const nextMethod = methods[nextIndex];
+            
+            const button = document.querySelector(`[data-method="${nextMethod}"]`);
+            button.click();
+            
+            window.luxuryCheckout.updateDemoStatus('💳 Payment method tested', 'info');
+        };
+        
+        window.testHighDiscount = function() {
+            const discountInput = document.getElementById('discount');
+            discountInput.value = 25;
+            discountInput.dispatchEvent(new Event('input'));
+            
+            window.luxuryCheckout.updateDemoStatus('⚠️ Safety lock triggered', 'warning');
+        };
+        
+        window.testSplitBill = function() {
+            openSplitBill();
+            
+            // Animate slider
+            const sliderThumb = document.getElementById('sliderThumb');
+            const sliderTrack = document.getElementById('sliderTrack');
+            const rect = sliderTrack.getBoundingClientRect();
+            
+            sliderThumb.style.left = '70%';
+            window.luxuryCheckout.updateSplitBill(7);
+            
+            window.luxuryCheckout.updateDemoStatus('👥 Split bill tested', 'info');
+        };
+        
+        window.testCountingAnimation = function() {
+            // Trigger counting animation by changing service charge
+            const serviceInput = document.getElementById('serviceCharge');
+            const originalValue = window.luxuryCheckout.serviceCharge;
+            
+            serviceInput.value = 15;
+            serviceInput.dispatchEvent(new Event('input'));
+            
+            setTimeout(() => {
+                serviceInput.value = originalValue;
+                serviceInput.dispatchEvent(new Event('input'));
+            }, 1000);
+            
+            window.luxuryCheckout.updateDemoStatus('🔢 Counting animation tested', 'info');
+        };
+        
+        window.testOfflineMode = function() {
+            // Simulate offline mode
+            if (navigator.onLine) {
+                alert('Bu funksiya ofline rejimdə test edilə bilər. İnternet bağlantınızı kəsin və yenidən cəhd edin.');
+            } else {
+                processPayment();
+            }
+            
+            window.luxuryCheckout.updateDemoStatus('📵 Offline mode test', 'info');
+        };
+        
+        window.testResponsive = function() {
+            const viewportInfo = `
+                Viewport: ${window.innerWidth}x${window.innerHeight}px
+                Device: ${window.innerWidth <= 768 ? 'Mobile' : window.innerWidth <= 1024 ? 'Tablet' : 'Desktop'}
+                Layout: ${window.innerWidth <= 768 ? 'Stacked' : window.innerWidth <= 1024 ? 'Compact' : 'Full Grid'}
+                Connection: ${navigator.onLine ? 'Online' : 'Offline'}
+                Touch: ${'ontouchstart' in window ? 'Available' : 'Not Available'}
+            `;
+            
+            window.luxuryCheckout.updateDemoStatus('📱 Responsive info logged', 'info');
+            console.log(viewportInfo);
+        };
+        
+        // Initialize checkout system
+        document.addEventListener('DOMContentLoaded', () => {
+            window.luxuryCheckout = new LuxuryCheckoutSystemDemo();
+        });
+        
+        // Add CSS for additional styles
+        const style = document.createElement('style');
+        style.textContent = `
+            .split-bill-trigger {
+                width: 100%;
+                padding: 1rem;
+                background: rgba(198, 166, 89, 0.1);
+                border: 1px solid var(--gold-primary, #c6a659);
+                border-radius: 12px;
+                color: var(--gold-primary, #c6a659);
+                font-size: 1rem;
+                font-weight: 600;
+                cursor: pointer;
+                transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 0.5rem;
+                margin-bottom: 1rem;
+            }
+            
+            .split-bill-trigger:hover {
+                background: rgba(198, 166, 89, 0.2);
+                transform: translateY(-2px);
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

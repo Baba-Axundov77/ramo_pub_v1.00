@@ -1,0 +1,681 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KDS Preview | Ramo Pub</title>
+    <link rel="stylesheet" href="web/static/css/luxury-kds.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&family=Inter+Mono:wght@600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Demo Controls */
+        .demo-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            z-index: 10000;
+            backdrop-filter: blur(20px);
+            max-width: 320px;
+        }
+        
+        .demo-controls h4 {
+            margin: 0 0 16px 0;
+            color: var(--gold-primary, #c6a659);
+            font-size: 16px;
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .demo-controls button {
+            display: block;
+            width: 100%;
+            margin: 8px 0;
+            padding: 12px 16px;
+            background: rgba(198, 166, 89, 0.1);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .demo-controls button:hover {
+            background: rgba(198, 166, 89, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .demo-info {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(198, 166, 89, 0.2);
+            font-size: 11px;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
+        
+        .demo-status {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            border-radius: 8px;
+            color: #2ecc71;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        /* Kitchen Frame Simulation */
+        .kds-frame {
+            max-width: 1920px;
+            margin: 0 auto;
+            background: #000;
+            border-radius: 20px;
+            padding: 20px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.8);
+            position: relative;
+        }
+        
+        .kds-frame::before {
+            content: 'KITCHEN DISPLAY SYSTEM';
+            position: absolute;
+            top: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            color: var(--gold-primary, #c6a659);
+            font-family: 'Inter Mono', monospace;
+            font-size: 12px;
+            letter-spacing: 2px;
+            z-index: 10;
+        }
+    </style>
+</head>
+<body>
+    <!-- Demo Controls -->
+    <div class="demo-controls">
+        <h4>🍳 KDS Controls</h4>
+        <button onclick="addNewOrder()">
+            <i class="fas fa-plus"></i> Add New Order
+        </button>
+        <button onclick="addPriorityOrder()">
+            <i class="fas fa-star"></i> Add Priority Order
+        </button>
+        <button onclick="markRandomReady()">
+            <i class="fas fa-check"></i> Mark Random Ready
+        </button>
+        <button onclick="simulateDelay()">
+            <i class="fas fa-clock"></i> Simulate Delay
+        </button>
+        <button onclick="testNotification()">
+            <i class="fas fa-bell"></i> Test Notification
+        </button>
+        <button onclick="testSounds()">
+            <i class="fas fa-volume-up"></i> Test Sounds
+        </button>
+        
+        <div class="demo-info">
+            <strong>Active Orders:</strong> <span id="activeCount">0</span><br>
+            <strong>Priority Orders:</strong> <span id="priorityCount">0</span><br>
+            <strong>Delayed Orders:</strong> <span id="delayedCount">0</span><br>
+            <strong>WebSocket:</strong> <span id="wsStatus">Simulated</span><br>
+            <strong>Grid Layout:</strong> <span id="gridInfo">Auto</span>
+        </div>
+        
+        <div class="demo-status" id="demoStatus">
+            ✨ KDS Ready
+        </div>
+    </div>
+
+    <!-- Kitchen Frame -->
+    <div class="kds-frame">
+        <div class="kds-container">
+            <!-- KDS Header -->
+            <header class="kds-header">
+                <h1 class="kds-title">MƏTBƏX EKRANI</h1>
+                <div class="kds-stats">
+                    <div class="kds-stat">
+                        <span class="kds-stat-value" id="activeOrders">0</span>
+                        <span class="kds-stat-label">Aktiv Sifariş</span>
+                    </div>
+                    <div class="kds-stat">
+                        <span class="kds-stat-value" id="waitingOrders">0</span>
+                        <span class="kds-stat-label">Gözləyən</span>
+                    </div>
+                    <div class="kds-stat">
+                        <span class="kds-stat-value" id="delayedOrders">0</span>
+                        <span class="kds-stat-label">Gecikən</span>
+                    </div>
+                </div>
+            </header>
+
+            <!-- KDS Grid Layout -->
+            <main class="kds-grid" id="kdsGrid">
+                <!-- Order cards will be dynamically loaded here -->
+            </main>
+
+            <!-- KDS Quick Action Buttons -->
+            <div class="kds-quick-actions">
+                <button class="kds-action-btn primary" onclick="markAllReady()">
+                    <span>✓</span>
+                    <span>Hamısını Hazırla</span>
+                </button>
+                <button class="kds-action-btn danger" onclick="returnAllOrders()">
+                    <span>↩</span>
+                    <span>Geri Qaytar</span>
+                </button>
+                <button class="kds-action-btn" onclick="printOrders()">
+                    <span>🖨️</span>
+                    <span>Çap Et</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Luxury Notification -->
+    <div class="luxury-notification" id="luxuryNotification">
+        <span id="notificationText">Masa 5 - Sifariş Hazırdır!</span>
+    </div>
+
+    <script>
+        class LuxuryKDSDemo {
+            constructor() {
+                this.orders = [];
+                this.timers = new Map();
+                this.soundEnabled = true;
+                this.orderCounter = 1;
+                this.init();
+            }
+            
+            init() {
+                this.loadSampleOrders();
+                this.startTimers();
+                this.updateStats();
+                this.initSoundEffects();
+                this.updateDemoInfo();
+            }
+            
+            // Sample Orders for Demo
+            loadSampleOrders() {
+                const sampleOrders = [
+                    {
+                        id: 1,
+                        table_number: 5,
+                        waiter_name: 'Əli Hüseynov',
+                        items: [
+                            { name: 'Pizza Margherita', quantity: 2, modifiers: ['Əlavə pendir'] },
+                            { name: 'Çeşburger', quantity: 1, modifiers: ['Acısız'] }
+                        ],
+                        notes: 'Sos ayrıca qoyun',
+                        priority: false,
+                        created_at: new Date(Date.now() - 3 * 60000).toISOString(),
+                        status: 'new'
+                    },
+                    {
+                        id: 2,
+                        table_number: 3,
+                        waiter_name: 'Nigar Əliyeva',
+                        items: [
+                            { name: 'Sezar Salatı', quantity: 1, modifiers: [] },
+                            { name: 'Qırmızı Şərab', quantity: 1, modifiers: ['Buzlu'] }
+                        ],
+                        notes: '',
+                        priority: true, // VIP table
+                        created_at: new Date(Date.now() - 8 * 60000).toISOString(),
+                        status: 'waiting'
+                    },
+                    {
+                        id: 3,
+                        table_number: 8,
+                        waiter_name: 'Kamal Qasımov',
+                        items: [
+                            { name: 'Lahmacun', quantity: 3, modifiers: ['Acılı'] },
+                            { name: 'Bira', quantity: 3, modifiers: [] }
+                        ],
+                        notes: 'Sürətli hazırlanın',
+                        priority: false,
+                        created_at: new Date(Date.now() - 18 * 60000).toISOString(),
+                        status: 'delayed'
+                    }
+                ];
+                
+                sampleOrders.forEach(order => this.addOrder(order));
+            }
+            
+            // Add Order
+            addOrder(order) {
+                if (this.orders.find(o => o.id === order.id)) {
+                    return;
+                }
+                
+                this.orders.push(order);
+                this.renderOrder(order);
+                this.updateStats();
+                this.updateDemoInfo();
+                
+                this.playSound('new_order');
+                this.startTimer(order.id, order.created_at);
+                
+                if (order.priority) {
+                    this.showNotification(`⭐ Prioritet Masa ${order.table_number} - Yeni sifariş!`, 'priority');
+                }
+            }
+            
+            // Render Order Card
+            renderOrder(order) {
+                const grid = document.getElementById('kdsGrid');
+                const insertPosition = order.priority ? 0 : grid.children.length;
+                
+                const orderCard = document.createElement('div');
+                orderCard.className = `order-card ${this.getStatusClass(order)}`;
+                orderCard.id = `order-${order.id}`;
+                
+                if (order.priority) {
+                    orderCard.classList.add('priority');
+                }
+                
+                orderCard.innerHTML = `
+                    ${order.priority ? '<div class="priority-indicator"></div>' : ''}
+                    <div class="order-header">
+                        <div class="order-table-info">
+                            <div class="order-table-number">MASA ${order.table_number}</div>
+                            <div class="order-waiter">${order.waiter_name}</div>
+                        </div>
+                        <div class="order-timer" id="timer-${order.id}">00:00</div>
+                    </div>
+                    <div class="order-items">
+                        ${order.items.map(item => `
+                            <div class="order-item">
+                                <div class="item-info">
+                                    <div class="item-name">${item.name}</div>
+                                    ${item.modifiers.length > 0 ? 
+                                        `<div class="item-modifiers">${item.modifiers.join(', ')}</div>` : ''}
+                                </div>
+                                <div class="item-quantity">×${item.quantity}</div>
+                            </div>
+                        `).join('')}
+                        ${order.notes ? `<div class="item-notes">📝 ${order.notes}</div>` : ''}
+                    </div>
+                    <div class="order-footer">
+                        <div class="order-time">${new Date(order.created_at).toLocaleTimeString('az-AZ')}</div>
+                        <div class="order-actions">
+                            <button class="order-done-btn" onclick="luxuryKDS.markOrderDone(${order.id})">
+                                HAZIR
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                if (insertPosition === 0 && grid.firstChild) {
+                    grid.insertBefore(orderCard, grid.firstChild);
+                } else {
+                    grid.appendChild(orderCard);
+                }
+            }
+            
+            // Get Status Class
+            getStatusClass(order) {
+                const elapsed = (Date.now() - new Date(order.created_at).getTime()) / 60000;
+                
+                if (elapsed <= 5) return 'new-order';
+                if (elapsed <= 15) return 'waiting';
+                return 'delayed';
+            }
+            
+            // Timer Management
+            startTimer(orderId, createdAt) {
+                const updateTimer = () => {
+                    const elapsed = Math.floor((Date.now() - new Date(createdAt).getTime()) / 1000);
+                    const minutes = Math.floor(elapsed / 60);
+                    const seconds = elapsed % 60;
+                    const timerElement = document.getElementById(`timer-${orderId}`);
+                    
+                    if (timerElement) {
+                        timerElement.textContent = `${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                        
+                        const orderCard = document.getElementById(`order-${orderId}`);
+                        if (orderCard) {
+                            const newStatusClass = this.getStatusClass({ created_at: createdAt });
+                            if (!orderCard.classList.contains(newStatusClass)) {
+                                orderCard.className = orderCard.className.replace(/new-order|waiting|delayed/g, newStatusClass);
+                                this.updateStats();
+                                this.updateDemoInfo();
+                            }
+                        }
+                    }
+                    
+                    this.timers.set(orderId, setTimeout(updateTimer, 1000));
+                };
+                
+                updateTimer();
+            }
+            
+            startTimers() {
+                this.orders.forEach(order => {
+                    this.startTimer(order.id, order.created_at);
+                });
+            }
+            
+            // Mark Order Done
+            markOrderDone(orderId) {
+                const order = this.orders.find(o => o.id === orderId);
+                if (!order) return;
+                
+                this.showNotification(`Masa ${order.table_number} - Sifariş Hazırdır!`, 'success');
+                this.playSound('success');
+                this.removeOrderWithAnimation(orderId);
+            }
+            
+            // Remove Order
+            removeOrder(orderId) {
+                const orderCard = document.getElementById(`order-${orderId}`);
+                if (orderCard) {
+                    orderCard.remove();
+                }
+                
+                const timer = this.timers.get(orderId);
+                if (timer) {
+                    clearTimeout(timer);
+                    this.timers.delete(orderId);
+                }
+                
+                this.orders = this.orders.filter(o => o.id !== orderId);
+                this.updateStats();
+                this.updateDemoInfo();
+            }
+            
+            // Remove Order with Animation
+            removeOrderWithAnimation(orderId) {
+                const orderCard = document.getElementById(`order-${orderId}`);
+                if (orderCard) {
+                    orderCard.style.transform = 'scale(0.9)';
+                    orderCard.style.opacity = '0.5';
+                    
+                    setTimeout(() => {
+                        this.removeOrder(orderId);
+                    }, 300);
+                }
+            }
+            
+            // Update Statistics
+            updateStats() {
+                const activeOrders = this.orders.length;
+                const waitingOrders = this.orders.filter(o => this.getStatusClass(o) === 'waiting').length;
+                const delayedOrders = this.orders.filter(o => this.getStatusClass(o) === 'delayed').length;
+                
+                document.getElementById('activeOrders').textContent = activeOrders;
+                document.getElementById('waitingOrders').textContent = waitingOrders;
+                document.getElementById('delayedOrders').textContent = delayedOrders;
+            }
+            
+            // Quick Actions
+            markAllReady() {
+                const activeOrders = [...this.orders];
+                activeOrders.forEach((order, index) => {
+                    setTimeout(() => {
+                        this.markOrderDone(order.id);
+                    }, index * 500);
+                });
+            }
+            
+            returnAllOrders() {
+                this.showNotification('Bütün sifarişlər geri qaytarıldı', 'info');
+                this.playSound('info');
+            }
+            
+            printOrders() {
+                window.print();
+                this.playSound('print');
+            }
+            
+            // Luxury Notification System
+            showNotification(message, type = 'success') {
+                const notification = document.getElementById('luxuryNotification');
+                const notificationText = document.getElementById('notificationText');
+                
+                notificationText.textContent = message;
+                notification.classList.add('active');
+                
+                if ('vibrate' in navigator) {
+                    navigator.vibrate(20);
+                }
+                
+                setTimeout(() => {
+                    notification.classList.remove('active');
+                }, 3000);
+            }
+            
+            // Sound Effects
+            initSoundEffects() {
+                try {
+                    window.AudioContext = window.AudioContext || window.webkitAudioContext;
+                    this.audioContext = new AudioContext();
+                } catch (e) {
+                    console.log('Audio context not available');
+                }
+            }
+            
+            playSound(type) {
+                if (!this.soundEnabled || !this.audioContext) return;
+                
+                const oscillator = this.audioContext.createOscillator();
+                const gainNode = this.audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(this.audioContext.destination);
+                
+                switch (type) {
+                    case 'new_order':
+                        oscillator.frequency.value = 800;
+                        gainNode.gain.value = 0.1;
+                        break;
+                    case 'success':
+                        oscillator.frequency.value = 1200;
+                        gainNode.gain.value = 0.15;
+                        break;
+                    case 'info':
+                        oscillator.frequency.value = 600;
+                        gainNode.gain.value = 0.08;
+                        break;
+                    case 'print':
+                        oscillator.frequency.value = 400;
+                        gainNode.gain.value = 0.05;
+                        break;
+                }
+                
+                oscillator.start();
+                oscillator.stop(this.audioContext.currentTime + 0.1);
+            }
+            
+            // Demo Functions
+            updateDemoInfo() {
+                const activeOrders = this.orders.length;
+                const priorityOrders = this.orders.filter(o => o.priority).length;
+                const delayedOrders = this.orders.filter(o => this.getStatusClass(o) === 'delayed').length;
+                
+                document.getElementById('activeCount').textContent = activeOrders;
+                document.getElementById('priorityCount').textContent = priorityOrders;
+                document.getElementById('delayedCount').textContent = delayedOrders;
+            }
+            
+            updateDemoStatus(message, type = 'success') {
+                const status = document.getElementById('demoStatus');
+                if (status) {
+                    status.textContent = message;
+                    status.style.background = type === 'success' 
+                        ? 'rgba(46, 204, 113, 0.1)' 
+                        : type === 'warning'
+                        ? 'rgba(243, 156, 18, 0.1)'
+                        : 'rgba(198, 166, 89, 0.1)';
+                    status.style.borderColor = type === 'success'
+                        ? 'rgba(46, 204, 113, 0.3)'
+                        : type === 'warning'
+                        ? 'rgba(243, 156, 18, 0.3)'
+                        : 'rgba(198, 166, 89, 0.3)';
+                    status.style.color = type === 'success' ? '#2ecc71' : type === 'warning' ? '#f39c12' : '#c6a659';
+                }
+            }
+        }
+        
+        // Global functions
+        window.markAllReady = function() {
+            window.luxuryKDS.markAllReady();
+        };
+        
+        window.returnAllOrders = function() {
+            window.luxuryKDS.returnAllOrders();
+        };
+        
+        window.printOrders = function() {
+            window.luxuryKDS.printOrders();
+        };
+        
+        // Demo functions
+        window.addNewOrder = function() {
+            const tables = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+            const waiters = ['Əli Hüseynov', 'Nigar Əliyeva', 'Kamal Qasımov', 'Ayşə Məmmədova', 'Rəşad Əkbərov'];
+            const items = [
+                { name: 'Pizza Margherita', modifiers: ['Əlavə pendir'] },
+                { name: 'Çeşburger', modifiers: ['Acısız'] },
+                { name: 'Sezar Salatı', modifiers: [] },
+                { name: 'Qırmızı Şərab', modifiers: ['Buzlu'] },
+                { name: 'Lahmacun', modifiers: ['Acılı'] },
+                { name: 'Bira', modifiers: [] },
+                { name: 'Tiramisu', modifiers: [] },
+                { name: 'Qəhvə', modifiers: ['Şəkərsiz'] }
+            ];
+            
+            const newOrder = {
+                id: window.luxuryKDS.orderCounter++,
+                table_number: tables[Math.floor(Math.random() * tables.length)],
+                waiter_name: waiters[Math.floor(Math.random() * waiters.length)],
+                items: [
+                    items[Math.floor(Math.random() * items.length)],
+                    items[Math.floor(Math.random() * items.length)]
+                ],
+                notes: Math.random() > 0.7 ? 'Xüsusi qeyd' : '',
+                priority: false,
+                created_at: new Date().toISOString(),
+                status: 'new'
+            };
+            
+            window.luxuryKDS.addOrder(newOrder);
+            window.luxuryKDS.updateDemoStatus('✨ New order added', 'success');
+        };
+        
+        window.addPriorityOrder = function() {
+            const priorityOrder = {
+                id: window.luxuryKDS.orderCounter++,
+                table_number: [1, 2, 3, 4][Math.floor(Math.random() * 4)], // VIP tables
+                waiter_name: 'VIP Müştəri',
+                items: [
+                    { name: 'Qırmızı Şərab', modifiers: ['Buzlu'] },
+                    { name: 'Lüks Burger', modifiers: ['Əlavə pendir'] }
+                ],
+                notes: 'VIP müştəri - xüsusi diqqət',
+                priority: true,
+                created_at: new Date().toISOString(),
+                status: 'new'
+            };
+            
+            window.luxuryKDS.addOrder(priorityOrder);
+            window.luxuryKDS.updateDemoStatus('⭐ Priority order added', 'warning');
+        };
+        
+        window.markRandomReady = function() {
+            if (window.luxuryKDS.orders.length > 0) {
+                const randomOrder = window.luxuryKDS.orders[Math.floor(Math.random() * window.luxuryKDS.orders.length)];
+                window.luxuryKDS.markOrderDone(randomOrder.id);
+                window.luxuryKDS.updateDemoStatus('✅ Order marked ready', 'success');
+            }
+        };
+        
+        window.simulateDelay = function() {
+            window.luxuryKDS.orders.forEach(order => {
+                // Simulate delay by updating created_at to be older
+                order.created_at = new Date(Date.now() - 20 * 60000).toISOString();
+            });
+            
+            // Re-render all orders
+            const grid = document.getElementById('kdsGrid');
+            grid.innerHTML = '';
+            window.luxuryKDS.orders.forEach(order => window.luxuryKDS.renderOrder(order));
+            window.luxuryKDS.updateStats();
+            window.luxuryKDS.updateDemoInfo();
+            
+            window.luxuryKDS.updateDemoStatus('⏰ Delay simulated', 'warning');
+        };
+        
+        window.testNotification = function() {
+            const tables = [1, 2, 3, 4, 5];
+            const randomTable = tables[Math.floor(Math.random() * tables.length)];
+            window.luxuryKDS.showNotification(`Masa ${randomTable} - Sifariş Hazırdır!`, 'success');
+            window.luxuryKDS.updateDemoStatus('🔔 Notification tested', 'info');
+        };
+        
+        window.testSounds = function() {
+            ['new_order', 'success', 'info', 'print'].forEach((sound, index) => {
+                setTimeout(() => {
+                    window.luxuryKDS.playSound(sound);
+                }, index * 200);
+            });
+            
+            window.luxuryKDS.updateDemoStatus('🔊 Sounds tested', 'info');
+        };
+        
+        // Initialize KDS
+        document.addEventListener('DOMContentLoaded', () => {
+            window.luxuryKDS = new LuxuryKDSDemo();
+        });
+        
+        // Add print styles
+        const printStyles = document.createElement('style');
+        printStyles.textContent = `
+            @media print {
+                body {
+                    background: white !important;
+                    color: black !important;
+                }
+                
+                .kds-header,
+                .kds-quick-actions,
+                .luxury-notification,
+                .demo-controls {
+                    display: none !important;
+                }
+                
+                .kds-grid {
+                    grid-template-columns: repeat(3, 1fr) !important;
+                    gap: 1rem !important;
+                }
+                
+                .order-card {
+                    break-inside: avoid !important;
+                    border: 1px solid #000 !important;
+                    background: white !important;
+                    color: black !important;
+                    page-break-inside: avoid;
+                }
+                
+                .priority-indicator {
+                    display: none !important;
+                }
+                
+                .kds-frame {
+                    background: white !important;
+                    box-shadow: none !important;
+                }
+            }
+        `;
+        document.head.appendChild(printStyles);
+    </script>
+</body>
+</html>

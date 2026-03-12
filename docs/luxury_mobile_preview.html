@@ -1,0 +1,1023 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#020617">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Ramo Pub">
+    <title>Luxury Mobile Preview | Ramo Pub</title>
+    <link rel="stylesheet" href="web/static/css/luxury-mobile.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&family=Inter+Mono:wght@600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <!-- PWA Manifest -->
+    <link rel="manifest" href="web/static/manifest.json">
+    
+    <!-- Prevent Zoom on Double Tap -->
+    <style>
+        html, body {
+            touch-action: manipulation;
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+        
+        input, textarea {
+            -webkit-user-select: text;
+            -khtml-user-select: text;
+            -moz-user-select: text;
+            -ms-user-select: text;
+            user-select: text;
+        }
+        
+        /* Demo Controls */
+        .demo-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            z-index: 10000;
+            backdrop-filter: blur(20px);
+            max-width: 320px;
+            display: none;
+        }
+        
+        @media (min-width: 768px) {
+            .demo-controls {
+                display: block;
+            }
+        }
+        
+        .demo-controls h4 {
+            margin: 0 0 16px 0;
+            color: var(--gold-primary, #c6a659);
+            font-size: 16px;
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .demo-controls button {
+            display: block;
+            width: 100%;
+            margin: 8px 0;
+            padding: 12px 16px;
+            background: rgba(198, 166, 89, 0.1);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .demo-controls button:hover {
+            background: rgba(198, 166, 89, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .demo-info {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(198, 166, 89, 0.2);
+            font-size: 11px;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
+        
+        .demo-status {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            border-radius: 8px;
+            color: #2ecc71;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        /* Mobile Frame for Desktop Preview */
+        .mobile-frame {
+            max-width: 414px;
+            margin: 0 auto;
+            background: #000;
+            border-radius: 40px;
+            padding: 10px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            position: relative;
+        }
+        
+        @media (max-width: 767px) {
+            .mobile-frame {
+                max-width: 100%;
+                background: transparent;
+                padding: 0;
+                border-radius: 0;
+                box-shadow: none;
+            }
+        }
+        
+        .mobile-frame::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 150px;
+            height: 25px;
+            background: #000;
+            border-radius: 0 0 20px 20px;
+            z-index: 10;
+        }
+        
+        @media (max-width: 767px) {
+            .mobile-frame::before {
+                display: none;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Demo Controls (Desktop Only) -->
+    <div class="demo-controls">
+        <h4>📱 Mobile UI Controls</h4>
+        <button onclick="testHapticFeedback()">
+            <i class="fas fa-hand-pointer"></i> Test Haptic Feedback
+        </button>
+        <button onclick="testBottomSheet()">
+            <i class="fas fa-arrow-up"></i> Test Bottom Sheet
+        </button>
+        <button onclick="testCategoryBar()">
+            <i class="fas fa-bars"></i> Test Categories
+        </button>
+        <button onclick="testSearch()">
+            <i class="fas fa-search"></i> Test Search
+        </button>
+        <button onclick="testPWAInstall()">
+            <i class="fas fa-download"></i> Test PWA Install
+        </button>
+        <button onclick="testViewSwitch()">
+            <i class="fas fa-exchange-alt"></i> Test View Switch
+        </button>
+        
+        <div class="demo-info">
+            <strong>Device:</strong> <span id="deviceInfo">Mobile</span><br>
+            <strong>View:</strong> <span id="currentView">Tables</span><br>
+            <strong>PWA:</strong> <span id="pwaStatus">Not Installed</span><br>
+            <strong>Touch:</strong> <span id="touchSupport">Available</span><br>
+            <strong>Viewport:</strong> <span id="viewportSize">--</span>
+        </div>
+        
+        <div class="demo-status" id="demoStatus">
+            ✨ Mobile UI Ready
+        </div>
+    </div>
+
+    <!-- Mobile Frame -->
+    <div class="mobile-frame">
+        <!-- Mobile Container -->
+        <div class="luxury-mobile-container">
+            <!-- Mobile Header -->
+            <header class="mobile-header">
+                <div class="mobile-header-title">Ramo Pub</div>
+                <div class="mobile-header-actions">
+                    <button class="mobile-action-btn" onclick="showNotifications()">
+                        <i class="fas fa-bell"></i>
+                    </button>
+                    <button class="mobile-action-btn" onclick="showProfile()">
+                        <i class="fas fa-user"></i>
+                    </button>
+                </div>
+            </header>
+
+            <!-- Mobile Content -->
+            <main class="mobile-content">
+                <!-- Mobile Search Bar -->
+                <div class="mobile-search-bar">
+                    <i class="fas fa-search mobile-search-icon"></i>
+                    <input type="text" class="mobile-search-input" placeholder="Masa, məhsul və ya sifariş axtar..." id="mobileSearch">
+                </div>
+
+                <!-- Floating Category Bar -->
+                <div class="floating-category-bar" id="categoryBar">
+                    <button class="category-pill active" data-category="all">
+                        Hamısı
+                    </button>
+                    <button class="category-pill" data-category="tables">
+                        Masalar
+                    </button>
+                    <button class="category-pill" data-category="menu">
+                        Menyu
+                    </button>
+                    <button class="category-pill" data-category="orders">
+                        Sifarişlər
+                    </button>
+                    <button class="category-pill" data-category="stats">
+                        Statistika
+                    </button>
+                </div>
+
+                <!-- Dynamic Content Area -->
+                <div id="dynamicContent">
+                    <!-- Tables View (Default) -->
+                    <div class="content-section active" id="tablesView">
+                        <div class="mobile-stats-grid">
+                            <div class="mobile-stat-card">
+                                <div class="mobile-stat-value">12</div>
+                                <div class="mobile-stat-label">Aktiv Masalar</div>
+                            </div>
+                            <div class="mobile-stat-card">
+                                <div class="mobile-stat-value">8</div>
+                                <div class="mobile-stat-label">Boş Masalar</div>
+                            </div>
+                        </div>
+                        
+                        <div class="mobile-tables-grid" id="mobileTablesGrid">
+                            <!-- Tables will be loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Menu View -->
+                    <div class="content-section" id="menuView">
+                        <div class="product-list" id="mobileProductList">
+                            <!-- Products will be loaded dynamically -->
+                        </div>
+                    </div>
+
+                    <!-- Orders View -->
+                    <div class="content-section" id="ordersView">
+                        <div class="mobile-order-summary">
+                            <div class="order-summary-item">
+                                <span class="order-summary-label">Cari Sifarişlər</span>
+                                <span class="order-summary-value">23</span>
+                            </div>
+                            <div class="order-summary-item">
+                                <span class="order-summary-label">Gözləyən</span>
+                                <span class="order-summary-value">8</span>
+                            </div>
+                            <div class="order-summary-item order-summary-total">
+                                <span class="order-summary-label">Cəm Gəlir</span>
+                                <span class="order-summary-value">1,234.50 ₼</span>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Stats View -->
+                    <div class="content-section" id="statsView">
+                        <div class="mobile-stats-grid">
+                            <div class="mobile-stat-card">
+                                <div class="mobile-stat-value">2,450</div>
+                                <div class="mobile-stat-label">Bugünkü Gəlir</div>
+                            </div>
+                            <div class="mobile-stat-card">
+                                <div class="mobile-stat-value">156</div>
+                                <div class="mobile-stat-label">Ümumi Sifariş</div>
+                            </div>
+                            <div class="mobile-stat-card">
+                                <div class="mobile-stat-value">4.8</div>
+                                <div class="mobile-stat-label">Ortalama Xidmət</div>
+                            </div>
+                            <div class="mobile-stat-card">
+                                <div class="mobile-stat-value">92%</div>
+                                <div class="mobile-stat-label">Müşteri Məmnuniyyəti</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </main>
+
+            <!-- Mobile Bottom Navigation -->
+            <nav class="mobile-bottom-nav">
+                <a href="#" class="mobile-nav-item active" data-view="tables">
+                    <i class="fas fa-chair mobile-nav-icon"></i>
+                    <span>Masalar</span>
+                </a>
+                <a href="#" class="mobile-nav-item" data-view="menu">
+                    <i class="fas fa-utensils mobile-nav-icon"></i>
+                    <span>Menyu</span>
+                </a>
+                <a href="#" class="mobile-nav-item" data-view="orders">
+                    <i class="fas fa-receipt mobile-nav-icon"></i>
+                    <span>Sifarişlər</span>
+                </a>
+                <a href="#" class="mobile-nav-item" data-view="stats">
+                    <i class="fas fa-chart-bar mobile-nav-icon"></i>
+                    <span>Statistika</span>
+                </a>
+            </nav>
+        </div>
+    </div>
+
+    <!-- Luxury Action Bottom Sheet -->
+    <div class="bottom-sheet-overlay" id="bottomSheetOverlay"></div>
+    <div class="bottom-sheet" id="bottomSheet">
+        <div class="bottom-sheet-handle"></div>
+        <div class="bottom-sheet-header">
+            <h3 class="bottom-sheet-title" id="bottomSheetTitle">Əməliyyatlar</h3>
+            <button class="bottom-sheet-close" onclick="closeBottomSheet()">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+        <div class="bottom-sheet-content" id="bottomSheetContent">
+            <!-- Dynamic content will be loaded here -->
+        </div>
+    </div>
+
+    <!-- PWA Install Prompt -->
+    <div class="pwa-install-prompt" id="pwaInstallPrompt">
+        <div class="pwa-install-content">
+            <div class="pwa-install-icon">
+                <i class="fas fa-download"></i>
+            </div>
+            <div class="pwa-install-text">
+                <div class="pwa-install-title">Ramo Pub-u Əlavə Et</div>
+                <div class="pwa-install-desc">Ana ekranınıza əlavə edərək tam ekran təcrübəsi qazanın</div>
+            </div>
+            <button class="pwa-install-button" onclick="installPWA()">Əlavə Et</button>
+        </div>
+    </div>
+
+    <script>
+        class LuxuryMobileUIDemo {
+            constructor() {
+                this.currentView = 'tables';
+                this.bottomSheetOpen = false;
+                this.pwaInstallPrompt = null;
+                this.tables = [];
+                this.products = [];
+                this.init();
+            }
+            
+            init() {
+                this.initPWA();
+                this.initNavigation();
+                this.initCategories();
+                this.initSearch();
+                this.initBottomSheet();
+                this.initHapticFeedback();
+                this.loadData();
+                this.updateDeviceInfo();
+                this.showPWAInstallPrompt();
+            }
+            
+            // PWA Installation
+            initPWA() {
+                window.addEventListener('beforeinstallprompt', (e) => {
+                    e.preventDefault();
+                    this.pwaInstallPrompt = e;
+                });
+                
+                window.addEventListener('appinstalled', () => {
+                    console.log('PWA installed successfully');
+                    this.hidePWAInstallPrompt();
+                    this.updatePWAStatus('Installed');
+                });
+            }
+            
+            showPWAInstallPrompt() {
+                setTimeout(() => {
+                    if (!this.isPWAInstalled() && this.pwaInstallPrompt) {
+                        const prompt = document.getElementById('pwaInstallPrompt');
+                        prompt.classList.add('show');
+                    }
+                }, 3000);
+            }
+            
+            hidePWAInstallPrompt() {
+                const prompt = document.getElementById('pwaInstallPrompt');
+                prompt.classList.remove('show');
+            }
+            
+            isPWAInstalled() {
+                return window.matchMedia('(display-mode: standalone)').matches ||
+                       window.navigator.standalone ||
+                       document.referrer.includes('android-app://');
+            }
+            
+            async installPWA() {
+                if (!this.pwaInstallPrompt) {
+                    this.updateDemoStatus('PWA install prompt not available', 'info');
+                    return;
+                }
+                
+                this.pwaInstallPrompt.prompt();
+                const { outcome } = await this.pwaInstallPrompt.userChoice;
+                
+                if (outcome === 'accepted') {
+                    console.log('User accepted PWA installation');
+                    this.updateDemoStatus('PWA installation accepted', 'success');
+                } else {
+                    console.log('User dismissed PWA installation');
+                    this.updateDemoStatus('PWA installation dismissed', 'info');
+                }
+                
+                this.pwaInstallPrompt = null;
+                this.hidePWAInstallPrompt();
+            }
+            
+            // Navigation
+            initNavigation() {
+                const navItems = document.querySelectorAll('.mobile-nav-item');
+                
+                navItems.forEach(item => {
+                    item.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        const view = item.dataset.view;
+                        this.switchView(view);
+                        
+                        navItems.forEach(nav => nav.classList.remove('active'));
+                        item.classList.add('active');
+                    });
+                });
+            }
+            
+            switchView(view) {
+                document.querySelectorAll('.content-section').forEach(section => {
+                    section.classList.remove('active');
+                });
+                
+                const targetView = document.getElementById(`${view}View`);
+                if (targetView) {
+                    targetView.classList.add('active');
+                }
+                
+                this.currentView = view;
+                document.getElementById('currentView').textContent = view.charAt(0).toUpperCase() + view.slice(1);
+            }
+            
+            // Categories
+            initCategories() {
+                const categoryPills = document.querySelectorAll('.category-pill');
+                
+                categoryPills.forEach(pill => {
+                    pill.addEventListener('click', () => {
+                        categoryPills.forEach(p => p.classList.remove('active'));
+                        pill.classList.add('active');
+                        
+                        const category = pill.dataset.category;
+                        this.filterContent(category);
+                    });
+                });
+            }
+            
+            filterContent(category) {
+                if (category === 'all') {
+                    this.switchView('tables');
+                } else {
+                    this.switchView(category.slice(0, -1));
+                }
+            }
+            
+            // Search
+            initSearch() {
+                const searchInput = document.getElementById('mobileSearch');
+                let searchTimeout;
+                
+                searchInput.addEventListener('input', (e) => {
+                    clearTimeout(searchTimeout);
+                    searchTimeout = setTimeout(() => {
+                        this.performSearch(e.target.value);
+                    }, 300);
+                });
+            }
+            
+            performSearch(query) {
+                if (!query) {
+                    this.renderCurrentView();
+                    return;
+                }
+                
+                const results = this.searchData(query);
+                this.renderSearchResults(results);
+            }
+            
+            searchData(query) {
+                const lowerQuery = query.toLowerCase();
+                const results = {
+                    tables: this.tables.filter(table => 
+                        table.number.toString().includes(lowerQuery) ||
+                        (table.name && table.name.toLowerCase().includes(lowerQuery))
+                    ),
+                    products: this.products.filter(product =>
+                        product.name.toLowerCase().includes(lowerQuery) ||
+                        product.category.toLowerCase().includes(lowerQuery)
+                    )
+                };
+                
+                return results;
+            }
+            
+            renderSearchResults(results) {
+                const dynamicContent = document.getElementById('dynamicContent');
+                
+                let html = '<div class="content-section active">';
+                
+                if (results.tables.length > 0) {
+                    html += '<h3 style="color: var(--gold-primary); margin: 1rem 0;">Masalar</h3>';
+                    html += '<div class="mobile-tables-grid">';
+                    results.tables.forEach(table => {
+                        html += this.createMobileTableCard(table);
+                    });
+                    html += '</div>';
+                }
+                
+                if (results.products.length > 0) {
+                    html += '<h3 style="color: var(--gold-primary); margin: 1rem 0;">Məhsullar</h3>';
+                    html += '<div class="product-list">';
+                    results.products.forEach(product => {
+                        html += this.createMobileProductItem(product);
+                    });
+                    html += '</div>';
+                }
+                
+                if (results.tables.length === 0 && results.products.length === 0) {
+                    html += '<div style="text-align: center; color: #94a3b8; padding: 2rem;">Nəticə tapılmadı</div>';
+                }
+                
+                html += '</div>';
+                dynamicContent.innerHTML = html;
+                
+                this.initTableInteractions();
+                this.initProductInteractions();
+            }
+            
+            renderCurrentView() {
+                switch (this.currentView) {
+                    case 'tables':
+                        this.renderTables();
+                        break;
+                    case 'menu':
+                        this.renderProducts();
+                        break;
+                }
+            }
+            
+            // Bottom Sheet
+            initBottomSheet() {
+                const overlay = document.getElementById('bottomSheetOverlay');
+                const bottomSheet = document.getElementById('bottomSheet');
+                
+                overlay.addEventListener('click', () => this.closeBottomSheet());
+                
+                let startY = 0;
+                bottomSheet.addEventListener('touchstart', (e) => {
+                    startY = e.touches[0].clientY;
+                });
+                
+                bottomSheet.addEventListener('touchmove', (e) => {
+                    const currentY = e.touches[0].clientY;
+                    const diff = currentY - startY;
+                    
+                    if (diff > 50) {
+                        this.closeBottomSheet();
+                    }
+                });
+            }
+            
+            openBottomSheet(title, content) {
+                const overlay = document.getElementById('bottomSheetOverlay');
+                const bottomSheet = document.getElementById('bottomSheet');
+                const titleElement = document.getElementById('bottomSheetTitle');
+                const contentElement = document.getElementById('bottomSheetContent');
+                
+                titleElement.textContent = title;
+                contentElement.innerHTML = content;
+                
+                overlay.classList.add('active');
+                bottomSheet.classList.add('active');
+                this.bottomSheetOpen = true;
+            }
+            
+            closeBottomSheet() {
+                const overlay = document.getElementById('bottomSheetOverlay');
+                const bottomSheet = document.getElementById('bottomSheet');
+                
+                overlay.classList.remove('active');
+                bottomSheet.classList.remove('active');
+                this.bottomSheetOpen = false;
+            }
+            
+            // Haptic Feedback Simulation
+            initHapticFeedback() {
+                const interactiveElements = document.querySelectorAll(
+                    '.mobile-action-btn, .category-pill, .mobile-table-card, .mobile-product-item, .mobile-nav-item'
+                );
+                
+                interactiveElements.forEach(element => {
+                    element.addEventListener('touchstart', () => {
+                        this.triggerHapticFeedback(element);
+                    });
+                });
+            }
+            
+            triggerHapticFeedback(element) {
+                element.classList.add('haptic-feedback');
+                
+                if (navigator.vibrate) {
+                    navigator.vibrate(10);
+                }
+                
+                setTimeout(() => {
+                    element.classList.remove('haptic-feedback');
+                }, 150);
+            }
+            
+            // Data Loading
+            loadData() {
+                this.loadTables();
+                this.loadProducts();
+            }
+            
+            loadTables() {
+                this.tables = [
+                    { id: 1, number: 1, status: 'available', name: 'Window' },
+                    { id: 2, number: 2, status: 'occupied', name: 'Corner', amount: 45.50 },
+                    { id: 3, number: 3, status: 'available', name: 'Center' },
+                    { id: 4, number: 4, status: 'occupied', name: 'Bar', amount: 78.00 },
+                    { id: 5, number: 5, status: 'reserved', name: 'Terrace' },
+                    { id: 6, number: 6, status: 'available', name: 'Garden' },
+                    { id: 7, number: 7, status: 'occupied', name: 'VIP', amount: 125.00 },
+                    { id: 8, number: 8, status: 'available', name: 'Private' },
+                    { id: 9, number: 9, status: 'occupied', name: 'Window', amount: 32.75 },
+                    { id: 10, number: 10, status: 'available', name: 'Corner' },
+                    { id: 11, number: 11, status: 'reserved', name: 'Center' },
+                    { id: 12, number: 12, status: 'occupied', name: 'Bar', amount: 89.25 }
+                ];
+                
+                this.renderTables();
+            }
+            
+            renderTables() {
+                const grid = document.getElementById('mobileTablesGrid');
+                if (!grid) return;
+                
+                grid.innerHTML = this.tables.map(table => this.createMobileTableCard(table)).join('');
+                this.initTableInteractions();
+            }
+            
+            createMobileTableCard(table) {
+                const statusClass = table.status;
+                let amountHtml = '';
+                
+                if (table.status === 'occupied' && table.amount) {
+                    amountHtml = `<div class="mobile-table-amount">${table.amount.toFixed(2)} ₼</div>`;
+                }
+                
+                return `
+                    <div class="mobile-table-card ${statusClass}" data-table-id="${table.id}">
+                        <div class="mobile-table-number">${table.number}</div>
+                        <div class="mobile-table-status">${this.getStatusLabel(table.status)}</div>
+                        ${amountHtml}
+                    </div>
+                `;
+            }
+            
+            getStatusLabel(status) {
+                const labels = {
+                    'available': 'Boş',
+                    'occupied': 'Dolu',
+                    'reserved': 'Rezerv'
+                };
+                return labels[status] || status;
+            }
+            
+            loadProducts() {
+                this.products = [
+                    { id: 1, name: 'Pizza Margherita', category: 'food', price: 18.00, emoji: '🍕', desc: 'Klassik italyan pizza' },
+                    { id: 2, name: 'Çeşburger', category: 'food', price: 15.00, emoji: '🍔', desc: 'Ən yaxşı burger' },
+                    { id: 3, name: 'Qırmızı Şərab', category: 'drinks', price: 25.00, emoji: '🍷', desc: 'Kaliforniya şərabı' },
+                    { id: 4, name: 'Sezar Salatı', category: 'food', price: 12.00, emoji: '🥗', desc: 'Təzə sezar salatı' },
+                    { id: 5, name: 'Bira', category: 'drinks', price: 5.00, emoji: '🍺', desc: 'Yerli bira' },
+                    { id: 6, name: 'Qəhvə', category: 'drinks', price: 4.00, emoji: '☕', desc: 'Türk qəhvəsi' }
+                ];
+                
+                this.renderProducts();
+            }
+            
+            renderProducts() {
+                const list = document.getElementById('mobileProductList');
+                if (!list) return;
+                
+                list.innerHTML = this.products.map(product => this.createMobileProductItem(product)).join('');
+                this.initProductInteractions();
+            }
+            
+            createMobileProductItem(product) {
+                return `
+                    <div class="mobile-product-item" data-product-id="${product.id}">
+                        <div class="mobile-product-image">${product.emoji}</div>
+                        <div class="mobile-product-info">
+                            <div class="mobile-product-name">${product.name}</div>
+                            <div class="mobile-product-desc">${product.desc}</div>
+                        </div>
+                        <div class="mobile-product-price">${product.price.toFixed(2)} ₼</div>
+                    </div>
+                `;
+            }
+            
+            // Interactions
+            initTableInteractions() {
+                document.querySelectorAll('.mobile-table-card').forEach(card => {
+                    card.addEventListener('click', () => {
+                        const tableId = parseInt(card.dataset.tableId);
+                        this.showTableActions(tableId);
+                    });
+                });
+            }
+            
+            initProductInteractions() {
+                document.querySelectorAll('.mobile-product-item').forEach(item => {
+                    item.addEventListener('click', () => {
+                        const productId = parseInt(item.dataset.productId);
+                        this.showProductActions(productId);
+                    });
+                });
+            }
+            
+            showTableActions(tableId) {
+                const table = this.tables.find(t => t.id === tableId);
+                if (!table) return;
+                
+                const content = `
+                    <div class="mobile-order-summary">
+                        <div class="order-summary-item">
+                            <span class="order-summary-label">Masa</span>
+                            <span class="order-summary-value">${table.number}</span>
+                        </div>
+                        <div class="order-summary-item">
+                            <span class="order-summary-label">Status</span>
+                            <span class="order-summary-value">${this.getStatusLabel(table.status)}</span>
+                        </div>
+                        ${table.amount ? `
+                        <div class="order-summary-item">
+                            <span class="order-summary-label">Cari Məbləğ</span>
+                            <span class="order-summary-value">${table.amount.toFixed(2)} ₼</span>
+                        </div>
+                        ` : ''}
+                    </div>
+                    
+                    <div class="mobile-action-buttons">
+                        <button class="mobile-action-button" onclick="luxuryMobile.handleTableAction('view', ${tableId})">
+                            <i class="fas fa-eye"></i>
+                            Bax
+                        </button>
+                        <button class="mobile-action-button" onclick="luxuryMobile.handleTableAction('order', ${tableId})">
+                            <i class="fas fa-plus"></i>
+                            Sifariş
+                        </button>
+                        <button class="mobile-action-button" onclick="luxuryMobile.handleTableAction('bill', ${tableId})">
+                            <i class="fas fa-receipt"></i>
+                            Hesab
+                        </button>
+                        <button class="mobile-action-button primary" onclick="luxuryMobile.handleTableAction('manage', ${tableId})">
+                            <i class="fas fa-cog"></i>
+                            İdarə et
+                        </button>
+                    </div>
+                `;
+                
+                this.openBottomSheet(`Masa ${table.number} Əməliyyatları`, content);
+            }
+            
+            showProductActions(productId) {
+                const product = this.products.find(p => p.id === productId);
+                if (!product) return;
+                
+                const content = `
+                    <div class="mobile-order-summary">
+                        <div class="order-summary-item">
+                            <span class="order-summary-label">Məhsul</span>
+                            <span class="order-summary-value">${product.name}</span>
+                        </div>
+                        <div class="order-summary-item">
+                            <span class="order-summary-label">Qiymət</span>
+                            <span class="order-summary-value">${product.price.toFixed(2)} ₼</span>
+                        </div>
+                        <div class="order-summary-item">
+                            <span class="order-summary-label">Kateqoriya</span>
+                            <span class="order-summary-value">${product.category}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="mobile-action-buttons">
+                        <button class="mobile-action-button" onclick="luxuryMobile.handleProductAction('details', ${productId})">
+                            <i class="fas fa-info-circle"></i>
+                            Detallar
+                        </button>
+                        <button class="mobile-action-button" onclick="luxuryMobile.handleProductAction('customize', ${productId})">
+                            <i class="fas fa-edit"></i>
+                            Fərdiləşdir
+                        </button>
+                        <button class="mobile-action-button primary" onclick="luxuryMobile.handleProductAction('add', ${productId})">
+                            <i class="fas fa-plus"></i>
+                            Sifarişə Əlavə Et
+                        </button>
+                    </div>
+                `;
+                
+                this.openBottomSheet(product.name, content);
+            }
+            
+            handleTableAction(action, tableId) {
+                console.log(`Table action: ${action} for table ${tableId}`);
+                this.closeBottomSheet();
+                this.showActionFeedback(`Masa ${tableId}: ${action} əməliyyatı`);
+            }
+            
+            handleProductAction(action, productId) {
+                console.log(`Product action: ${action} for product ${productId}`);
+                this.closeBottomSheet();
+                const product = this.products.find(p => p.id === productId);
+                this.showActionFeedback(`${product.name}: ${action} əməliyyatı`);
+            }
+            
+            showActionFeedback(message) {
+                const feedback = document.createElement('div');
+                feedback.style.cssText = `
+                    position: fixed;
+                    top: 50%;
+                    left: 50%;
+                    transform: translate(-50%, -50%);
+                    background: var(--gold-primary);
+                    color: var(--slate-950);
+                    padding: 1rem 2rem;
+                    border-radius: 50px;
+                    font-weight: 600;
+                    z-index: 10000;
+                    animation: fadeInOut 2s ease-in-out;
+                `;
+                feedback.textContent = message;
+                
+                document.body.appendChild(feedback);
+                
+                setTimeout(() => {
+                    feedback.remove();
+                }, 2000);
+            }
+            
+            // Demo Functions
+            updateDeviceInfo() {
+                const isMobile = window.innerWidth <= 767;
+                const isPWA = this.isPWAInstalled();
+                
+                document.getElementById('deviceInfo').textContent = isMobile ? 'Mobile' : 'Desktop';
+                document.getElementById('pwaStatus').textContent = isPWA ? 'Installed' : 'Not Installed';
+                document.getElementById('touchSupport').textContent = 'ontouchstart' in window ? 'Available' : 'Not Available';
+                document.getElementById('viewportSize').textContent = `${window.innerWidth}x${window.innerHeight}`;
+                
+                window.addEventListener('resize', () => {
+                    document.getElementById('viewportSize').textContent = `${window.innerWidth}x${window.innerHeight}`;
+                });
+            }
+            
+            updatePWAStatus(status) {
+                document.getElementById('pwaStatus').textContent = status;
+            }
+            
+            updateDemoStatus(message, type = 'success') {
+                const status = document.getElementById('demoStatus');
+                if (status) {
+                    status.textContent = message;
+                    status.style.background = type === 'success' 
+                        ? 'rgba(46, 204, 113, 0.1)' 
+                        : type === 'warning'
+                        ? 'rgba(243, 156, 18, 0.1)'
+                        : 'rgba(198, 166, 89, 0.1)';
+                    status.style.borderColor = type === 'success'
+                        ? 'rgba(46, 204, 113, 0.3)'
+                        : type === 'warning'
+                        ? 'rgba(243, 156, 18, 0.3)'
+                        : 'rgba(198, 166, 89, 0.3)';
+                    status.style.color = type === 'success' ? '#2ecc71' : type === 'warning' ? '#f39c12' : '#c6a659';
+                }
+            }
+        }
+        
+        // Global functions
+        window.closeBottomSheet = function() {
+            window.luxuryMobile.closeBottomSheet();
+        };
+        
+        window.showNotifications = function() {
+            window.luxuryMobile.showActionFeedback('Bildirişlər açıldı');
+        };
+        
+        window.showProfile = function() {
+            window.luxuryMobile.showActionFeedback('Profil açıldı');
+        };
+        
+        window.installPWA = function() {
+            window.luxuryMobile.installPWA();
+        };
+        
+        // Demo functions
+        window.testHapticFeedback = function() {
+            const buttons = document.querySelectorAll('.mobile-action-btn');
+            const randomButton = buttons[Math.floor(Math.random() * buttons.length)];
+            window.luxuryMobile.triggerHapticFeedback(randomButton);
+            window.luxuryMobile.updateDemoStatus('📳 Haptic feedback tested', 'success');
+        };
+        
+        window.testBottomSheet = function() {
+            const content = `
+                <div style="text-align: center; padding: 2rem;">
+                    <div style="font-size: 3rem; margin-bottom: 1rem;">🎉</div>
+                    <h3 style="color: var(--gold-primary); margin-bottom: 1rem;">Bottom Sheet Test</h3>
+                    <p style="color: #94a3b8; margin-bottom: 2rem;">Bu luxury bottom sheet interfeysi test edilir.</p>
+                    <button class="mobile-action-button primary" onclick="closeBottomSheet()">
+                        Bağla
+                    </button>
+                </div>
+            `;
+            window.luxuryMobile.openBottomSheet('Test Panel', content);
+            window.luxuryMobile.updateDemoStatus('📑 Bottom sheet tested', 'success');
+        };
+        
+        window.testCategoryBar = function() {
+            const pills = document.querySelectorAll('.category-pill');
+            const randomPill = pills[Math.floor(Math.random() * pills.length)];
+            randomPill.click();
+            window.luxuryMobile.updateDemoStatus('🏷️ Category bar tested', 'success');
+        };
+        
+        window.testSearch = function() {
+            const searchInput = document.getElementById('mobileSearch');
+            searchInput.value = 'Pizza';
+            searchInput.dispatchEvent(new Event('input'));
+            
+            setTimeout(() => {
+                searchInput.value = '';
+                searchInput.dispatchEvent(new Event('input'));
+            }, 2000);
+            
+            window.luxuryMobile.updateDemoStatus('🔍 Search functionality tested', 'success');
+        };
+        
+        window.testPWAInstall = function() {
+            const prompt = document.getElementById('pwaInstallPrompt');
+            prompt.classList.add('show');
+            window.luxuryMobile.updateDemoStatus('📱 PWA install prompt shown', 'info');
+            
+            setTimeout(() => {
+                prompt.classList.remove('show');
+            }, 3000);
+        };
+        
+        window.testViewSwitch = function() {
+            const views = ['tables', 'menu', 'orders', 'stats'];
+            const currentView = window.luxuryMobile.currentView;
+            const currentIndex = views.indexOf(currentView);
+            const nextIndex = (currentIndex + 1) % views.length;
+            const nextView = views[nextIndex];
+            
+            const navItem = document.querySelector(`[data-view="${nextView}"]`);
+            navItem.click();
+            
+            window.luxuryMobile.updateDemoStatus('🔄 View switch tested', 'success');
+        };
+        
+        // Add fade animation
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes fadeInOut {
+                0% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+                20% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                80% { opacity: 1; transform: translate(-50%, -50%) scale(1); }
+                100% { opacity: 0; transform: translate(-50%, -50%) scale(0.8); }
+            }
+            
+            .content-section {
+                display: none;
+            }
+            
+            .content-section.active {
+                display: block;
+            }
+            
+            @media (max-width: 767px) {
+                .demo-controls {
+                    display: none !important;
+                }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Initialize mobile UI
+        document.addEventListener('DOMContentLoaded', () => {
+            window.luxuryMobile = new LuxuryMobileUIDemo();
+        });
+    </script>
+</body>
+</html>

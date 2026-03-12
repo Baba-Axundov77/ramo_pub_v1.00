@@ -1,0 +1,1047 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Admin Dashboard Preview | Ramo Pub</title>
+    <link rel="stylesheet" href="web/static/css/luxury-admin.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&family=Inter+Mono:wght@600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Demo Controls */
+        .demo-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            z-index: 10000;
+            backdrop-filter: blur(20px);
+            max-width: 320px;
+        }
+        
+        .demo-controls h4 {
+            margin: 0 0 16px 0;
+            color: var(--gold-primary, #c6a659);
+            font-size: 16px;
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .demo-controls button {
+            display: block;
+            width: 100%;
+            margin: 8px 0;
+            padding: 12px 16px;
+            background: rgba(198, 166, 89, 0.1);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .demo-controls button:hover {
+            background: rgba(198, 166, 89, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .demo-info {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(198, 166, 89, 0.2);
+            font-size: 11px;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
+        
+        .demo-status {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            border-radius: 8px;
+            color: #2ecc71;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        /* Performance Monitor */
+        .performance-monitor {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 16px;
+            padding: 16px;
+            color: white;
+            font-family: 'Inter Mono', monospace;
+            font-size: 12px;
+            z-index: 10000;
+            backdrop-filter: blur(20px);
+            min-width: 280px;
+        }
+        
+        .performance-title {
+            color: var(--gold-primary, #c6a659);
+            font-weight: 600;
+            margin-bottom: 12px;
+            text-align: center;
+        }
+        
+        .performance-metric {
+            display: flex;
+            justify-content: space-between;
+            margin: 4px 0;
+            color: #94a3b8;
+        }
+        
+        .performance-value {
+            color: #f1f5f9;
+            font-weight: 600;
+        }
+        
+        .performance-value.good {
+            color: #10b981;
+        }
+        
+        .performance-value.warning {
+            color: #f59e0b;
+        }
+        
+        .performance-value.bad {
+            color: #ef4444;
+        }
+    </style>
+</head>
+<body>
+    <!-- Demo Controls -->
+    <div class="demo-controls">
+        <h4>📊 Admin Dashboard Controls</h4>
+        <button onclick="testKPIUpdates()">
+            <i class="fas fa-chart-line"></i> Test KPI Updates
+        </button>
+        <button onclick="testCharts()">
+            <i class="fas fa-chart-bar"></i> Test Charts
+        </button>
+        <button onclick="testLeaderboards()">
+            <i class="fas fa-trophy"></i> Test Leaderboards
+        </button>
+        <button onclick="testStockAlerts()">
+            <i class="fas fa-exclamation-triangle"></i> Test Stock Alerts
+        </button>
+        <button onclick="testWebSocket()">
+            <i class="fas fa-wifi"></i> Test WebSocket
+        </button>
+        <button onclick="testPerformance()">
+            <i class="fas fa-tachometer-alt"></i> Test Performance
+        </button>
+        
+        <div class="demo-info">
+            <strong>Data Updates:</strong> <span id="updateCount">0</span><br>
+            <strong>Chart Animations:</strong> <span id="chartAnimations">On</span><br>
+            <strong>WebSocket:</strong> <span id="wsStatus">Simulated</span><br>
+            <strong>Cache Status:</strong> <span id="cacheStatus">Ready</span><br>
+            <strong>Last Update:</strong> <span id="lastUpdate">--</span>
+        </div>
+        
+        <div class="demo-status" id="demoStatus">
+            ✨ Executive Dashboard Ready
+        </div>
+    </div>
+
+    <!-- Performance Monitor -->
+    <div class="performance-monitor">
+        <div class="performance-title">PERFORMANCE MONITOR</div>
+        <div class="performance-metric">
+            <span>Render Time:</span>
+            <span class="performance-value good" id="renderTime">0ms</span>
+        </div>
+        <div class="performance-metric">
+            <span>Chart Updates:</span>
+            <span class="performance-value" id="chartUpdates">0</span>
+        </div>
+        <div class="performance-metric">
+            <span>Memory Usage:</span>
+            <span class="performance-value" id="memoryUsage">0MB</span>
+        </div>
+        <div class="performance-metric">
+            <span>Cache Hits:</span>
+            <span class="performance-value" id="cacheHits">0</span>
+        </div>
+        <div class="performance-metric">
+            <span>Throttle Status:</span>
+            <span class="performance-value good" id="throttleStatus">Active</span>
+        </div>
+    </div>
+
+    <div class="admin-dashboard">
+        <!-- Admin Header -->
+        <header class="admin-header">
+            <div class="admin-title-section">
+                <h1 class="admin-main-title">EXECUTIVE DASHBOARD</h1>
+                <p class="admin-subtitle">Real-time Analytics & Business Intelligence</p>
+            </div>
+            <div class="admin-controls">
+                <select class="date-range-selector" id="dateRangeSelector">
+                    <option value="today">Bugün</option>
+                    <option value="week">Bu Həftə</option>
+                    <option value="month">Bu Ay</option>
+                    <option value="quarter">Bu Rüb</option>
+                </select>
+                <button class="export-btn" onclick="exportData()">
+                    <i class="fas fa-download"></i>
+                    <span>Export</span>
+                </button>
+            </div>
+        </header>
+
+        <!-- KPI Cards Grid -->
+        <section class="kpi-grid" id="kpiGrid">
+            <!-- KPI cards will be dynamically loaded -->
+        </section>
+
+        <!-- Analytics Charts Section -->
+        <section class="analytics-section">
+            <!-- Sales Trend Chart -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2 class="chart-title">Satış Trendi</h2>
+                    <div class="chart-options">
+                        <button class="chart-option active" data-period="day">Gün</button>
+                        <button class="chart-option" data-period="week">Həftə</button>
+                        <button class="chart-option" data-period="month">Ay</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="salesTrendChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Kitchen Load Heatmap -->
+            <div class="chart-card">
+                <div class="chart-header">
+                    <h2 class="chart-title">Mətbəx Yükü</h2>
+                    <div class="chart-options">
+                        <button class="chart-option active" data-view="heatmap">Heatmap</button>
+                        <button class="chart-option" data-view="bar">Bar</button>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <canvas id="kitchenLoadChart"></canvas>
+                </div>
+            </div>
+        </section>
+
+        <!-- Leaderboard Section -->
+        <section class="leaderboard-section">
+            <!-- Waiter Leaderboard -->
+            <div class="leaderboard-card">
+                <div class="leaderboard-header">
+                    <i class="fas fa-trophy leaderboard-icon"></i>
+                    <h3 class="leaderboard-title">Ofisiant Reytinqi</h3>
+                </div>
+                <div class="leaderboard-list" id="waiterLeaderboard">
+                    <!-- Waiter rankings will be dynamically loaded -->
+                </div>
+            </div>
+
+            <!-- Chef Leaderboard -->
+            <div class="leaderboard-card">
+                <div class="leaderboard-header">
+                    <i class="fas fa-utensils leaderboard-icon"></i>
+                    <h3 class="leaderboard-title">Aşpaz Reytinqi</h3>
+                </div>
+                <div class="leaderboard-list" id="chefLeaderboard">
+                    <!-- Chef rankings will be dynamically loaded -->
+                </div>
+            </div>
+        </section>
+
+        <!-- Stock Alerts Section -->
+        <section class="stock-alerts-section">
+            <div class="stock-alerts-card">
+                <div class="stock-alerts-header">
+                    <h2 class="stock-alerts-title">Kritik Stok Xəbərdarlığı</h2>
+                    <div class="alert-count" id="alertCount">0</div>
+                </div>
+                <div class="stock-alerts-grid" id="stockAlerts">
+                    <!-- Stock alerts will be dynamically loaded -->
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        class LuxuryAdminDashboardDemo {
+            constructor() {
+                this.kpiData = {};
+                this.charts = {};
+                this.updateInterval = null;
+                this.currentDateRange = 'today';
+                this.isOnline = true;
+                this.lastUpdateTime = null;
+                this.performanceMetrics = {
+                    renderTime: 0,
+                    chartUpdates: 0,
+                    memoryUsage: 0,
+                    cacheHits: 0
+                };
+                this.init();
+            }
+            
+            async init() {
+                this.startPerformanceMonitoring();
+                const startTime = performance.now();
+                
+                this.initCharts();
+                await this.loadKPIData();
+                await this.loadLeaderboards();
+                await this.loadStockAlerts();
+                this.setupEventListeners();
+                this.startDataUpdates();
+                this.initWebSocket();
+                
+                const endTime = performance.now();
+                this.performanceMetrics.renderTime = (endTime - startTime).toFixed(2);
+                this.updatePerformanceMonitor();
+            }
+            
+            // Performance Monitoring
+            startPerformanceMonitoring() {
+                setInterval(() => {
+                    // Simulate memory usage
+                    this.performanceMetrics.memoryUsage = (Math.random() * 50 + 20).toFixed(1);
+                    
+                    // Update cache hits
+                    this.performanceMetrics.cacheHits += Math.floor(Math.random() * 5);
+                    
+                    this.updatePerformanceMonitor();
+                }, 2000);
+            }
+            
+            updatePerformanceMonitor() {
+                document.getElementById('renderTime').textContent = `${this.performanceMetrics.renderTime}ms`;
+                document.getElementById('chartUpdates').textContent = this.performanceMetrics.chartUpdates;
+                document.getElementById('memoryUsage').textContent = `${this.performanceMetrics.memoryUsage}MB`;
+                document.getElementById('cacheHits').textContent = this.performanceMetrics.cacheHits;
+                
+                const throttleStatus = document.getElementById('throttleStatus');
+                if (this.updateInterval) {
+                    throttleStatus.textContent = 'Active';
+                    throttleStatus.className = 'performance-value good';
+                } else {
+                    throttleStatus.textContent = 'Inactive';
+                    throttleStatus.className = 'performance-value warning';
+                }
+                
+                // Update demo info
+                document.getElementById('updateCount').textContent = this.performanceMetrics.chartUpdates;
+                document.getElementById('lastUpdate').textContent = this.lastUpdateTime ? 
+                    new Date(this.lastUpdateTime).toLocaleTimeString('az-AZ') : '--';
+            }
+            
+            // Initialize Charts
+            initCharts() {
+                // Sales Trend Chart
+                const salesCtx = document.getElementById('salesTrendChart').getContext('2d');
+                this.charts.salesTrend = new Chart(salesCtx, {
+                    type: 'line',
+                    data: {
+                        labels: [],
+                        datasets: [{
+                            label: 'Gündəlik Dövriyyə',
+                            data: [],
+                            borderColor: '#c6a659',
+                            backgroundColor: 'rgba(198, 166, 89, 0.1)',
+                            borderWidth: 3,
+                            tension: 0.4,
+                            fill: true,
+                            pointRadius: 4,
+                            pointBackgroundColor: '#c6a659',
+                            pointBorderColor: '#fff',
+                            pointBorderWidth: 2,
+                            pointHoverRadius: 6
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            duration: 750,
+                            easing: 'easeInOutQuart'
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(2, 6, 23, 0.9)',
+                                titleColor: '#f1f5f9',
+                                bodyColor: '#94a3b8',
+                                borderColor: '#c6a659',
+                                borderWidth: 1,
+                                padding: 12,
+                                displayColors: false,
+                                callbacks: {
+                                    label: function(context) {
+                                        return `Dövriyyə: ${context.parsed.y.toFixed(2)} ₼`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    color: 'rgba(148, 163, 184, 0.1)',
+                                    borderColor: 'rgba(148, 163, 184, 0.2)'
+                                },
+                                ticks: {
+                                    color: '#94a3b8'
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    color: 'rgba(148, 163, 184, 0.1)',
+                                    borderColor: 'rgba(148, 163, 184, 0.2)'
+                                },
+                                ticks: {
+                                    color: '#94a3b8',
+                                    callback: function(value) {
+                                        return value.toFixed(0) + ' ₼';
+                                    }
+                                }
+                            }
+                        }
+                    }
+                });
+                
+                // Kitchen Load Chart
+                const kitchenCtx = document.getElementById('kitchenLoadChart').getContext('2d');
+                this.charts.kitchenLoad = new Chart(kitchenCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['08:00', '10:00', '12:00', '14:00', '16:00', '18:00', '20:00', '22:00'],
+                        datasets: [{
+                            label: 'Sifariş Sayı',
+                            data: [],
+                            backgroundColor: function(context) {
+                                const value = context.parsed.y;
+                                const max = Math.max(...context.dataset.data);
+                                const intensity = value / max;
+                                
+                                if (intensity > 0.8) return 'rgba(239, 68, 68, 0.8)';  // Red - High load
+                                if (intensity > 0.5) return 'rgba(245, 158, 11, 0.8)'; // Yellow - Medium load
+                                return 'rgba(16, 185, 129, 0.8)'; // Green - Low load
+                            },
+                            borderColor: 'rgba(198, 166, 89, 0.5)',
+                            borderWidth: 1,
+                            borderRadius: 8
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        animation: {
+                            duration: 500,
+                            easing: 'easeInOutQuart'
+                        },
+                        plugins: {
+                            legend: {
+                                display: false
+                            },
+                            tooltip: {
+                                backgroundColor: 'rgba(2, 6, 23, 0.9)',
+                                titleColor: '#f1f5f9',
+                                bodyColor: '#94a3b8',
+                                borderColor: '#c6a659',
+                                borderWidth: 1,
+                                padding: 12,
+                                callbacks: {
+                                    label: function(context) {
+                                        const value = context.parsed.y;
+                                        let status = 'Normal';
+                                        if (value > 20) status = 'Yüksək';
+                                        else if (value > 10) status = 'Orta';
+                                        return `Sifariş: ${value} (${status})`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            x: {
+                                grid: {
+                                    color: 'rgba(148, 163, 184, 0.1)',
+                                    borderColor: 'rgba(148, 163, 184, 0.2)'
+                                },
+                                ticks: {
+                                    color: '#94a3b8'
+                                }
+                            },
+                            y: {
+                                grid: {
+                                    color: 'rgba(148, 163, 184, 0.1)',
+                                    borderColor: 'rgba(148, 163, 184, 0.2)'
+                                },
+                                ticks: {
+                                    color: '#94a3b8'
+                                }
+                            }
+                        }
+                    }
+                });
+            }
+            
+            // Load KPI Data
+            async loadKPIData() {
+                this.showKPIsLoading();
+                
+                await new Promise(resolve => setTimeout(resolve, 300));
+                
+                this.kpiData = {
+                    dailyRevenue: {
+                        value: 3456.78,
+                        change: 12.5,
+                        icon: '💰',
+                        title: 'Gündəlik Dövriyyə'
+                    },
+                    avgPrepTime: {
+                        value: 9.5,
+                        change: -8.3,
+                        icon: '⏱️',
+                        title: 'Orta Hazırlanma Müddəti',
+                        unit: 'dəq'
+                    },
+                    topProduct: {
+                        value: 'Pizza Margherita',
+                        change: 15.2,
+                        icon: '🍕',
+                        title: 'Ən Çox Satan Məhsul'
+                    },
+                    activeTables: {
+                        value: 18,
+                        change: 5.6,
+                        icon: '🪑',
+                        title: 'Aktiv Masa Sayı',
+                        total: 24
+                    }
+                };
+                
+                this.renderKPIs();
+            }
+            
+            showKPIsLoading() {
+                const kpiGrid = document.getElementById('kpiGrid');
+                kpiGrid.innerHTML = Array(4).fill(0).map(() => `
+                    <div class="kpi-card">
+                        <div class="loading-skeleton" style="height: 60px; margin-bottom: 1rem;"></div>
+                        <div class="loading-skeleton" style="height: 40px; margin-bottom: 1rem;"></div>
+                        <div class="loading-skeleton" style="height: 20px;"></div>
+                    </div>
+                `).join('');
+            }
+            
+            renderKPIs() {
+                const kpiGrid = document.getElementById('kpiGrid');
+                
+                kpiGrid.innerHTML = Object.entries(this.kpiData).map(([key, kpi]) => {
+                    const changeClass = kpi.change > 0 ? 'positive' : kpi.change < 0 ? 'negative' : 'neutral';
+                    const changeIcon = kpi.change > 0 ? '↑' : kpi.change < 0 ? '↓' : '→';
+                    const displayValue = kpi.unit ? `${kpi.value} ${kpi.unit}` : 
+                                        typeof kpi.value === 'number' ? `${kpi.value.toFixed(2)} ₼` : 
+                                        kpi.value;
+                    
+                    return `
+                        <div class="kpi-card">
+                            <div class="kpi-header">
+                                <div>
+                                    <div class="kpi-title">${kpi.title}</div>
+                                    <div class="kpi-value">${displayValue}</div>
+                                    <div class="kpi-change ${changeClass}">
+                                        <span>${changeIcon}</span>
+                                        <span>${Math.abs(kpi.change)}%</span>
+                                        <span>günə</span>
+                                    </div>
+                                </div>
+                                <div class="kpi-icon">${kpi.icon}</div>
+                            </div>
+                            <canvas class="kpi-sparkline" id="sparkline-${key}"></canvas>
+                        </div>
+                    `;
+                }).join('');
+                
+                setTimeout(() => this.renderSparklines(), 100);
+            }
+            
+            renderSparklines() {
+                Object.keys(this.kpiData).forEach(key => {
+                    const canvas = document.getElementById(`sparkline-${key}`);
+                    if (!canvas) return;
+                    
+                    const ctx = canvas.getContext('2d');
+                    const data = this.generateSparklineData();
+                    
+                    new Chart(ctx, {
+                        type: 'line',
+                        data: {
+                            labels: data.labels,
+                            datasets: [{
+                                data: data.values,
+                                borderColor: '#c6a659',
+                                borderWidth: 2,
+                                fill: false,
+                                tension: 0.4,
+                                pointRadius: 0
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false },
+                                tooltip: { enabled: false }
+                            },
+                            scales: {
+                                x: { display: false },
+                                y: { display: false }
+                            }
+                        }
+                    });
+                });
+            }
+            
+            generateSparklineData() {
+                const hours = 24;
+                const labels = [];
+                const values = [];
+                
+                for (let i = 0; i < hours; i++) {
+                    labels.push(`${i}:00`);
+                    values.push(Math.random() * 100 + 50);
+                }
+                
+                return { labels, values };
+            }
+            
+            // Load Leaderboards
+            async loadLeaderboards() {
+                const waiters = [
+                    { name: 'Əli Hüseynov', sales: 1250, orders: 45, rank: 1 },
+                    { name: 'Nigar Əliyeva', sales: 1180, orders: 42, rank: 2 },
+                    { name: 'Kamal Qasımov', sales: 980, orders: 38, rank: 3 },
+                    { name: 'Ayşə Məmmədova', sales: 890, orders: 35, rank: 4 },
+                    { name: 'Rəşad Əkbərov', sales: 750, orders: 28, rank: 5 }
+                ];
+                
+                this.renderLeaderboard('waiterLeaderboard', waiters, 'sales', '₼');
+                
+                const chefs = [
+                    { name: 'Chef Ramiz', avgTime: 8.2, orders: 52, rank: 1 },
+                    { name: 'Chef Leyla', avgTime: 9.5, orders: 48, rank: 2 },
+                    { name: 'Chef Tural', avgTime: 10.1, orders: 45, rank: 3 },
+                    { name: 'Chef Gülnar', avgTime: 11.3, orders: 40, rank: 4 },
+                    { name: 'Chef Elvin', avgTime: 12.7, orders: 35, rank: 5 }
+                ];
+                
+                this.renderLeaderboard('chefLeaderboard', chefs, 'avgTime', 'dəq');
+            }
+            
+            renderLeaderboard(elementId, data, metric, unit) {
+                const element = document.getElementById(elementId);
+                
+                element.innerHTML = data.map(person => {
+                    const rankClass = person.rank === 1 ? 'gold' : person.rank === 2 ? 'silver' : person.rank === 3 ? 'bronze' : '';
+                    const value = typeof person[metric] === 'number' ? person[metric].toFixed(1) : person[metric];
+                    const metricLabel = metric === 'avgTime' ? 'Orta Vaxt' : metric === 'sales' ? 'Satış' : 'Sifariş';
+                    
+                    return `
+                        <div class="leaderboard-item">
+                            <div class="leaderboard-rank ${rankClass}">${person.rank}</div>
+                            <div class="leaderboard-info">
+                                <div class="leaderboard-name">${person.name}</div>
+                                <div class="leaderboard-metric">${metricLabel}: ${person.orders}</div>
+                            </div>
+                            <div class="leaderboard-value">${value} ${unit}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+            
+            // Load Stock Alerts
+            async loadStockAlerts() {
+                const alerts = [
+                    { product: 'Viski', quantity: 2, unit: 'şüşə', icon: '🥃' },
+                    { product: 'Qırmızı Şərab', quantity: 3, unit: 'butulka', icon: '🍷' },
+                    { product: 'Lahmacun', quantity: 5, unit: 'ədəd', icon: '🫓' },
+                    { product: 'Tiramisu', quantity: 1, unit: 'porsiya', icon: '🍰' }
+                ];
+                
+                this.renderStockAlerts(alerts);
+            }
+            
+            renderStockAlerts(alerts) {
+                const element = document.getElementById('stockAlerts');
+                const alertCount = document.getElementById('alertCount');
+                
+                alertCount.textContent = alerts.length;
+                
+                element.innerHTML = alerts.map(alert => `
+                    <div class="stock-alert-item">
+                        <div class="stock-alert-icon">${alert.icon}</div>
+                        <div class="stock-alert-info">
+                            <div class="stock-alert-product">${alert.product}</div>
+                            <div class="stock-alert-quantity">Cəmi ${alert.quantity} ${alert.unit} qalıb</div>
+                        </div>
+                        <button class="stock-alert-action" onclick="luxuryAdmin.handleStockAlert('${alert.product}')">
+                            Sifariş Et
+                        </button>
+                    </div>
+                `).join('');
+            }
+            
+            // Setup Event Listeners
+            setupEventListeners() {
+                document.getElementById('dateRangeSelector').addEventListener('change', (e) => {
+                    this.currentDateRange = e.target.value;
+                    this.refreshData();
+                });
+                
+                document.querySelectorAll('.chart-option').forEach(option => {
+                    option.addEventListener('click', (e) => {
+                        const parent = e.target.closest('.chart-options');
+                        parent.querySelectorAll('.chart-option').forEach(opt => opt.classList.remove('active'));
+                        e.target.classList.add('active');
+                        
+                        const period = e.target.dataset.period;
+                        const view = e.target.dataset.view;
+                        
+                        if (period) {
+                            this.updateChartPeriod(e.target.closest('.chart-card'), period);
+                        } else if (view) {
+                            this.updateChartView(e.target.closest('.chart-card'), view);
+                        }
+                    });
+                });
+            }
+            
+            updateChartPeriod(chartCard, period) {
+                const salesChart = this.charts.salesTrend;
+                if (salesChart) {
+                    const newData = this.generateSalesData(period);
+                    salesChart.data.labels = newData.labels;
+                    salesChart.data.datasets[0].data = newData.values;
+                    salesChart.update();
+                    this.performanceMetrics.chartUpdates++;
+                }
+            }
+            
+            updateChartView(chartCard, view) {
+                const kitchenChart = this.charts.kitchenLoad;
+                if (kitchenChart) {
+                    if (view === 'bar') {
+                        kitchenChart.config.type = 'bar';
+                    } else {
+                        kitchenChart.config.type = 'bar';
+                    }
+                    kitchenChart.update();
+                    this.performanceMetrics.chartUpdates++;
+                }
+            }
+            
+            generateSalesData(period) {
+                let labels = [];
+                let values = [];
+                
+                switch (period) {
+                    case 'day':
+                        labels = ['00:00', '04:00', '08:00', '12:00', '16:00', '20:00', '23:59'];
+                        values = [120, 180, 450, 680, 520, 380, 200];
+                        break;
+                    case 'week':
+                        labels = ['B.e.', 'Ç.a.', 'Ç.', 'C.a.', 'C.', 'Ş.', 'B.'];
+                        values = [1200, 1450, 1380, 1650, 1890, 2100, 980];
+                        break;
+                    case 'month':
+                        labels = ['Həftə 1', 'Həftə 2', 'Həftə 3', 'Həftə 4'];
+                        values = [8500, 9200, 8900, 10500];
+                        break;
+                }
+                
+                return { labels, values };
+            }
+            
+            // Start Data Updates with Throttling
+            startDataUpdates() {
+                // Update every 30 seconds (throttling)
+                this.updateInterval = setInterval(() => {
+                    this.refreshData();
+                }, 30000);
+            }
+            
+            async refreshData() {
+                if (!this.isOnline) return;
+                
+                try {
+                    this.showKPIsLoading();
+                    
+                    await new Promise(resolve => setTimeout(resolve, 300));
+                    
+                    this.updateKPIValues();
+                    this.updateCharts();
+                    this.updateLeaderboards();
+                    
+                    this.lastUpdateTime = new Date();
+                    console.log('Dashboard data updated at', this.lastUpdateTime);
+                    
+                } catch (error) {
+                    console.error('Error refreshing dashboard data:', error);
+                }
+            }
+            
+            updateKPIValues() {
+                Object.keys(this.kpiData).forEach(key => {
+                    const kpi = this.kpiData[key];
+                    
+                    if (typeof kpi.value === 'number') {
+                        const variation = (Math.random() - 0.5) * 0.1;
+                        kpi.value = kpi.value * (1 + variation);
+                        
+                        const changeVariation = (Math.random() - 0.5) * 2;
+                        kpi.change = kpi.change + changeVariation;
+                    }
+                });
+                
+                this.renderKPIs();
+            }
+            
+            updateCharts() {
+                const salesChart = this.charts.salesTrend;
+                if (salesChart) {
+                    const currentData = salesChart.data.datasets[0].data;
+                    const newValue = currentData[currentData.length - 1] * (1 + (Math.random() - 0.5) * 0.1);
+                    salesChart.data.datasets[0].data.push(newValue);
+                    salesChart.data.datasets[0].data.shift();
+                    salesChart.update('none');
+                    this.performanceMetrics.chartUpdates++;
+                }
+                
+                const kitchenChart = this.charts.kitchenLoad;
+                if (kitchenChart) {
+                    const currentData = kitchenChart.data.datasets[0].data;
+                    const newData = currentData.map(value => {
+                        const variation = (Math.random() - 0.5) * 4;
+                        return Math.max(0, value + variation);
+                    });
+                    kitchenChart.data.datasets[0].data = newData;
+                    kitchenChart.update('none');
+                    this.performanceMetrics.chartUpdates++;
+                }
+            }
+            
+            updateLeaderboards() {
+                this.loadLeaderboards();
+            }
+            
+            // WebSocket Connection (Simulated)
+            initWebSocket() {
+                this.isOnline = true;
+                console.log('Admin WebSocket connected (simulated)');
+                
+                // Simulate WebSocket messages
+                setTimeout(() => {
+                    this.simulateWebSocketMessage({
+                        type: 'kpi_update',
+                        kpi_data: {
+                            dailyRevenue: { value: 3500.50, change: 13.2 }
+                        }
+                    });
+                }, 5000);
+            }
+            
+            handleWebSocketMessage(data) {
+                switch (data.type) {
+                    case 'kpi_update':
+                        this.updateKPIFromWebSocket(data.kpi_data);
+                        break;
+                    case 'stock_alert':
+                        this.addStockAlert(data.alert);
+                        break;
+                    case 'leaderboard_update':
+                        this.updateLeaderboardFromWebSocket(data.leaderboard_type, data.data);
+                        break;
+                }
+            }
+            
+            updateKPIFromWebSocket(kpiData) {
+                Object.assign(this.kpiData, kpiData);
+                this.renderKPIs();
+            }
+            
+            addStockAlert(alert) {
+                this.loadStockAlerts();
+            }
+            
+            updateLeaderboardFromWebSocket(type, data) {
+                const elementId = type === 'waiter' ? 'waiterLeaderboard' : 'chefLeaderboard';
+                const metric = type === 'waiter' ? 'sales' : 'avgTime';
+                const unit = type === 'waiter' ? '₼' : 'dəq';
+                this.renderLeaderboard(elementId, data, metric, unit);
+            }
+            
+            // Export Data
+            exportData() {
+                const data = {
+                    kpi: this.kpiData,
+                    lastUpdate: this.lastUpdateTime,
+                    dateRange: this.currentDateRange
+                };
+                
+                const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `ramo-pub-dashboard-${new Date().toISOString().split('T')[0]}.json`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+                
+                this.showNotification('Data exported successfully', 'success');
+            }
+            
+            // Handle Stock Alert Action
+            handleStockAlert(product) {
+                this.showNotification(`Sifariş göndərildi: ${product}`, 'info');
+            }
+            
+            // Show Notification
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    background: ${type === 'success' ? 'linear-gradient(135deg, #10b981, #059669)' : 
+                           type === 'error' ? 'linear-gradient(135deg, #ef4444, #dc2626)' : 
+                           'linear-gradient(135deg, #c6a659, #a68a4b)'};
+                    color: white;
+                    padding: 1rem 1.5rem;
+                    border-radius: 12px;
+                    font-weight: 600;
+                    z-index: 10000;
+                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+                    animation: slideInRight 0.3s ease-out;
+                `;
+                notification.textContent = message;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.animation = 'slideOutRight 0.3s ease-out';
+                    setTimeout(() => {
+                        document.body.removeChild(notification);
+                    }, 300);
+                }, 3000);
+            }
+        }
+        
+        // Add animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from { transform: translateX(100%); opacity: 0; }
+                to { transform: translateX(0); opacity: 1; }
+            }
+            
+            @keyframes slideOutRight {
+                from { transform: translateX(0); opacity: 1; }
+                to { transform: translateX(100%); opacity: 0; }
+            }
+        `;
+        document.head.appendChild(style);
+        
+        // Initialize dashboard
+        document.addEventListener('DOMContentLoaded', () => {
+            window.luxuryAdmin = new LuxuryAdminDashboardDemo();
+        });
+        
+        // Global functions
+        window.exportData = function() {
+            window.luxuryAdmin.exportData();
+        };
+        
+        window.luxuryAdmin = window.luxuryAdmin || {};
+        
+        // Demo functions
+        window.testKPIUpdates = function() {
+            window.luxuryAdmin.updateKPIValues();
+            window.luxuryAdmin.updateDemoStatus('✨ KPI updates tested', 'success');
+        };
+        
+        window.testCharts = function() {
+            window.luxuryAdmin.updateCharts();
+            window.luxuryAdmin.updateDemoStatus('📊 Charts tested', 'success');
+        };
+        
+        window.testLeaderboards = function() {
+            window.luxuryAdmin.updateLeaderboards();
+            window.luxuryAdmin.updateDemoStatus('🏆 Leaderboards tested', 'success');
+        };
+        
+        window.testStockAlerts = function() {
+            window.luxuryAdmin.loadStockAlerts();
+            window.luxuryAdmin.updateDemoStatus('⚠️ Stock alerts tested', 'warning');
+        };
+        
+        window.testWebSocket = function() {
+            window.luxuryAdmin.simulateWebSocketMessage({
+                type: 'kpi_update',
+                kpi_data: {
+                    dailyRevenue: { value: 4000.00, change: 15.5 }
+                }
+            });
+            document.getElementById('wsStatus').textContent = 'Connected';
+            window.luxuryAdmin.updateDemoStatus('📡 WebSocket tested', 'success');
+        };
+        
+        window.testPerformance = function() {
+            // Simulate performance stress test
+            for (let i = 0; i < 10; i++) {
+                setTimeout(() => {
+                    window.luxuryAdmin.updateCharts();
+                }, i * 100);
+            }
+            
+            window.luxuryAdmin.updateDemoStatus('⚡ Performance tested', 'info');
+        };
+        
+        window.luxuryAdmin.updateDemoStatus = function(message, type = 'success') {
+            const status = document.getElementById('demoStatus');
+            if (status) {
+                status.textContent = message;
+                status.style.background = type === 'success' 
+                    ? 'rgba(46, 204, 113, 0.1)' 
+                    : type === 'warning'
+                    ? 'rgba(243, 156, 18, 0.1)'
+                    : 'rgba(198, 166, 89, 0.1)';
+                status.style.borderColor = type === 'success'
+                    ? 'rgba(46, 204, 113, 0.3)'
+                    : type === 'warning'
+                    ? 'rgba(243, 156, 18, 0.3)'
+                    : 'rgba(198, 166, 89, 0.3)';
+                status.style.color = type === 'success' ? '#2ecc71' : type === 'warning' ? '#f39c12' : '#c6a659';
+            }
+        };
+    </script>
+</body>
+</html>

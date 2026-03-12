@@ -3,8 +3,8 @@ from __future__ import annotations
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from database.connection import Base
-from database.models import (
+from src.core.database.connection import Base
+from src.core.database.models import (
     InventoryItem,
     MenuCategory,
     MenuItem,
@@ -19,8 +19,8 @@ from database.models import (
     UserRole,
     InventoryAdjustment,
 )
-from modules.auth.auth_service import AuthService
-from modules.pos.pos_service import POSService
+from src.core.modules.auth.auth_service import AuthService
+from src.core.modules.pos.pos_service import POSService
 
 
 def _make_db(tmp_path, name: str):

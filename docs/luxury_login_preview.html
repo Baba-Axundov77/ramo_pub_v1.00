@@ -1,0 +1,270 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
+    <title>Giriş | Ramo Pub</title>
+    <link rel="stylesheet" href="web/static/css/luxury-login.css">
+    <!-- Google Fonts for preview -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    <style>
+        /* Demo controls */
+        .demo-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 12px;
+            padding: 16px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+        }
+        
+        .demo-controls h4 {
+            margin: 0 0 12px 0;
+            color: var(--gold-primary, #c6a659);
+            font-size: 14px;
+        }
+        
+        .demo-controls button {
+            display: block;
+            width: 100%;
+            margin: 8px 0;
+            padding: 8px 12px;
+            background: rgba(198, 166, 89, 0.2);
+            border: 1px solid rgba(198, 166, 89, 0.4);
+            border-radius: 6px;
+            color: white;
+            font-size: 12px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        
+        .demo-controls button:hover {
+            background: rgba(198, 166, 89, 0.3);
+        }
+        
+        .demo-info {
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px solid rgba(198, 166, 89, 0.2);
+            font-size: 11px;
+            color: #94a3b8;
+        }
+        
+        @media (max-width: 768px) {
+            .demo-controls {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin: 20px;
+                max-width: calc(100% - 40px);
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Demo Controls -->
+    <div class="demo-controls">
+        <h4>🎨 Demo Controls</h4>
+        <button onclick="toggleError()">Toggle Error State</button>
+        <button onclick="toggleSuccess()">Toggle Success State</button>
+        <button onclick="toggleLoading()">Toggle Loading</button>
+        <button onclick="testResponsive()">Test Responsive</button>
+        <div class="demo-info">
+            <strong>Current viewport:</strong> <span id="viewport-size"></span><br>
+            <strong>Touch targets:</strong> 48px minimum<br>
+            <strong>Fluid typography:</strong> Active
+        </div>
+    </div>
+<div class="luxury-login-container">
+  <div class="animated-background">
+    <div class="mesh-gradient"></div>
+  </div>
+  
+  <div class="luxury-login-card">
+    <div class="luxury-logo">
+      <div class="luxury-logo-icon">🍺</div>
+      <h1>Ramo Pub</h1>
+      <p class="luxury-logo-subtitle">İdarəetmə Paneli</p>
+    </div>
+
+    <!-- Example flash message -->
+    <div class="luxury-flash error" id="flashMessage" style="display: none;">
+      <span class="luxury-flash-icon">✗</span>
+      <span id="flashText">İstifadəçi adı və ya şifrə yanlışdır</span>
+    </div>
+
+    <form class="luxury-form" id="luxuryLoginForm">
+      <div class="luxury-form-group">
+        <label for="username" class="luxury-form-label">İstifadəçi adı</label>
+        <div class="luxury-input-wrapper">
+          <input 
+            type="text" 
+            name="username" 
+            id="username"
+            class="luxury-input" 
+            placeholder="admin"
+            autocomplete="username" 
+            required 
+            autofocus>
+          <span class="luxury-input-icon">👤</span>
+        </div>
+      </div>
+      
+      <div class="luxury-form-group">
+        <label for="password" class="luxury-form-label">Şifrə</label>
+        <div class="luxury-input-wrapper">
+          <input 
+            type="password" 
+            name="password" 
+            id="password"
+            class="luxury-input" 
+            placeholder="••••••••"
+            autocomplete="current-password" 
+            required>
+          <span class="luxury-input-icon">🔒</span>
+          <button type="button" class="password-toggle" id="passwordToggle">
+            👁️
+          </button>
+        </div>
+      </div>
+
+      <div class="luxury-form-options">
+        <div class="luxury-checkbox-wrapper">
+          <input type="checkbox" id="remember" name="remember" class="luxury-checkbox">
+          <label for="remember" class="luxury-checkbox-label">Məni xatırla</label>
+        </div>
+        <a href="#" class="luxury-forgot-link">Şifrəmi unutdum</a>
+      </div>
+
+      <button type="submit" class="luxury-button" id="loginButton">
+        <span class="button-text">Daxil ol</span>
+      </button>
+    </form>
+
+    <div class="luxury-footer">
+      <span class="luxury-footer-icon">🔒</span>
+      Ramo Pub &amp; TeaHouse — Bütün hüquqlar qorunur
+    </div>
+  </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('luxuryLoginForm');
+  const loginButton = document.getElementById('loginButton');
+  const passwordToggle = document.getElementById('passwordToggle');
+  const passwordInput = document.getElementById('password');
+  const inputs = document.querySelectorAll('.luxury-input');
+  const flashMessage = document.getElementById('flashMessage');
+  const flashText = document.getElementById('flashText');
+  const viewportSize = document.getElementById('viewport-size');
+  
+  // Update viewport size display
+  function updateViewportSize() {
+    viewportSize.textContent = `${window.innerWidth}x${window.innerHeight}px`;
+  }
+  updateViewportSize();
+  window.addEventListener('resize', updateViewportSize);
+  
+  // Password toggle functionality
+  passwordToggle.addEventListener('click', function() {
+    const type = passwordInput.getAttribute('type') === 'password' ? 'text' : 'password';
+    passwordInput.setAttribute('type', type);
+    this.textContent = type === 'password' ? '👁️' : '👁️‍🗨️';
+  });
+  
+  // Remove error states on input
+  inputs.forEach(input => {
+    input.addEventListener('input', function() {
+      this.classList.remove('error');
+    });
+  });
+  
+  // Form submission with loading state
+  form.addEventListener('submit', function(e) {
+    e.preventDefault();
+    
+    // Remove previous error states
+    inputs.forEach(input => input.classList.remove('error'));
+    
+    // Validate inputs
+    let hasError = false;
+    inputs.forEach(input => {
+      if (!input.value.trim()) {
+        input.classList.add('error');
+        hasError = true;
+      }
+    });
+    
+    if (hasError) {
+      showFlash('error', 'Zəhmət olmasa bütün xanaları doldurun');
+      return;
+    }
+    
+    // Show loading state
+    loginButton.classList.add('loading');
+    loginButton.disabled = true;
+    
+    // Simulate API call
+    setTimeout(function() {
+      loginButton.classList.remove('loading');
+      loginButton.disabled = false;
+      showFlash('success', 'Uğurlu giriş! Dashboarda yönləndirilir...');
+    }, 1500);
+  });
+  
+  // Forgot password link
+  document.querySelector('.luxury-forgot-link').addEventListener('click', function(e) {
+    e.preventDefault();
+    showFlash('info', 'Şifrə bərpa funksiyası tezliklə əlavə olunacaq');
+  });
+  
+  // Flash message function
+  function showFlash(type, message) {
+    flashMessage.className = `luxury-flash ${type}`;
+    flashText.textContent = message;
+    flashMessage.style.display = 'flex';
+    
+    // Auto hide after 3 seconds
+    setTimeout(() => {
+      flashMessage.style.display = 'none';
+    }, 3000);
+  }
+  
+  // Demo functions
+  window.toggleError = function() {
+    inputs.forEach(input => input.classList.add('error'));
+    showFlash('error', 'Demo: Xəta mesajı göstərildi');
+  };
+  
+  window.toggleSuccess = function() {
+    showFlash('success', 'Demo: Uğurlu əməliyyat!');
+  };
+  
+  window.toggleLoading = function() {
+    loginButton.classList.toggle('loading');
+    loginButton.disabled = !loginButton.disabled;
+  };
+  
+  window.testResponsive = function() {
+    const sizes = [320, 480, 768, 1024, 1200];
+    const currentWidth = window.innerWidth;
+    const nextSize = sizes.find(s => s > currentWidth) || sizes[0];
+    
+    // Simulate responsive testing (in real implementation, this would resize the viewport)
+    showFlash('info', `Demo: ${nextWidth}px genişlikdə görünüş - ${nextSize <= 480 ? 'Mobil' : nextSize <= 768 ? 'Tablet' : 'Desktop'} versiya`);
+  };
+});
+</script>
+</body>
+</html>

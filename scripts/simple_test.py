@@ -13,7 +13,7 @@ def test_database():
     print("\n1. Testing Database...")
     try:
         sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-        from database.connection import init_database, get_db
+        from src.core.database.connection import init_database, get_db
         from sqlalchemy import text
         
         ok, msg = init_database()

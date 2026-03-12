@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>Luxury Dashboard Preview | Ramo Pub</title>
+    <link rel="stylesheet" href="web/static/css/luxury-dashboard.css">
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@700&family=Inter:wght@400;500;600;700&family=Inter+Mono:wght@500;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        /* Demo Controls */
+        .demo-controls {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.95);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 16px;
+            padding: 20px;
+            color: white;
+            font-family: 'Inter', sans-serif;
+            z-index: 10000;
+            backdrop-filter: blur(20px);
+            max-width: 300px;
+        }
+        
+        .demo-controls h4 {
+            margin: 0 0 16px 0;
+            color: var(--gold-primary, #c6a659);
+            font-size: 16px;
+            font-family: 'Playfair Display', serif;
+        }
+        
+        .demo-controls button {
+            display: block;
+            width: 100%;
+            margin: 8px 0;
+            padding: 12px 16px;
+            background: rgba(198, 166, 89, 0.1);
+            border: 1px solid rgba(198, 166, 89, 0.3);
+            border-radius: 8px;
+            color: white;
+            font-size: 13px;
+            cursor: pointer;
+            transition: all 0.2s;
+            font-weight: 500;
+        }
+        
+        .demo-controls button:hover {
+            background: rgba(198, 166, 89, 0.2);
+            transform: translateY(-1px);
+        }
+        
+        .demo-info {
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(198, 166, 89, 0.2);
+            font-size: 11px;
+            color: #94a3b8;
+            line-height: 1.4;
+        }
+        
+        .demo-status {
+            margin-top: 12px;
+            padding: 8px 12px;
+            background: rgba(46, 204, 113, 0.1);
+            border: 1px solid rgba(46, 204, 113, 0.3);
+            border-radius: 8px;
+            color: #2ecc71;
+            font-size: 12px;
+            text-align: center;
+        }
+        
+        @media (max-width: 768px) {
+            .demo-controls {
+                position: relative;
+                top: auto;
+                right: auto;
+                margin: 20px;
+                max-width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <!-- Demo Controls -->
+    <div class="demo-controls">
+        <h4>🎛️ Dashboard Controls</h4>
+        <button onclick="simulateNewOrder()">
+            <i class="fas fa-plus"></i> New Order
+        </button>
+        <button onclick="simulatePayment()">
+            <i class="fas fa-credit-card"></i> Payment
+        </button>
+        <button onclick="simulateTableStatus()">
+            <i class="fas fa-chair"></i> Table Status
+        </button>
+        <button onclick="simulateStaffStatus()">
+            <i class="fas fa-users"></i> Staff Status
+        </button>
+        <button onclick="toggleSidebar()">
+            <i class="fas fa-bars"></i> Toggle Sidebar
+        </button>
+        <button onclick="testResponsive()">
+            <i class="fas fa-mobile-alt"></i> Test Responsive
+        </button>
+        
+        <div class="demo-info">
+            <strong>WebSocket:</strong> Simulated<br>
+            <strong>Viewport:</strong> <span id="viewportSize">--</span><br>
+            <strong>Animations:</strong> Active<br>
+            <strong>Touch Targets:</strong> 48px minimum
+        </div>
+        
+        <div class="demo-status" id="demoStatus">
+            ✨ Dashboard Ready
+        </div>
+    </div>
+
+    <!-- Mobile Menu Toggle -->
+    <button class="mobile-menu-toggle" id="mobileMenuToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Luxury Dashboard Layout -->
+    <div class="luxury-dashboard">
+        <!-- Sidebar Navigation -->
+        <aside class="luxury-sidebar" id="luxurySidebar">
+            <div class="sidebar-header">
+                <a href="#" class="sidebar-logo">
+                    <span class="sidebar-logo-icon">🍺</span>
+                    <span class="nav-label">Ramo Pub</span>
+                </a>
+            </div>
+            
+            <nav class="sidebar-nav">
+                <a href="#" class="nav-item active">
+                    <span class="nav-icon"><i class="fas fa-chart-pie"></i></span>
+                    <span class="nav-label">İdarə Paneli</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-chair"></i></span>
+                    <span class="nav-label">Masalar</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-receipt"></i></span>
+                    <span class="nav-label">Sifarişlər</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-utensils"></i></span>
+                    <span class="nav-label">Menyu</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-chart-bar"></i></span>
+                    <span class="nav-label">Hesabatlar</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-calendar-alt"></i></span>
+                    <span class="nav-label">Rezervasiyalar</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-boxes"></i></span>
+                    <span class="nav-label">Anbar</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-cash-register"></i></span>
+                    <span class="nav-label">Kassa</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-users"></i></span>
+                    <span class="nav-label">İşçilər</span>
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-icon"><i class="fas fa-kitchen-set"></i></span>
+                    <span class="nav-label">Mətbəx</span>
+                </a>
+            </nav>
+            
+            <div class="sidebar-footer">
+                <div class="user-profile">
+                    <div class="user-avatar">A</div>
+                    <div class="user-info">
+                        <div class="user-name">Admin User</div>
+                        <div class="user-role">Administrator</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+        
+        <!-- Main Content Area -->
+        <main class="luxury-main-content">
+            <!-- Dashboard Header -->
+            <header class="dashboard-header">
+                <div class="header-title-section">
+                    <h1 class="dashboard-title">İdarə Paneli</h1>
+                    <div class="dashboard-subtitle">
+                        <span>Canlı statistika</span>
+                        <span class="clock-display" id="luxuryClock">--:--:--</span>
+                    </div>
+                </div>
+                <div class="header-actions">
+                    <button class="refresh-button" id="refreshButton">
+                        <i class="fas fa-sync-alt"></i>
+                        <span>Yenilə</span>
+                    </button>
+                </div>
+            </header>
+            
+            <!-- Stats Cards Grid -->
+            <div class="stats-grid">
+                <!-- Bugünkü Gəlir -->
+                <div class="stat-card" data-stat="revenue">
+                    <div class="stat-header">
+                        <div class="stat-icon">💰</div>
+                    </div>
+                    <div class="stat-value" id="revenueValue">1,234.50</div>
+                    <div class="stat-label">Bugünkü Gəlir</div>
+                    <div class="stat-badges">
+                        <span class="stat-badge success">15 ödəniş</span>
+                    </div>
+                </div>
+                
+                <!-- Aktiv Masalar -->
+                <div class="stat-card" data-stat="tables">
+                    <div class="stat-header">
+                        <div class="stat-icon">🪑</div>
+                    </div>
+                    <div class="stat-value" id="tablesValue">8</div>
+                    <div class="stat-label">Aktiv Masalar</div>
+                    <div class="stat-badges">
+                        <span class="stat-badge success">12 boş</span>
+                        <span class="stat-badge warning">3 rezerv</span>
+                    </div>
+                </div>
+                
+                <!-- Gözləyən Sifarişlər -->
+                <div class="stat-card" data-stat="orders">
+                    <div class="stat-header">
+                        <div class="stat-icon">📋</div>
+                    </div>
+                    <div class="stat-value" id="ordersValue">23</div>
+                    <div class="stat-label">Gözləyən Sifarişlər</div>
+                    <div class="stat-badges">
+                        <span class="stat-badge warning">456.80 ₼</span>
+                    </div>
+                </div>
+                
+                <!-- İşçi Heyəti -->
+                <div class="stat-card" data-stat="staff">
+                    <div class="stat-header">
+                        <div class="stat-icon">👥</div>
+                    </div>
+                    <div class="stat-value" id="staffValue">12</div>
+                    <div class="stat-label">İşçi Heyəti</div>
+                    <div class="stat-badges">
+                        <span class="stat-badge success">18 nəfər</span>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Table Status Panel -->
+            <section class="table-status-panel">
+                <div class="panel-header">
+                    <h2 class="panel-title">
+                        <span>🪑</span>
+                        Masa Statusu
+                    </h2>
+                    <div class="panel-actions">
+                        <a href="#" class="view-all-button">
+                            <span>Hamısına bax</span>
+                            <i class="fas fa-arrow-right"></i>
+                        </a>
+                    </div>
+                </div>
+                <div class="table-status-grid" id="tableStatusGrid">
+                    <!-- Sample tables -->
+                    <div class="table-status-circle available" data-table-id="1">
+                        <div class="table-number">1</div>
+                        <div class="table-status-label">Boş</div>
+                    </div>
+                    <div class="table-status-circle occupied" data-table-id="2">
+                        <div class="table-number">2</div>
+                        <div class="table-status-label">Dolu</div>
+                    </div>
+                    <div class="table-status-circle occupied" data-table-id="3">
+                        <div class="table-number">3</div>
+                        <div class="table-status-label">Dolu</div>
+                    </div>
+                    <div class="table-status-circle reserved" data-table-id="4">
+                        <div class="table-number">4</div>
+                        <div class="table-status-label">Rezerv</div>
+                    </div>
+                    <div class="table-status-circle available" data-table-id="5">
+                        <div class="table-number">5</div>
+                        <div class="table-status-label">Boş</div>
+                    </div>
+                    <div class="table-status-circle occupied" data-table-id="6">
+                        <div class="table-number">6</div>
+                        <div class="table-status-label">Dolu</div>
+                    </div>
+                    <div class="table-status-circle available" data-table-id="7">
+                        <div class="table-number">7</div>
+                        <div class="table-status-label">Boş</div>
+                    </div>
+                    <div class="table-status-circle reserved" data-table-id="8">
+                        <div class="table-number">8</div>
+                        <div class="table-status-label">Rezerv</div>
+                    </div>
+                    <div class="table-status-circle occupied" data-table-id="9">
+                        <div class="table-number">9</div>
+                        <div class="table-status-label">Dolu</div>
+                    </div>
+                    <div class="table-status-circle available" data-table-id="10">
+                        <div class="table-number">10</div>
+                        <div class="table-status-label">Boş</div>
+                    </div>
+                    <div class="table-status-circle occupied" data-table-id="11">
+                        <div class="table-number">11</div>
+                        <div class="table-status-label">Dolu</div>
+                    </div>
+                    <div class="table-status-circle available" data-table-id="12">
+                        <div class="table-number">12</div>
+                        <div class="table-status-label">Boş</div>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Charts Section -->
+            <section class="charts-section">
+                <!-- Payment Methods Chart -->
+                <div class="chart-card">
+                    <h3 class="chart-title">
+                        <span>💳</span>
+                        Ödəniş Üsulları
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="paymentMethodsChart"></canvas>
+                    </div>
+                </div>
+                
+                <!-- Hourly Orders Chart -->
+                <div class="chart-card">
+                    <h3 class="chart-title">
+                        <span>📈</span>
+                        Bu Günkü Saatlıq Sifariş
+                    </h3>
+                    <div class="chart-container">
+                        <canvas id="hourlyOrdersChart"></canvas>
+                    </div>
+                </div>
+            </section>
+            
+            <!-- Quick Actions -->
+            <section class="quick-actions">
+                <a href="#" class="quick-action-card">
+                    <div class="quick-action-icon">📝</div>
+                    <div class="quick-action-label">Yeni Sifariş</div>
+                </a>
+                <a href="#" class="quick-action-card">
+                    <div class="quick-action-icon">🍽️</div>
+                    <div class="quick-action-label">Menyu</div>
+                </a>
+                <a href="#" class="quick-action-card">
+                    <div class="quick-action-icon">💳</div>
+                    <div class="quick-action-label">Kassa</div>
+                </a>
+                <a href="#" class="quick-action-card">
+                    <div class="quick-action-icon">🪑</div>
+                    <div class="quick-action-label">Masa İdarəsi</div>
+                </a>
+            </section>
+        </main>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+    <script>
+        // Luxury Dashboard Demo JavaScript
+        class LuxuryDashboardDemo {
+            constructor() {
+                this.stats = {
+                    revenue: 1234.50,
+                    tables: 8,
+                    orders: 23,
+                    staff: 12
+                };
+                this.init();
+            }
+            
+            init() {
+                this.initClock();
+                this.initMobileMenu();
+                this.initCharts();
+                this.initAnimations();
+                this.updateViewportSize();
+                window.addEventListener('resize', () => this.updateViewportSize());
+            }
+            
+            initClock() {
+                const updateClock = () => {
+                    const now = new Date();
+                    const timeString = now.toLocaleString('az-AZ', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        second: '2-digit',
+                        hour12: false
+                    });
+                    document.getElementById('luxuryClock').textContent = timeString;
+                };
+                
+                updateClock();
+                setInterval(updateClock, 1000);
+            }
+            
+            initMobileMenu() {
+                const toggle = document.getElementById('mobileMenuToggle');
+                const sidebar = document.getElementById('luxurySidebar');
+                
+                toggle.addEventListener('click', () => {
+                    sidebar.classList.toggle('mobile-open');
+                });
+                
+                document.addEventListener('click', (e) => {
+                    if (window.innerWidth <= 768 && 
+                        !sidebar.contains(e.target) && 
+                        !toggle.contains(e.target)) {
+                        sidebar.classList.remove('mobile-open');
+                    }
+                });
+            }
+            
+            initCharts() {
+                // Payment Methods Chart
+                const paymentCtx = document.getElementById('paymentMethodsChart');
+                if (paymentCtx) {
+                    new Chart(paymentCtx, {
+                        type: 'doughnut',
+                        data: {
+                            labels: ['Nağd', 'Kart', 'Online'],
+                            datasets: [{
+                                data: [45, 35, 20],
+                                backgroundColor: [
+                                    'rgba(46, 204, 113, 0.8)',
+                                    'rgba(52, 152, 219, 0.8)',
+                                    'rgba(155, 89, 182, 0.8)'
+                                ],
+                                borderColor: '#0f172a',
+                                borderWidth: 2
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: {
+                                    position: 'bottom',
+                                    labels: {
+                                        color: '#cbd5e1',
+                                        font: { size: 12 },
+                                        padding: 15
+                                    }
+                                }
+                            }
+                        }
+                    });
+                }
+                
+                // Hourly Orders Chart
+                const hourlyCtx = document.getElementById('hourlyOrdersChart');
+                if (hourlyCtx) {
+                    new Chart(hourlyCtx, {
+                        type: 'bar',
+                        data: {
+                            labels: ['09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00'],
+                            datasets: [{
+                                label: 'Sifariş',
+                                data: [5, 8, 12, 18, 25, 20, 15, 10],
+                                backgroundColor: 'rgba(198, 166, 89, 0.6)',
+                                borderColor: '#c6a659',
+                                borderWidth: 2,
+                                borderRadius: 6
+                            }]
+                        },
+                        options: {
+                            responsive: true,
+                            maintainAspectRatio: false,
+                            plugins: {
+                                legend: { display: false }
+                            },
+                            scales: {
+                                x: {
+                                    ticks: { color: '#94a3b8', font: { size: 11 } },
+                                    grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                                },
+                                y: {
+                                    ticks: { color: '#94a3b8', font: { size: 11 }, stepSize: 5 },
+                                    grid: { color: 'rgba(148, 163, 184, 0.1)' }
+                                }
+                            }
+                        }
+                    });
+                }
+            }
+            
+            initAnimations() {
+                // Animate stat cards on load
+                document.querySelectorAll('.stat-card').forEach((card, index) => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateY(20px)';
+                    
+                    setTimeout(() => {
+                        card.style.transition = 'all 0.5s ease-out';
+                        card.style.opacity = '1';
+                        card.style.transform = 'translateY(0)';
+                    }, index * 100);
+                });
+                
+                // Animate table status circles
+                document.querySelectorAll('.table-status-circle').forEach((circle, index) => {
+                    circle.style.opacity = '0';
+                    circle.style.transform = 'scale(0.8)';
+                    
+                    setTimeout(() => {
+                        circle.style.transition = 'all 0.3s ease-out';
+                        circle.style.opacity = '1';
+                        circle.style.transform = 'scale(1)';
+                    }, 500 + index * 50);
+                });
+            }
+            
+            updateStat(statName, newValue) {
+                const element = document.getElementById(`${statName}Value`);
+                const oldValue = this.stats[statName];
+                
+                if (oldValue !== newValue) {
+                    this.animateNumber(element, oldValue, newValue);
+                    this.stats[statName] = newValue;
+                }
+                
+                element.classList.add('updating');
+                setTimeout(() => element.classList.remove('updating'), 600);
+            }
+            
+            animateNumber(element, start, end) {
+                const duration = 1000;
+                const startTime = performance.now();
+                
+                const animate = (currentTime) => {
+                    const elapsed = currentTime - startTime;
+                    const progress = Math.min(elapsed / duration, 1);
+                    
+                    const easeOutQuart = 1 - Math.pow(1 - progress, 4);
+                    const current = start + (end - start) * easeOutQuart;
+                    
+                    if (element.id === 'revenueValue') {
+                        element.textContent = `${current.toFixed(2)} ₼`;
+                    } else {
+                        element.textContent = Math.round(current);
+                    }
+                    
+                    if (progress < 1) {
+                        requestAnimationFrame(animate);
+                    }
+                };
+                
+                requestAnimationFrame(animate);
+            }
+            
+            showNotification(message, type = 'info') {
+                const notification = document.createElement('div');
+                notification.className = `luxury-flash ${type}`;
+                notification.innerHTML = `
+                    <span class="luxury-flash-icon">
+                        ${type === 'success' ? '✓' : type === 'error' ? '✗' : 'ℹ'}
+                    </span>
+                    <span>${message}</span>
+                `;
+                
+                notification.style.cssText = `
+                    position: fixed;
+                    top: 20px;
+                    right: 20px;
+                    z-index: 10000;
+                    padding: 16px 20px;
+                    border-radius: 12px;
+                    background: ${type === 'success' ? 'rgba(46, 204, 113, 0.9)' : 'rgba(198, 166, 89, 0.9)'};
+                    color: white;
+                    font-weight: 500;
+                    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+                    backdrop-filter: blur(10px);
+                    animation: slideInRight 0.3s ease-out;
+                `;
+                
+                document.body.appendChild(notification);
+                
+                setTimeout(() => {
+                    notification.style.animation = 'slideOutRight 0.3s ease-in';
+                    setTimeout(() => notification.remove(), 300);
+                }, 3000);
+            }
+            
+            updateViewportSize() {
+                const viewportSize = document.getElementById('viewportSize');
+                if (viewportSize) {
+                    viewportSize.textContent = `${window.innerWidth}x${window.innerHeight}px`;
+                }
+            }
+            
+            updateDemoStatus(message, type = 'success') {
+                const status = document.getElementById('demoStatus');
+                if (status) {
+                    status.textContent = message;
+                    status.style.background = type === 'success' 
+                        ? 'rgba(46, 204, 113, 0.1)' 
+                        : 'rgba(198, 166, 89, 0.1)';
+                    status.style.borderColor = type === 'success'
+                        ? 'rgba(46, 204, 113, 0.3)'
+                        : 'rgba(198, 166, 89, 0.3)';
+                    status.style.color = type === 'success' ? '#2ecc71' : '#c6a659';
+                }
+            }
+        }
+        
+        // Initialize Dashboard
+        const dashboard = new LuxuryDashboardDemo();
+        
+        // Demo Functions
+        window.simulateNewOrder = function() {
+            const newRevenue = dashboard.stats.revenue + Math.random() * 50 + 20;
+            const newOrders = dashboard.stats.orders + 1;
+            
+            dashboard.updateStat('revenue', newRevenue);
+            dashboard.updateStat('orders', newOrders);
+            
+            dashboard.showNotification('Yeni sifariş əlavə edildi!', 'success');
+            dashboard.updateDemoStatus('✨ New order simulated', 'success');
+        };
+        
+        window.simulatePayment = function() {
+            const paymentAmount = Math.random() * 100 + 30;
+            const newRevenue = dashboard.stats.revenue + paymentAmount;
+            const newOrders = Math.max(0, dashboard.stats.orders - 1);
+            
+            dashboard.updateStat('revenue', newRevenue);
+            dashboard.updateStat('orders', newOrders);
+            
+            dashboard.showNotification(`${paymentAmount.toFixed(2)} ₼ ödəniş alındı!`, 'success');
+            dashboard.updateDemoStatus('💳 Payment processed', 'success');
+        };
+        
+        window.simulateTableStatus = function() {
+            const tables = document.querySelectorAll('.table-status-circle');
+            const randomTable = tables[Math.floor(Math.random() * tables.length)];
+            const statuses = ['available', 'occupied', 'reserved'];
+            const currentStatus = Array.from(randomTable.classList).find(cls => statuses.includes(cls));
+            const newStatus = statuses[Math.floor(Math.random() * statuses.length)];
+            
+            randomTable.classList.remove(currentStatus);
+            randomTable.classList.add(newStatus);
+            
+            const statusLabels = { available: 'Boş', occupied: 'Dolu', reserved: 'Rezerv' };
+            const labelElement = randomTable.querySelector('.table-status-label');
+            if (labelElement) {
+                labelElement.textContent = statusLabels[newStatus];
+            }
+            
+            // Update occupied count
+            const occupiedCount = document.querySelectorAll('.table-status-circle.occupied').length;
+            dashboard.updateStat('tables', occupiedCount);
+            
+            dashboard.showNotification(`Masa ${randomTable.querySelector('.table-number').textContent} statusu dəyişdirildi`, 'info');
+            dashboard.updateDemoStatus('🪑 Table status updated', 'info');
+        };
+        
+        window.simulateStaffStatus = function() {
+            const newStaff = Math.floor(Math.random() * 8) + 10;
+            dashboard.updateStat('staff', newStaff);
+            
+            dashboard.showNotification(`İşçi statusu yeniləndi: ${newStaff} nəfər online`, 'info');
+            dashboard.updateDemoStatus('👥 Staff status updated', 'info');
+        };
+        
+        window.toggleSidebar = function() {
+            const sidebar = document.getElementById('luxurySidebar');
+            sidebar.classList.toggle('collapsed');
+            
+            const isCollapsed = sidebar.classList.contains('collapsed');
+            dashboard.showNotification(`Sidebar ${isCollapsed ? 'collapsed' : 'expanded'}`, 'info');
+            dashboard.updateDemoStatus(`📋 Sidebar ${isCollapsed ? 'collapsed' : 'expanded'}`, 'info');
+        };
+        
+        window.testResponsive = function() {
+            const viewportInfo = `
+                Viewport: ${window.innerWidth}x${window.innerHeight}px
+                Device: ${window.innerWidth <= 480 ? 'Mobile' : window.innerWidth <= 768 ? 'Tablet' : 'Desktop'}
+                Touch: ${'ontouchstart' in window ? 'Available' : 'Not Available'}
+                Pixel Ratio: ${window.devicePixelRatio || 1}
+            `;
+            
+            dashboard.showNotification('Responsive info logged to console', 'info');
+            console.log(viewportInfo);
+            dashboard.updateDemoStatus('📱 Responsive test complete', 'info');
+        };
+        
+        // Refresh button
+        document.getElementById('refreshButton').addEventListener('click', function() {
+            this.classList.add('ws-updating');
+            
+            setTimeout(() => {
+                this.classList.remove('ws-updating');
+                dashboard.showNotification('Məlumatlar yeniləndi', 'success');
+                dashboard.updateDemoStatus('🔄 Data refreshed', 'success');
+            }, 1000);
+        });
+        
+        // Add CSS animations
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes slideInRight {
+                from { opacity: 0; transform: translateX(20px); }
+                to { opacity: 1; transform: translateX(0); }
+            }
+            
+            @keyframes slideOutRight {
+                from { opacity: 1; transform: translateX(0); }
+                to { opacity: 0; transform: translateX(20px); }
+            }
+            
+            .luxury-flash {
+                display: flex;
+                align-items: center;
+                gap: 12px;
+                padding: 16px 20px;
+                border-radius: 12px;
+                font-size: 14px;
+                font-weight: 500;
+                color: white;
+                backdrop-filter: blur(10px);
+                box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+            }
+            
+            .luxury-flash.success {
+                background: rgba(46, 204, 113, 0.9);
+                border: 1px solid rgba(46, 204, 113, 0.3);
+            }
+            
+            .luxury-flash.error {
+                background: rgba(231, 76, 60, 0.9);
+                border: 1px solid rgba(231, 76, 60, 0.3);
+            }
+            
+            .luxury-flash.info {
+                background: rgba(198, 166, 89, 0.9);
+                border: 1px solid rgba(198, 166, 89, 0.3);
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>

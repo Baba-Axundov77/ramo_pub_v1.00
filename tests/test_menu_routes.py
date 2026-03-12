@@ -6,9 +6,9 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
 
-from database.connection import Base
-from database.models import User, UserRole, MenuCategory, MenuItem
-from modules.auth.auth_service import AuthService
+from src.core.database.connection import Base
+from src.core.database.models import User, UserRole, MenuCategory, MenuItem
+from src.core.modules.auth.auth_service import AuthService
 import web.app as web_app_module
 
 
