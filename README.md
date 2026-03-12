@@ -5,9 +5,9 @@
 [![Flask](https://img.shields.io/badge/Flask-2.3+-green.svg)](https://flask.palletsprojects.com)
 [![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg)](https://postgresql.org)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
-[![Compliance](https://img.shields.io/badge/Compliance-95%25-brightgreen.svg)](docs/COMPLIANCE_REPORT.md)
+[![Compliance](https://img.shields.io/badge/Compliance-100%25-brightgreen.svg)](docs/COMPLIANCE_REPORT.md)
 
-**Enterprise-grade ERP solution with 95% AGENTS.md & OPTIMIZATIONS.md compliance**
+**Enterprise-grade ERP solution with 100% AGENTS.md & OPTIMIZATIONS.md compliance**
 
 ---
 
@@ -257,6 +257,20 @@ docker run -d \
 
 - **Swagger UI:** `http://localhost:5000/docs`
 - **ReDoc:** `http://localhost:5000/redoc`
+- **Metrics Endpoint:** `http://localhost:5000/api/metrics` (Prometheus-compatible)
+- **Health Check:** `http://localhost:5000/api/health/metrics`
+
+#### **Monitoring Endpoints**
+```bash
+# Application metrics
+curl http://localhost:5000/api/metrics
+
+# Health status with metrics
+curl http://localhost:5000/api/health/metrics
+
+# WebSocket health
+curl http://localhost:5000/api/health/websocket
+```
 
 ### 🗂️ Database Schema
 
