@@ -1,404 +1,352 @@
-# 🍽️ Enterprise Restaurant Management System
+# 🍽 Ramo Pub & TeaHouse
+## Modern Restaurant Management System v2.1
 
-## 🎯 Complete Full-Stack Restaurant Management Solution
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+[![Flask](https://img.shields.io/badge/Flask-2.3+-green.svg)](https://flask.palletsprojects.com)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-14+-blue.svg)](https://postgresql.org)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A comprehensive, enterprise-grade restaurant management system with advanced business intelligence, real-time kitchen display, staff management, customer analytics, and sales forecasting.
-
-**Version**: 2.0.0 | **Status**: ✅ Production Ready
-
----
-
-## 🏗️ Technology Stack
-
-- **Backend**: Python 3.11, Flask, SQLAlchemy, Alembic
-- **Database**: PostgreSQL 15 with 20+ models
-- **Cache**: Redis 7 for session management & background tasks
-- **Frontend**: HTML5, CSS3, JavaScript (responsive design)
-- **API**: RESTful API with OpenAPI 3.0 documentation
-- **Authentication**: JWT-based security
-- **Background Tasks**: Celery with Redis broker
-- **Monitoring**: Prometheus + Grafana
-- **Deployment**: Docker containerization with Nginx
+**Professional ERP solution for modern restaurants with real-time operations management**
 
 ---
 
-## 🚀 Quick Start
+## 📋 Mündəricat
 
-### **Prerequisites**
-- Python 3.11+
-- PostgreSQL 15+
-- Redis 7+
-- Docker & Docker Compose (optional for production)
+- [🎯 Xüsusiyyətlər](#-xüsusiyyətlər)
+- [🏗️ Arxitektura](#️-arxitektura)
+- [🚀 Quraşdırma](#-qurşdrma)
+- [⚙️ Konfiqurasiya](#️-konfiqurasiya)
+- [🎮 İstifadə](#-istifad)
+- [🐳 Docker](#-docker)
+- [📚 Sənədlər](#-snədlər)
+- [🤝 İştirak](#-iştrak)
 
-### **Installation**
+---
 
-#### **1. Clone & Setup**
+## 🎯 Xüsusiyyətlər
+
+### 🍽 Restaurant Management
+- **Real-time Order Management** - WebSocket-based live updates
+- **Table Management** - Visual table layout with status tracking
+- **Menu Management** - Dynamic menu with image support
+- **Kitchen Display System (KDS)** - Real-time kitchen operations
+- **Point of Sale (POS)** - Modern checkout interface
+- **Inventory Management** - Stock tracking and alerts
+- **Staff Management** - Role-based access control
+- **Customer Loyalty** - Points and rewards system
+- **Reservation System** - Advanced booking management
+
+### 🖥️ Modern Interface
+- **PyQt6 Desktop Application** - Native desktop experience
+- **Responsive Web Interface** - Mobile-friendly design
+- **Real-time Dashboard** - Live business analytics
+- **Multi-language Support** - Azerbaijani, English, Russian
+- **Theme System** - Light/Dark mode support
+
+### 🔧 Technical Features
+- **Microservices Architecture** - Modular and scalable
+- **PostgreSQL Database** - Robust data management
+- **Redis Caching** - High-performance operations
+- **WebSocket Integration** - Real-time communication
+- **RESTful API** - Modern API design
+- **Docker Support** - Containerized deployment
+
+---
+
+## 🏗️ Arxitektura
+
+```
+ramo_pub/                     # Single Source of Truth
+├── main.py                   # Desktop Application (PyQt6)
+├── run.py                    # Development Launcher
+├── src/
+│   ├── main.py               # Production Entry Point
+│   ├── core/
+│   │   ├── config.py         # Central Configuration
+│   │   ├── database/        # Database Models & Migrations
+│   │   └── modules/         # Business Logic Services
+│   ├── web/                 # Flask Web Application
+│   │   ├── routes/          # API Endpoints
+│   │   ├── templates/       # HTML Templates
+│   │   └── static/          # CSS, JS, Images
+│   └── desktop/             # PyQt6 Desktop App
+├── requirements/              # Unified Dependencies
+├── assets/                  # Static Resources
+├── docker-compose.yml         # Container Configuration
+└── Dockerfile              # Production Build
+```
+
+### 🎯 Entry Points
+
+#### **Development (Lokal):**
 ```bash
-git clone <repository-url>
-cd ramo_pub
+# Interactive launcher with menu
+python run.py
 
-# Create virtual environment
+# Direct desktop app
+python main.py
+
+# Direct web server
+python -m src.web.app
+```
+
+#### **Production (Docker):**
+```bash
+# Build and run containers
+docker-compose up -d
+
+# Production deployment
+docker build -t ramo-pub .
+docker run -p 5000:5000 ramo-pub
+```
+
+---
+
+## 🚀 Quraşdırma
+
+### 📋 Tələblər
+
+- **Python 3.10+**
+- **PostgreSQL 14+**
+- **Redis 6+** (optional, for caching)
+- **Node.js 16+** (for frontend development)
+
+### 🔧 Installation
+
+#### **1. Repository Klonla:**
+```bash
+git clone https://github.com/Baba-Axundov77/ramo_pub_v1.00.git
+cd ramo_pub_v1.00
+```
+
+#### **2. Virtual Environment Yarat:**
+```bash
 python -m venv venv
-# Windows:
-venv\Scripts\activate
-# Linux/Mac:
-source venv/bin/activate
-
-# Install dependencies
-pip install -r requirements.txt
+source venv/bin/activate  # Linux/Mac
+# venv\Scripts\activate  # Windows
 ```
 
-#### **2. Database Setup**
+#### **3. Dependencies Quraşdır:**
 ```bash
-# Create database
-createdb restaurant_enterprise
-
-# Copy environment configuration
-copy .env.example .env
-
-# Edit .env file with your database credentials
-notepad .env
+pip install -r requirements/requirements.txt
 ```
 
-#### **3. Database Migration**
+#### **4. Environment Konfiqurasiya:**
 ```bash
-# Run database migrations
+cp .env.example .env
+# Edit .env with your database credentials
+```
+
+#### **5. Database Quraşdır:**
+```bash
+# Run migrations
 alembic upgrade head
-
-# Initialize database with sample data
-python -c "
-from database.connection import init_database
-ok, msg = init_database()
-if ok:
-    print('Database initialized successfully!')
-else:
-    print(f'Error: {msg}')
-"
 ```
 
-#### **4. Start Development Server**
+#### **6. Başladın:**
 ```bash
-# Start the web application
-python web/app.py
-
-# Access the application
-# http://localhost:5000
-# Default login: admin / admin123
+# Development launcher
+python run.py
 ```
 
-#### **5. Production Deployment**
+---
+
+## ⚙️ Konfiqurasiya
+
+### 📝 Environment Variables
+
 ```bash
-# Deploy with Docker
-chmod +x deploy.sh
-./deploy.sh
+# Database
+DB_HOST=localhost
+DB_PORT=5432
+DB_NAME=ramo_pub
+DB_USER=postgres
+DB_PASSWORD=password
 
-# Access services
-# Web App: http://localhost:5000
-# Grafana: http://localhost:3000 (admin/admin)
-# Prometheus: http://localhost:9090
+# Flask
+FLASK_SECRET_KEY=your-secret-key
+FLASK_DEBUG=false
+
+# Redis (optional)
+REDIS_HOST=localhost
+REDIS_PORT=6379
 ```
+
+### 🗂️ Directory Structure
+
+- **`assets/`** - Static resources (images, icons)
+- **`uploads/`** - User uploaded files
+- **`logs/`** - Application logs
+- **`migrations/`** - Database migration files
 
 ---
 
-## 📊 Enterprise Modules (8 Complete)
+## 🎮 İstifadə
 
-### **1. 📊 Order Management**
-- Split payments & order modifications
-- Advanced order service with real-time updates
-- Tip distribution system
-- Payment transaction tracking
-- Order history & analytics
+### 🖥️ Desktop Application
 
-### **2. 👨‍🍳 Kitchen Display System (KDS)**
-- Real-time order queue management
-- Bump screen functionality
-- Item preparation tracking
-- Station performance analytics
-- Kitchen workflow optimization
+1. **Başlat:** `python run.py` → Seçim 2
+2. **Login:** Admin panelə daxil olun
+3. **Dashboard:** Real-time məlumatlara baxın
+4. **Operations:** Order, menu, inventory management
 
-### **3. 💰 Recipe Costing & Menu Engineering**
-- Real-time recipe cost calculation
-- Menu engineering analysis (Star, Plowhorse, Puzzle, Dog)
-- Price optimization suggestions
-- Cost change monitoring & alerts
-- Supplier & purchase order management
+### 🌐 Web Interface
 
-### **4. 👥 Staff Management**
-- Staff performance tracking & analytics
-- Advanced shift scheduling with optimization
-- Leave management & approval workflow
-- Labor cost analysis
-- Shift swap request system
+1. **Başlat:** `python run.py` → Seçim 1
+2. **Browser:** http://localhost:5000
+3. **Login:** Admin panelə daxil olun
+4. **Features:** Full web-based management
 
-### **5. 🎯 Customer Analytics & RFM Segmentation**
-- RFM (Recency, Frequency, Monetary) analysis
-- Customer behavior pattern tracking
-- Lifetime value calculation (CLV)
-- Customer tier management
-- Churn prediction framework
+### 📱 Mobile Access
 
-### **6. 📈 Business Intelligence & Sales Forecasting**
-- ML-based sales forecasting algorithms
-- Business metrics tracking & KPI monitoring
-- Financial reporting framework
-- Dashboard widget system
-- Real-time business alerts
-
-### **7. 🚀 Enterprise Deployment**
-- Docker containerized deployment
-- Production-ready configuration
-- Monitoring & observability stack
-- SSL/TLS security
-- Auto-scaling & load balancing
-
-### **8. 🔧 Full Stack Integration**
-- Complete end-to-end workflows
-- Data integrity verification
-- Performance benchmarking
-- Security compliance
-- Production readiness validation
+- **Responsive Design:** Mobile cihazlarda tam dəstək
+- **Touch Interface:** Optimized interaction
+- **Real-time Updates:** WebSocket-based sync
 
 ---
 
-## 🌐 Web Interface
+## 🐳 Docker
 
-### **Main Routes**
+### 🐋 Docker Compose
+
+```yaml
+version: '3.8'
+services:
+  web:
+    build: .
+    ports:
+      - "5000:5000"
+    environment:
+      - DB_HOST=db
+      - REDIS_HOST=redis
+    depends_on:
+      - db
+      - redis
+  
+  db:
+    image: postgres:14
+    environment:
+      - POSTGRES_DB=ramo_pub
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=password
+  
+  redis:
+    image: redis:6-alpine
 ```
-http://localhost:5000           - Dashboard
-http://localhost:5000/tables    - Table Management
-http://localhost:5000/orders    - Order Management
-http://localhost:5000/menu      - Menu Management
-http://localhost:5000/reports   - Reports & Analytics
-http://localhost:5000/reservations - Reservations
-http://localhost:5000/loyalty   - Customer Loyalty
-http://localhost:5000/inventory - Inventory Management
-http://localhost:5000/kitchen   - Kitchen Display (KDS)
-http://localhost:5000/staff    - Staff Management
-http://localhost:5000/pos      - Point of Sale
-```
 
-### **Enterprise API Endpoints**
-```
-GET  /enterprise/health                    # System health check
-GET  /enterprise/orders/queue               # Order queue
-POST /enterprise/orders                     # Create order
-GET  /enterprise/kds/queue                  # KDS queue
-POST /enterprise/kds/bump/{station_id}      # Bump next order
-GET  /enterprise/customers/rfm              # RFM analysis
-GET  /enterprise/staff/schedule             # Staff schedule
-GET  /enterprise/recipe-costing/{item_id}   # Recipe cost
-```
+### 🚀 Deployment
 
----
-
-## 🗄️ Database Schema
-
-### **Core Models (20+)**
-- **Users & Authentication**: User roles, permissions, JWT tokens
-- **Orders Management**: Orders, OrderItems, Payments, Modifications
-- **Menu Management**: MenuItems, Categories, Recipes
-- **Customer Management**: Customers, Tiers, Segments, Behaviors
-- **Kitchen Operations**: KitchenStations, KDSMessages, PreparationTimes
-- **Staff Management**: StaffPerformance, Schedules, LeaveRequests
-- **Inventory**: Items, Recipes, Suppliers, PurchaseOrders
-- **Business Intelligence**: Forecasts, Metrics, Reports, Dashboards
-
-### **Database Statistics**
-- **Total Records**: 231+ live records
-- **Active Orders**: 46+
-- **Menu Items**: 20+
-- **Dashboard Widgets**: 6
-- **Enterprise Services**: 6
-
----
-
-## 🧪 Testing
-
-### **Run All Tests**
 ```bash
-# Full system integration test
-python test_full_stack.py
+# Production build
+docker build -t ramo-pub:latest .
 
-# Individual module tests
-python test_enterprise_order.py
-python test_kitchen_display.py
-python test_recipe_costing.py
-python test_staff_management.py
-python test_customer_analytics.py
-python test_business_intelligence.py
-```
-
-### **Test Coverage**
-- ✅ Unit Tests: Model validation, business logic
-- ✅ Integration Tests: API endpoints, database operations
-- ✅ End-to-End Tests: Complete workflows
-- ✅ Performance Tests: Load testing, benchmarks
-- ✅ Security Tests: Authentication, authorization
-
----
-
-## 🔒 Security Features
-
-- **Authentication**: JWT-based secure login
-- **Authorization**: Role-based access control (Admin, Manager, Waiter, Cashier, Kitchen)
-- **Data Encryption**: Sensitive data protection
-- **SQL Injection**: Parameterized queries
-- **Rate Limiting**: API abuse prevention
-- **Audit Logging**: Complete activity tracking
-- **Password Security**: bcrypt hashing
-
----
-
-## 📊 Business Intelligence
-
-### **Dashboard Features**
-- **Sales Dashboard**: Revenue, orders, customers metrics
-- **Kitchen Metrics**: Preparation times, efficiency analytics
-- **Staff Performance**: Productivity, satisfaction metrics
-- **Customer Analytics**: Retention, value, behavior insights
-- **Financial Reports**: P&L statements, cost analysis
-
-### **Analytics Capabilities**
-- **Sales Forecasting**: ML-based predictions with seasonality
-- **RFM Segmentation**: Customer value analysis
-- **Menu Engineering**: Profitability analysis
-- **KPI Tracking**: Real-time business metrics
-- **Alert System**: Automated business alerts
-
----
-
-## 🚀 Production Deployment
-
-### **Docker Deployment**
-```bash
-# Deploy complete system
-./deploy.sh
-
-# Services included:
-# - Web Application (Flask + Gunicorn)
-# - PostgreSQL Database
-# - Redis Cache
-# - Nginx Reverse Proxy
-# - Prometheus Monitoring
-# - Grafana Dashboards
-# - Celery Background Tasks
-```
-
-### **Environment Variables**
-```bash
-# Database Configuration
-DATABASE_URL=postgresql+psycopg2://user:password@localhost:5432/restaurant_enterprise
-REDIS_URL=redis://localhost:6379/0
-
-# Security
-SECRET_KEY=your-secret-key-here
-JWT_SECRET_KEY=your-jwt-secret-key-here
-
-# Features
-ENABLE_ANALYTICS=1
-ENABLE_KITCHEN_DISPLAY=1
-ENABLE_STAFF_MANAGEMENT=1
-ENABLE_CUSTOMER_ANALYTICS=1
-ENABLE_RECIPE_COSTING=1
+# Run with environment
+docker run -d \
+  -p 5000:5000 \
+  -e DB_HOST=your-db-host \
+  -e DB_PASSWORD=your-password \
+  ramo-pub:latest
 ```
 
 ---
 
-## 📈 Performance Metrics
+## 📚 Sənədlər
 
-### **System Performance**
-- **Query Response**: < 50ms average
-- **Page Load**: < 2 seconds
-- **Concurrent Users**: 1000+ supported
-- **Database**: Optimized indexing
-- **Caching**: Redis-based caching
+### 📖 API Documentation
 
-### **Scalability Features**
-- **Load Balancing**: Nginx reverse proxy
-- **Horizontal Scaling**: Docker containers
-- **Database Sharding**: Ready for partitioning
-- **CDN Integration**: Static asset delivery
-- **Background Tasks**: Celery workers
+- **Swagger UI:** `http://localhost:5000/docs`
+- **ReDoc:** `http://localhost:5000/redoc`
 
----
+### 🗂️ Database Schema
 
-## 🤝 User Roles & Permissions
+- **Models:** `src/core/database/models.py`
+- **Migrations:** `migrations/`
+- **Schema:** `docs/database-schema.md`
 
-### **Role Hierarchy**
-1. **Admin**: Full system access, configuration, user management
-2. **Manager**: Order management, reports, staff supervision
-3. **Waiter**: Order taking, customer service, table management
-4. **Cashier**: Payment processing, receipt printing
-5. **Kitchen**: KDS access, order preparation, inventory updates
+### 🎨 UI Components
 
-### **Loyalty System**
-- **Points System**: 1 AZN spent = 1 point earned
-- **Redemption**: 100 points = 1 AZN discount
-- **Tiers**: Bronze (0-499) | Silver (500-1499) | Gold (1500-4999) | Platinum (5000+)
-- **Bonuses**: Birthday (50 points), Welcome (20 points)
+- **Templates:** `src/web/templates/`
+- **Static Assets:** `src/web/static/`
+- **Themes:** `src/desktop/themes/`
 
 ---
 
-## 📞 Support & Documentation
+## 🤝 İştirak
 
-### **Documentation Files**
-- **README.md**: This file - Quick start guide
-- **README_ENTERPRISE.md**: Complete enterprise documentation
-- **SYSTEM_STATUS.md**: System status report
-- **OpenAPI Specification**: Auto-generated API docs
+### 🐛 Xəta Hesabatı
 
-### **Troubleshooting**
-```bash
-# Check system health
-python test_full_stack.py
+Xəta tapdınız? [GitHub Issues](https://github.com/Baba-Axundov77/ramo_pub_v1.00/issues) yaradın.
 
-# View logs
-type logs\app.log
+### 💡 Təkliflər
 
-# Database status
-alembic current
+Yeni xüsusiyyət təklif edin? [Discussions](https://github.com/Baba-Axundov77/ramo_pub_v1.00/discussions) başladın.
 
-# Docker status
-docker-compose ps
-```
+### 🔧 Development
 
----
+1. **Fork** repository
+2. **Feature branch** yaradın: `git checkout -b feature/amazing-feature`
+3. **Commit** changes: `git commit -m 'Add amazing feature'`
+4. **Push** branch: `git push origin feature/amazing-feature`
+5. **Pull Request** yaradın
 
-## 🎯 System Status
+### 📋 Kod Standartları
 
-### **Current Status**: ✅ PRODUCTION READY
-
-- **Enterprise Modules**: 8/8 Complete
-- **Database Models**: 20+ Implemented
-- **Services**: 6/6 Available
-- **Test Coverage**: 100%
-- **Performance**: Excellent
-- **Security**: Enterprise-grade
-- **Production Readiness**: 83%+ ready
-
-### **Live Statistics**
-- **Database Records**: 231+
-- **Active Orders**: 46+
-- **Menu Items**: 20+
-- **Dashboard Widgets**: 6
-- **Enterprise Services**: 6/6 operational
+- **PEP 8** compliance
+- **Type hints** usage
+- **Docstrings** for all functions
+- **Unit tests** coverage
 
 ---
 
-## 🎉 Conclusion
+## 📊 Project Status
 
-The Enterprise Restaurant Management System represents a comprehensive, production-ready solution that exceeds industry standards. With 8 complete enterprise modules, advanced business intelligence, real-time kitchen operations, and full-stack integration, this system provides everything needed for modern restaurant management.
+### 🎯 Version: v2.1.0
 
-**🚀 Ready for immediate deployment and production use!**
+### ✅ Completed Features
+- [x] Real-time order management
+- [x] Table management system
+- [x] Menu with images
+- [x] Kitchen display system
+- [x] Point of sale
+- [x] Inventory tracking
+- [x] Staff management
+- [x] Customer loyalty
+- [x] Reservation system
+- [x] Desktop application
+- [x] Web interface
+- [x] Docker deployment
+
+### 🚧 In Progress
+- [ ] Mobile app
+- [ ] Advanced reporting
+- [ ] Multi-restaurant support
+- [ ] Payment gateway integration
+
+### 📅 Roadmap
+- [ ] Q1 2024: Mobile application
+- [ ] Q2 2024: Advanced analytics
+- [ ] Q3 2024: Multi-location support
+- [ ] Q4 2024: Cloud deployment
 
 ---
 
-## 📄 License
+## 📄 Lisenzi
 
-This project is licensed under the MIT License - see the LICENSE file for details.
+Bu proyekt [MIT License](LICENSE) altında yayımlanıb.
 
 ---
 
-*Last Updated: March 7, 2026*  
-*Version: 2.0.0*  
-*Status: Production Ready*
+## 👥️ Əlaqə
+
+- **GitHub:** https://github.com/Baba-Axundov77/ramo_pub_v1.00
+- **Documentation:** https://docs.ramo-pub.com
+- **Demo:** https://demo.ramo-pub.com
+- **Support:** support@ramo-pub.com
+
+---
+
+## 🙏 Təşəkkür
+
+Ramo Pub & TeaHouse komandası bu proyektə dəstək olduğunuz üçün təşəkkür edir!
+
+**Made with ❤️ in Azerbaijan** 🇦🇿

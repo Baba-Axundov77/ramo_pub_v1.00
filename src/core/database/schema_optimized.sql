@@ -209,8 +209,9 @@ DECLARE
     recipe_item RECORD;
     current_stock DECIMAL(10,3);
 BEGIN
-    -- Only process when status changes to 'completed'
-    IF OLD.status != 'completed' AND NEW.status = 'completed' THEN
+    -- Only process when status changes to 'paid' or 'served' (terminal states)
+    IF OLD.status != 'paid' AND NEW.status = 'paid' OR
+       OLD.status != 'served' AND NEW.status = 'served' THEN
         -- Log completion time
         NEW.completed_at = CURRENT_TIMESTAMP;
         

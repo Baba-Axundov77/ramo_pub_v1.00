@@ -33,6 +33,7 @@ class OrderStatus(enum.Enum):
     served = "served"
     paid = "paid"
     cancelled = "cancelled"
+    completed = "completed"
 
 
 class PaymentMethod(enum.Enum):

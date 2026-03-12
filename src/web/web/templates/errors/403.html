@@ -1,9 +1,0 @@
-{% extends "base.html" %}
-{% block title %}İcazə yoxdur{% endblock %}
-{% block content %}
-<div class="empty-state" style="margin-top:60px;">
-    <div class="empty-icon">⛔</div>
-    <div style="font-size:20px; font-weight:700;">Bu səhifəyə giriş icazəniz yoxdur.</div>
-    <a class="btn btn-primary" href="{{ url_for('dashboard.index') }}" style="margin-top:12px;">Dashboard-a qayıt</a>
-</div>
-{% endblock %}

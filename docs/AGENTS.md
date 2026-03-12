@@ -1,41 +1,40 @@
 # AGENTS.md
 
 ## Must-follow constraints
-- `OPTIMIZATIONS.md` is audit-only; never implement runtime changes from that file
-- Schema changes must use Alembic migrations; never mutate schema at runtime in `database/connection.py`
-- Inventory/stock updates MUST use `SELECT FOR UPDATE` to prevent overselling
-- Checkout flow must remain in single DB transaction; never split commits
-- WebSocket events must follow established naming: `kds_orders_update`, `order_ready`, etc.
-- UI color palette: gold (#c6a659) on dark (#020617) - never deviate
-- Never break backward compatibility of database schema during deployment
+- `OPTIMIZATIONS.md` is audit-only; do not implement runtime changes from it unless explicitly requested.
+- Do not mutate schema in runtime code (`database/connection.py`); use Alembic migrations for schema changes.
+- Inventory deductions must lock rows with `SELECT FOR UPDATE`.
+- Keep checkout/payment flow in a single DB transaction.
+- WebSocket event names must stay backward-compatible (`kds_orders_update`, `order_ready`, etc.).
+- Preserve luxury UI palette: gold `#c6a659` on dark `#020617`.
 
 ## Validation before finishing
-- Run: `pytest -q`
-- Run: `python -m compileall modules web database`
-- Verify: WebSocket connections don't leak (check `kds_clients` dict cleanup)
+- Run `pytest -q`.
+- Run `python -m compileall modules web database`.
+- For WebSocket handler edits, verify client cleanup prevents `kds_clients` growth.
 
 ## Repo-specific conventions
-- Business logic lives in `modules/*/*_service.py`; keep `web/routes/*.py` thin and delegate
-- Use `g.db` (Flask request-scoped session) in routes; never create ad-hoc global sessions
-- Use soft-delete pattern (`is_active`, `is_cancelled`) unless hard delete is explicitly required
-- All N+1 queries must be eliminated with batch loading or subqueries
-- Cache stampede protection required for analytics endpoints
+- Put business logic in `modules/*/*_service.py`; keep `web/routes/*.py` thin.
+- In routes, use request-scoped `g.db`; do not create ad-hoc global DB sessions.
+- Prefer soft-delete flags (`is_active`, `is_cancelled`) unless hard delete is explicitly required.
+- Eliminate N+1 query patterns with batch loading/subqueries.
+- Analytics endpoints must use cache stampede protection.
 
 ## Important locations
-- DB connection management: `database/connection.py`
-- Core ORM models: `database/models.py`
+- DB connection/session management: `database/connection.py`
+- ORM models: `database/models.py`
 - Checkout + inventory flow: `modules/pos/pos_service.py`
 - WebSocket handlers: `web/routes/websocket_*.py`
 - Analytics hot paths: `modules/reports/report_service.py`
 
 ## Change safety rules
-- Never modify API response keys in existing `web/routes` unless explicitly requested
-- Preserve numerical accuracy in reports refactoring (sums/counts must match exactly)
-- WebSocket message structure must remain backward compatible
-- All stock-related operations must be atomic and lock rows appropriately
+- Do not change existing API response keys in `web/routes` without explicit request.
+- Preserve numeric accuracy in reports.
+- Keep WebSocket payload structure backward-compatible.
+- Maintain backward-compatible database deployments.
 
 ## Known gotchas
-- `kds_clients` dict grows without cleanup - must implement TTL in WebSocket handlers
-- Analytics cache can cause stampede - always use Redis SETNX lock pattern
-- Permission decorators (`permission_required`) are easy to miss when adding new endpoints
-- Soft-delete fields vary by table - check model before implementing delete logic
+- `kds_clients` can leak without cleanup/TTL handling.
+- Analytics caching is prone to stampede without Redis `SETNX` locking.
+- New endpoints often miss `permission_required` checks.
+- Soft-delete fields differ by table; confirm model fields before delete logic.
