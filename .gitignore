@@ -21,9 +21,11 @@ legacy_backup/
 validate_imports.py
 temp_*.py
 debug_*.py
-test_*.py
 *_backup/
 *_old/
+
+# Tests (allow compliance tests)
+test_compliance.py
 
 # Logs
 *.log

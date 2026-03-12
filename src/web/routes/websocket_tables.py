@@ -8,12 +8,11 @@ from flask import request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from src.core.database.connection import get_db
 
+# Import safe connection manager
+from src.web.routes.websocket_connection_manager import tables_manager
+
 # Table management room
 TABLES_ROOM = 'tables'
-
-# Connected clients tracking
-connected_clients = {}
-table_locks = {}  # table_id -> {user, user_name, timestamp}
 
 def get_socketio():
     """Get SocketIO instance"""
@@ -26,8 +25,22 @@ def handle_connect_tables():
     client_id = request.sid
     user_name = getattr(request, 'user', {}).get('full_name', 'Anonymous')
     
-    connected_clients[client_id] = {
+    # Use safe connection manager
+    tables_manager.add_client(client_id, TABLES_ROOM, {
         'user': user_name,
+        'client_id': client_id
+    })
+    
+    join_room(TABLES_ROOM)
+    emit('tables_connected', {
+        'client_id': client_id,
+        'user': user_name,
+        'message': f'{user_name} connected to tables room'
+    }, room=client_id)
+    
+    # Broadcast updated client count
+    client_count = tables_manager.get_client_count(TABLES_ROOM)
+    emit('tables_client_count', {'count': client_count}, room=TABLES_ROOM)
         'connected_at': datetime.now(),
         'room': TABLES_ROOM
     }

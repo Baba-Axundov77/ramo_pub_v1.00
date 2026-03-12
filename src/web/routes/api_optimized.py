@@ -18,6 +18,9 @@ import redis
 import psycopg2
 from psycopg2.extras import RealDictCursor
 
+# Import safe connection manager
+from src.core.database.connection_manager import get_db_connection, get_db_cursor, SafeConnectionManager
+
 # Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
