@@ -8,6 +8,9 @@ from flask import Blueprint, request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from src.core.database.connection import get_db
 
+# Import safe connection manager
+from src.web.routes.websocket_connection_manager import get_manager_for_room
+
 # Create WebSocket blueprint
 ws_bp = Blueprint('websocket_dashboard', __name__)
 
@@ -17,14 +20,18 @@ socketio = SocketIO(cors_allowed_origins="*", async_mode='thread')
 # Dashboard room for broadcasting updates
 DASHBOARD_ROOM = 'dashboard'
 
-# Connected clients tracking
-connected_clients = set()
-
 @socketio.on('connect')
 def handle_connect():
     """Handle client connection to dashboard WebSocket"""
     client_id = request.sid
-    connected_clients.add(client_id)
+    
+    # Use safe connection manager
+    manager = get_manager_for_room(DASHBOARD_ROOM)
+    manager.add_client(client_id, DASHBOARD_ROOM, {
+        'client_id': client_id,
+        'connected_at': datetime.now()
+    })
+    
     join_room(DASHBOARD_ROOM)
     
     print(f"Client {client_id} connected to dashboard")

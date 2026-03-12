@@ -6,6 +6,7 @@ Prevents memory leaks and ensures proper client management
 import json
 import asyncio
 import threading
+import time
 from datetime import datetime, timedelta
 from typing import Dict, Any, Optional
 from collections import defaultdict
@@ -83,7 +84,7 @@ class WebSocketConnectionManager:
             while True:
                 try:
                     self.cleanup_expired_clients()
-                    asyncio.sleep(60)  # Check every minute
+                    time.sleep(60)  # Check every minute
                 except Exception as e:
                     logger.error(f"WebSocket cleanup error: {e}")
                     

@@ -10,11 +10,11 @@ from flask import request, session
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from functools import wraps
 
+# Import safe connection manager
+from src.web.routes.websocket_connection_manager import dashboard_manager
+
 # Admin room
 ADMIN_ROOM = 'admin'
-
-# Connected admin clients
-admin_clients = {}
 
 # Simple cache implementation with lock for stampede protection
 class SimpleCache:
@@ -74,12 +74,12 @@ def handle_admin_connect():
     user_id = session.get('user_id')
     user_name = session.get('user_name', 'Unknown')
     
-    admin_clients[client_id] = {
-        'connected_at': datetime.now(),
+    # Use safe connection manager
+    dashboard_manager.add_client(client_id, ADMIN_ROOM, {
         'user_id': user_id,
         'user_name': user_name,
-        'room': ADMIN_ROOM
-    }
+        'client_id': client_id
+    })
     
     join_room(ADMIN_ROOM)
     
@@ -94,20 +94,25 @@ def handle_admin_connect():
     }, room=client_id)
     
     # Broadcast client count
-    emit('admin_client_count', {'count': len(admin_clients)}, room=ADMIN_ROOM)
+    client_count = dashboard_manager.get_client_count(ADMIN_ROOM)
+    emit('admin_client_count', {'count': client_count}, room=ADMIN_ROOM)
 
 @get_socketio().on('disconnect')
 def handle_admin_disconnect():
     """Handle admin client disconnection"""
     client_id = request.sid
     
-    if client_id in admin_clients:
-        user_name = admin_clients[client_id].get('user_name', 'Unknown')
-        del admin_clients[client_id]
+    # Use safe connection manager
+    clients = dashboard_manager.get_room_clients(ADMIN_ROOM)
+    if client_id in clients:
+        user_name = clients[client_id].get('user_name', 'Unknown')
+        dashboard_manager.remove_client(client_id, ADMIN_ROOM)
         leave_room(ADMIN_ROOM)
         print(f"Admin {user_name} ({client_id}) disconnected")
     
-    emit('admin_client_count', {'count': len(admin_clients)}, room=ADMIN_ROOM)
+    # Broadcast updated client count
+    client_count = dashboard_manager.get_client_count(ADMIN_ROOM)
+    emit('admin_client_count', {'count': client_count}, room=ADMIN_ROOM)
 
 @get_socketio().on('request_kpi_update')
 @require_admin_role

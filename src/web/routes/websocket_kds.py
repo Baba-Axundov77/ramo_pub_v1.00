@@ -11,22 +11,11 @@ from flask import request
 from flask_socketio import SocketIO, emit, join_room, leave_room
 from src.core.database.connection import get_db
 
+# Import safe connection manager
+from src.web.routes.websocket_connection_manager import kds_manager
+
 # KDS room
 KDS_ROOM = 'kds'
-
-class ConnectionManager:
-    """Manages WebSocket connections with TTL cleanup"""
-    def __init__(self):
-        self.clients = defaultdict(dict)
-        self.lock = threading.Lock()
-        self._start_cleanup_task()
-    
-    def add_client(self, client_id, room):
-        with self.lock:
-            self.clients[room][client_id] = {
-                'connected_at': datetime.now(),
-                'last_heartbeat': datetime.now()
-            }
     
     def remove_client(self, client_id, room):
         with self.lock:
@@ -61,8 +50,7 @@ class ConnectionManager:
         with self.lock:
             return len(self.clients.get(room, {}))
 
-# Global connection manager
-connection_manager = ConnectionManager()
+# Global active orders tracking
 active_orders = {}
 
 def get_socketio():
@@ -75,8 +63,11 @@ def handle_kds_connect():
     """Handle KDS client connection"""
     client_id = request.sid
     
-    # Use connection manager
-    connection_manager.add_client(client_id, KDS_ROOM)
+    # Use safe connection manager
+    kds_manager.add_client(client_id, KDS_ROOM, {
+        'client_id': client_id,
+        'connected_at': datetime.now()
+    })
     
     join_room(KDS_ROOM)
     
@@ -89,19 +80,21 @@ def handle_kds_connect():
     }, room=client_id)
     
     # Broadcast client count
-    emit('kds_client_count', {'count': connection_manager.get_client_count(KDS_ROOM)}, room=KDS_ROOM)
+    client_count = kds_manager.get_client_count(KDS_ROOM)
+    emit('kds_client_count', {'count': client_count}, room=KDS_ROOM)
 
 @get_socketio().on('disconnect')
 def handle_kds_disconnect():
     """Handle KDS client disconnection"""
     client_id = request.sid
     
-    # Use connection manager
-    connection_manager.remove_client(client_id, KDS_ROOM)
+    # Use safe connection manager
+    kds_manager.remove_client(client_id, KDS_ROOM)
     leave_room(KDS_ROOM)
     print(f"KDS client {client_id} disconnected")
     
-    emit('kds_client_count', {'count': connection_manager.get_client_count(KDS_ROOM)}, room=KDS_ROOM)
+    client_count = kds_manager.get_client_count(KDS_ROOM)
+    emit('kds_client_count', {'count': client_count}, room=KDS_ROOM)
 
 @get_socketio().on('order_ready')
 def handle_order_ready(data):
